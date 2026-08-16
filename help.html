@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Help & Architecture — tasks.tesh.ai</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✅</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0f1117;
+      --bg2:        #1a1d27;
+      --card:       #1e2130;
+      --border:     #2d3348;
+      --text:       #e2e8f0;
+      --text2:      #94a3b8;
+      --text3:      #64748b;
+      --accent:     #6366f1;
+      --accent2:    #818cf8;
+      --green:      #22c55e;
+      --amber:      #f59e0b;
+      --red:        #f87171;
+      --teal:       #2dd4bf;
+      --pink:       #ec4899;
+      --radius:     12px;
+      --radius-sm:  8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── TOP NAV ── */
+    .topnav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 56px;
+    }
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .topnav-brand .emoji { font-size: 1.3rem; }
+    .topnav-links { display: flex; gap: 6px; }
+    .topnav-links a {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 0.82rem;
+      padding: 5px 10px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .topnav-links a:hover { background: var(--card); color: var(--text); }
+    .back-btn {
+      background: var(--accent);
+      color: #fff !important;
+      font-weight: 500;
+    }
+    .back-btn:hover { background: var(--accent2) !important; }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent)22;
+      border: 1px solid var(--accent)55;
+      color: var(--accent2);
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #e2e8f0 30%, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text2);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── SECTION LAYOUT ── */
+    .section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 2rem 3rem;
+    }
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      margin-bottom: 0.5rem;
+    }
+    .section-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .section-sub {
+      color: var(--text2);
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    /* ── ARCH DIAGRAM ── */
+    .arch-diagram {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem 2rem;
+      margin-bottom: 2rem;
+      overflow: visible;
+    }
+    .arch-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .arch-row + .arch-row { margin-top: 1.2rem; }
+
+    .arch-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 18px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      min-width: 120px;
+      text-align: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .arch-node .node-icon { font-size: 1.8rem; line-height: 1; }
+    .arch-node .node-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .arch-node .node-sub {
+      font-size: 0.68rem;
+      color: var(--text3);
+      line-height: 1.3;
+    }
+    .arch-node.accent-node { border-color: var(--accent)66; background: var(--accent)11; }
+    .arch-node.green-node  { border-color: var(--green)66;  background: var(--green)11;  }
+    .arch-node.amber-node  { border-color: var(--amber)66;  background: var(--amber)11;  }
+    .arch-node.teal-node   { border-color: var(--teal)66;   background: var(--teal)11;   }
+    .arch-node.pink-node   { border-color: var(--pink)66;   background: var(--pink)11;   }
+
+    .arch-arrow {
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      color: var(--text3);
+      font-size: 0.7rem;
+      flex-direction: column;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .arch-arrow .arrow-line {
+      width: 48px;
+      height: 2px;
+      background: var(--border);
+      position: relative;
+    }
+    .arch-arrow .arrow-line::after {
+      content: '';
+      position: absolute;
+      right: -1px;
+      top: -4px;
+      border-left: 8px solid var(--border);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    .arch-arrow .arrow-label {
+      font-size: 0.6rem;
+      color: var(--text3);
+      white-space: nowrap;
+    }
+    .arch-arrow.bidirectional .arrow-line::before {
+      content: '';
+      position: absolute;
+      left: -1px;
+      top: -4px;
+      border-right: 8px solid var(--border);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+
+    .arch-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+    .arch-vert-arrow {
+      width: 2px;
+      height: 32px;
+      background: var(--border);
+      position: relative;
+      margin: 0 auto;
+    }
+    .arch-vert-arrow::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: -4px;
+      border-top: 8px solid var(--border);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+    }
+    .arch-vert-arrow.bidirectional::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: -4px;
+      border-bottom: 8px solid var(--border);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+    }
+    .arch-vert-label {
+      font-size: 0.6rem;
+      color: var(--text3);
+      margin: 2px 0;
+      text-align: center;
+    }
+
+    .arch-center-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .arch-group {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ── FEATURE GRID ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .feature-card:hover {
+      border-color: var(--accent)55;
+      transform: translateY(-2px);
+    }
+    .feature-card .fc-icon {
+      font-size: 1.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .feature-card .fc-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .feature-card .fc-desc {
+      font-size: 0.8rem;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+    .feature-card .fc-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 0.75rem;
+    }
+    .fc-tag {
+      font-size: 0.66rem;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--accent)22;
+      color: var(--accent2);
+      border: 1px solid var(--accent)33;
+    }
+    .fc-tag.green  { background: var(--green)18; color: var(--green); border-color: var(--green)33; }
+    .fc-tag.amber  { background: var(--amber)18; color: var(--amber); border-color: var(--amber)33; }
+    .fc-tag.teal   { background: var(--teal)18;  color: var(--teal);  border-color: var(--teal)33; }
+    .fc-tag.pink   { background: var(--pink)18;  color: var(--pink);  border-color: var(--pink)33; }
+    .fc-tag.red    { background: var(--red)18;   color: var(--red);   border-color: var(--red)33; }
+
+    /* ── MCP TOOLS TABLE ── */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 0.75rem;
+    }
+    .tool-row {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.1rem;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: border-color 0.2s;
+    }
+    .tool-row:hover { border-color: var(--teal)55; }
+    .tool-badge {
+      flex-shrink: 0;
+      background: var(--teal)18;
+      border: 1px solid var(--teal)33;
+      color: var(--teal);
+      font-size: 0.65rem;
+      font-weight: 700;
+      font-family: monospace;
+      padding: 3px 7px;
+      border-radius: 4px;
+      margin-top: 2px;
+      letter-spacing: 0.02em;
+    }
+    .tool-info .tool-name {
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: monospace;
+      color: var(--teal);
+      margin-bottom: 2px;
+    }
+    .tool-info .tool-desc {
+      font-size: 0.76rem;
+      color: var(--text2);
+      line-height: 1.4;
+    }
+
+    /* ── STACK TABLE ── */
+    .stack-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.75rem;
+    }
+    .stack-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .stack-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .stack-label { font-size: 0.82rem; font-weight: 600; }
+    .stack-sub   { font-size: 0.72rem; color: var(--text3); margin-top: 2px; }
+
+    /* ── DATA FLOW ── */
+    .flow-steps {
+      display: flex;
+      gap: 0;
+      align-items: stretch;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .flow-step {
+      flex: 1;
+      min-width: 150px;
+      max-width: 200px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 0.9rem;
+      text-align: center;
+      position: relative;
+    }
+    .flow-step + .flow-step {
+      margin-left: 0;
+    }
+    .flow-step .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+    .flow-step .step-icon { font-size: 1.4rem; display: block; margin-bottom: 6px; }
+    .flow-step .step-label { font-size: 0.8rem; font-weight: 600; margin-bottom: 3px; }
+    .flow-step .step-sub   { font-size: 0.7rem; color: var(--text3); line-height: 1.4; }
+    .flow-connector {
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+      color: var(--text3);
+      font-size: 1.2rem;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      max-width: 1100px;
+      margin: 0 auto;
+      border: none;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text3);
+      font-size: 0.8rem;
+    }
+    .footer a { color: var(--accent2); text-decoration: none; }
+
+    /* ── QUICK REFERENCE CALLOUT ── */
+    .callout {
+      background: var(--accent)0d;
+      border: 1px solid var(--accent)44;
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.88rem;
+      color: var(--text2);
+    }
+    .callout strong { color: var(--accent2); }
+
+    /* ── URL PILL ── */
+    .url-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      padding: 4px 10px;
+      color: var(--teal);
+    }
+
+    @media (max-width: 640px) {
+      .topnav { padding: 0 1rem; }
+      .topnav-links a span { display: none; }
+      .arch-arrow .arrow-line { width: 28px; }
+      .flow-connector { display: none; }
+      .flow-step { min-width: 130px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── TOP NAV ── -->
+<nav class="topnav">
+  <a class="topnav-brand" href="/">
+    <span class="emoji">✅</span>
+    <span>tasks.tesh.ai</span>
+  </a>
+  <div class="topnav-links">
+    <a href="#features"><span>Features</span></a>
+    <a href="#architecture"><span>Architecture</span></a>
+    <a href="#mcp"><span>MCP&nbsp;API</span></a>
+    <a href="#stack"><span>Stack</span></a>
+    <a href="/" class="back-btn">← Open App</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-badge">📖 Help &amp; Architecture Guide</div>
+  <h1>How tasks.tesh.ai works</h1>
+  <p>A full overview of the app's features, data flows, and AI integration — from the UI to the MCP server.</p>
+</div>
+
+<hr class="divider" />
+
+<!-- ══════════════════════════════════════════
+     SECTION 1 — ARCHITECTURE DIAGRAM
+════════════════════════════════════════════ -->
+<section class="section" id="architecture">
+  <div class="section-label">System Design</div>
+  <div class="section-title">Architecture Overview</div>
+  <p class="section-sub">Every component in the system and how they connect.</p>
+
+  <div class="arch-diagram">
+
+    <!-- Row 1 — AI clients -->
+    <div class="arch-row">
+      <div class="arch-group">
+        <div class="arch-node pink-node">
+          <span class="node-icon">🤖</span>
+          <span class="node-label">Claude.ai</span>
+          <span class="node-sub">Web connector<br>via URL + ?key=</span>
+        </div>
+        <div class="arch-node pink-node">
+          <span class="node-icon">🖥️</span>
+          <span class="node-label">Claude Desktop</span>
+          <span class="node-sub">JSON config<br>Bearer header</span>
+        </div>
+        <div class="arch-node pink-node">
+          <span class="node-icon">⚡</span>
+          <span class="node-label">OpenAI / GPT</span>
+          <span class="node-sub">Custom connector<br>Bearer header</span>
+        </div>
+        <div class="arch-node pink-node">
+          <span class="node-icon">🔷</span>
+          <span class="node-label">Cursor / Other</span>
+          <span class="node-sub">JSON-RPC 2.0<br>Streamable HTTP</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow down -->
+    <div style="display:flex;justify-content:center;margin:4px 0;">
+      <div class="arch-vert-arrow bidirectional"></div>
+    </div>
+    <div style="text-align:center;" class="arch-vert-label">MCP Protocol · JSON-RPC 2.0 · Per-user API key</div>
+    <div style="display:flex;justify-content:center;margin:4px 0;">
+      <div class="arch-vert-arrow"></div>
+    </div>
+
+    <!-- Row 2 — MCP Server -->
+    <div class="arch-row">
+      <div class="arch-node teal-node" style="min-width:260px;">
+        <span class="node-icon">🔌</span>
+        <span class="node-label">MCP Server</span>
+        <span class="node-sub">tasks.tesh.ai/mcp/index.php<br>8 tools · per-user key auth · stateless POST</span>
+      </div>
+    </div>
+
+    <!-- Arrow down + sideways -->
+    <div style="display:flex; justify-content:center; gap:80px; margin:4px 0; align-items:flex-end;">
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div class="arch-vert-arrow bidirectional"></div>
+        <div class="arch-vert-label">OAuth token</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div class="arch-vert-arrow"></div>
+        <div class="arch-vert-label">key lookup</div>
+      </div>
+    </div>
+
+    <!-- Row 3 — Google Tasks API + Data store -->
+    <div class="arch-row" style="gap:24px;">
+      <div class="arch-node green-node">
+        <span class="node-icon">☑️</span>
+        <span class="node-label">Google Tasks API</span>
+        <span class="node-sub">tasks.googleapis.com<br>Per-user data</span>
+      </div>
+      <div class="arch-node amber-node">
+        <span class="node-icon">🗄️</span>
+        <span class="node-label">Data Store</span>
+        <span class="node-sub">IONOS shared hosting<br>JSON files in /data/</span>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;margin:8px 0;">
+      <div class="arch-vert-arrow bidirectional"></div>
+    </div>
+    <div style="text-align:center;" class="arch-vert-label">Google OAuth 2.0 · Read/write tasks</div>
+    <div style="display:flex;justify-content:center;margin:4px 0;">
+      <div class="arch-vert-arrow"></div>
+    </div>
+
+    <!-- Row 4 — Web App -->
+    <div class="arch-row">
+      <div class="arch-node accent-node" style="min-width:260px;">
+        <span class="node-icon">🌐</span>
+        <span class="node-label">Web App (tasks.tesh.ai)</span>
+        <span class="node-sub">Single-page PHP + Vanilla JS · Two themes<br>Google Tasks UI · Real-time sync</span>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:center;margin:4px 0;">
+      <div class="arch-vert-arrow bidirectional"></div>
+    </div>
+    <div style="text-align:center;" class="arch-vert-label">HTTPS · Browser</div>
+    <div style="display:flex;justify-content:center;margin:4px 0;">
+      <div class="arch-vert-arrow"></div>
+    </div>
+
+    <!-- Row 5 — User -->
+    <div class="arch-row">
+      <div class="arch-node" style="min-width:160px;">
+        <span class="node-icon">👤</span>
+        <span class="node-label">You (Google Account)</span>
+        <span class="node-sub">Any Google sign-in · isolated data</span>
+      </div>
+    </div>
+
+  </div><!-- /arch-diagram -->
+
+  <!-- Data store detail -->
+  <div class="callout">
+    <strong>Data files per user</strong> (stored in <code>/data/</code> on the server, never publicly accessible):
+    &nbsp;
+    <span class="url-pill">mcp_key_{key}.json</span>
+    &nbsp;
+    <span class="url-pill">tokens_{userId}.json</span>
+    &nbsp;
+    <span class="url-pill">prefs_{userId}.json</span>
+  </div>
+
+</section>
+
+<hr class="divider" />
+
+<!-- ══════════════════════════════════════════
+     SECTION 2 — FEATURES
+════════════════════════════════════════════ -->
+<section class="section" id="features">
+  <div class="section-label">What it does</div>
+  <div class="section-title">App Features</div>
+  <p class="section-sub">Everything available in the tasks.tesh.ai web interface.</p>
+
+  <div class="feature-grid">
+
+    <div class="feature-card">
+      <div class="fc-icon">🔐</div>
+      <div class="fc-title">Google Sign-In</div>
+      <div class="fc-desc">Sign in with any Google account. Each user gets their own fully isolated task lists, stars, preferences, and MCP key.</div>
+      <div class="fc-tags"><span class="fc-tag green">Multi-user</span><span class="fc-tag">OAuth 2.0</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">📋</div>
+      <div class="fc-title">Multiple Task Lists</div>
+      <div class="fc-desc">View, create, and delete Google Task lists. Lists are displayed as draggable cards on a kanban-style board.</div>
+      <div class="fc-tags"><span class="fc-tag">Drag &amp; drop</span><span class="fc-tag">Reorder</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">☑️</div>
+      <div class="fc-title">Numbered Checkboxes</div>
+      <div class="fc-desc">Active tasks show their number in the checkbox circle. Completed tasks show ✓. Numbers automatically update after completion or deletion.</div>
+      <div class="fc-tags"><span class="fc-tag">Auto-renumber</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">⭐</div>
+      <div class="fc-title">Starred / Priority Tasks</div>
+      <div class="fc-desc">Star any task to pin it to the Priority Card — a special aggregated view at the top of the board showing your most important items across all lists.</div>
+      <div class="fc-tags"><span class="fc-tag amber">Priority Card</span><span class="fc-tag">Cross-list</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">📝</div>
+      <div class="fc-title">Notes &amp; Descriptions</div>
+      <div class="fc-desc">Each task has a collapsible notes panel. View mode auto-links URLs. Edit mode has an auto-growing textarea. Save with Ctrl+Enter or Escape to cancel.</div>
+      <div class="fc-tags"><span class="fc-tag">URL linkify</span><span class="fc-tag">Ctrl+Enter</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">📅</div>
+      <div class="fc-title">Due Dates</div>
+      <div class="fc-desc">Set due dates on tasks using an inline date picker. Overdue tasks are flagged in red. Dates display in a friendly relative format.</div>
+      <div class="fc-tags"><span class="fc-tag red">Overdue flag</span><span class="fc-tag">Inline picker</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">↕️</div>
+      <div class="fc-title">Drag &amp; Drop Reordering</div>
+      <div class="fc-desc">Drag tasks within a list using the grip handle. Drag entire list cards to reorder the board. Cross-list drag moves tasks between lists.</div>
+      <div class="fc-tags"><span class="fc-tag">SortableJS</span><span class="fc-tag">Cross-list</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">✏️</div>
+      <div class="fc-title">Inline Task Editing</div>
+      <div class="fc-desc">Click any task title to edit it in-place with an auto-sizing textarea. Press Enter to save or Escape to cancel. Changes sync immediately to Google Tasks.</div>
+      <div class="fc-tags"><span class="fc-tag green">Live sync</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">🔁</div>
+      <div class="fc-title">Auto-Sync</div>
+      <div class="fc-desc">Background polling refreshes data every 2 minutes. Smart focus detection skips the refresh if you're actively typing — your input is never interrupted.</div>
+      <div class="fc-tags"><span class="fc-tag">2 min interval</span><span class="fc-tag">Focus-aware</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">🎨</div>
+      <div class="fc-title">Two Themes</div>
+      <div class="fc-desc">Switch between <strong>Notebook</strong> (warm parchment, handwritten fonts, paper line texture) and <strong>Modern</strong> (dark mode, indigo accents, clean sans-serif).</div>
+      <div class="fc-tags"><span class="fc-tag amber">Notebook</span><span class="fc-tag">Modern</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">📁</div>
+      <div class="fc-title">Subtasks</div>
+      <div class="fc-desc">Google Tasks subtasks are displayed indented under their parent, with a bullet marker instead of a number. Subtasks can be completed independently.</div>
+      <div class="fc-tags"><span class="fc-tag">Indented</span><span class="fc-tag">Nested</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="fc-icon">🔌</div>
+      <div class="fc-title">MCP AI Integration</div>
+      <div class="fc-desc">Connect any MCP-compatible AI client (Claude, OpenAI, Cursor) to your tasks. Get a personal API key from the Setup page and manage tasks by talking to your AI.</div>
+      <div class="fc-tags"><span class="fc-tag teal">MCP Server</span><span class="fc-tag pink">AI clients</span></div>
+    </div>
+
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ══════════════════════════════════════════
+     SECTION 3 — MCP API
+════════════════════════════════════════════ -->
+<section class="section" id="mcp">
+  <div class="section-label">AI Integration</div>
+  <div class="section-title">MCP Server &amp; Tools</div>
+  <p class="section-sub">The MCP server exposes 8 tools that let any AI client read and manage your personal Google Tasks.</p>
+
+  <div class="callout">
+    <strong>Server URL:</strong> &nbsp;<span class="url-pill">https://tasks.tesh.ai/mcp/</span>&nbsp;
+    &nbsp;·&nbsp;
+    <strong>Auth:</strong> Per-user API key (generate one at <a href="/mcp/setup.php" style="color:var(--teal);">tasks.tesh.ai/mcp/setup.php</a>)
+    &nbsp;·&nbsp;
+    <strong>Protocol:</strong> JSON-RPC 2.0 over Streamable HTTP
+  </div>
+
+  <div class="tools-grid">
+    <div class="tool-row">
+      <span class="tool-badge">GET</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_list_tasklists</div>
+        <div class="tool-desc">Returns all your Google Task lists with their IDs and titles.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">GET</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_list_tasks</div>
+        <div class="tool-desc">Lists tasks in a given list. Includes title, notes, due date, completion status, and subtasks.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">GET</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_get_task</div>
+        <div class="tool-desc">Fetches full detail for a single task by list ID + task ID.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">POST</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_create_task</div>
+        <div class="tool-desc">Creates a new task in a list. Supports title, notes, due date, and optional parent task (for subtasks).</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">PATCH</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_update_task</div>
+        <div class="tool-desc">Updates a task's title, notes, or due date. Partial updates — only send what you want to change.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">POST</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_complete_task</div>
+        <div class="tool-desc">Marks a task as completed (or un-completes it). Updates the status and completion timestamp.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">PATCH</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_star_task</div>
+        <div class="tool-desc">Stars or un-stars a task, surfacing it in the Priority Card on the web app.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">PATCH</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_add_ai_note</div>
+        <div class="tool-desc">Appends a timestamped AI-generated note to a task's notes field without overwriting existing content.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">POST</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_move_task</div>
+        <div class="tool-desc">Moves a task to a different position within its list, or to a different list entirely.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCP Flow -->
+  <div style="margin-top:2rem;">
+    <div class="section-label" style="margin-bottom:1rem;">How a request flows</div>
+    <div class="flow-steps">
+      <div class="flow-step">
+        <span class="step-num">1</span>
+        <span class="step-icon">🤖</span>
+        <div class="step-label">AI Client</div>
+        <div class="step-sub">Sends JSON-RPC POST with tool name + args</div>
+      </div>
+      <div class="flow-connector">→</div>
+      <div class="flow-step">
+        <span class="step-num">2</span>
+        <span class="step-icon">🔑</span>
+        <div class="step-label">Auth Check</div>
+        <div class="step-sub">Validates API key, resolves user ID from key file</div>
+      </div>
+      <div class="flow-connector">→</div>
+      <div class="flow-step">
+        <span class="step-num">3</span>
+        <span class="step-icon">🎟️</span>
+        <div class="step-label">Token Load</div>
+        <div class="step-sub">Loads OAuth token for that user; auto-refreshes if expired</div>
+      </div>
+      <div class="flow-connector">→</div>
+      <div class="flow-step">
+        <span class="step-num">4</span>
+        <span class="step-icon">☑️</span>
+        <div class="step-label">Google Tasks API</div>
+        <div class="step-sub">Calls tasks.googleapis.com on behalf of user</div>
+      </div>
+      <div class="flow-connector">→</div>
+      <div class="flow-step">
+        <span class="step-num">5</span>
+        <span class="step-icon">📤</span>
+        <div class="step-label">JSON Response</div>
+        <div class="step-sub">Returns result to AI client</div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<hr class="divider" />
+
+<!-- ══════════════════════════════════════════
+     SECTION 4 — TECH STACK
+════════════════════════════════════════════ -->
+<section class="section" id="stack">
+  <div class="section-label">Under the Hood</div>
+  <div class="section-title">Tech Stack</div>
+  <p class="section-sub">The technologies powering the app — intentionally minimal and dependency-light.</p>
+
+  <div class="stack-list">
+    <div class="stack-item">
+      <span class="stack-icon">🐘</span>
+      <div>
+        <div class="stack-label">PHP 8</div>
+        <div class="stack-sub">Backend · API · MCP server · OAuth flow</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🌐</span>
+      <div>
+        <div class="stack-label">Vanilla JS (ES2022)</div>
+        <div class="stack-sub">No framework · async/await · fetch API</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🎨</span>
+      <div>
+        <div class="stack-label">CSS Custom Properties</div>
+        <div class="stack-sub">Theme system · two full visual themes</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">↕️</span>
+      <div>
+        <div class="stack-label">SortableJS</div>
+        <div class="stack-sub">Drag &amp; drop · lists + cards</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">☑️</span>
+      <div>
+        <div class="stack-label">Google Tasks API v1</div>
+        <div class="stack-sub">Data source · tasks.googleapis.com</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🔐</span>
+      <div>
+        <div class="stack-label">Google OAuth 2.0</div>
+        <div class="stack-sub">Authentication · per-user refresh tokens</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🖥️</span>
+      <div>
+        <div class="stack-label">IONOS Shared Hosting</div>
+        <div class="stack-sub">Apache · PHP · JSON file storage</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🔌</span>
+      <div>
+        <div class="stack-label">MCP Protocol</div>
+        <div class="stack-sub">JSON-RPC 2.0 · Streamable HTTP transport</div>
+      </div>
+    </div>
+    <div class="stack-item">
+      <span class="stack-icon">🅰️</span>
+      <div>
+        <div class="stack-label">Google Fonts</div>
+        <div class="stack-sub">Inter · Caveat · Kalam</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer class="footer">
+  <p>tasks.tesh.ai &nbsp;·&nbsp; Built with ☑️ and a lot of PHP &nbsp;·&nbsp;
+    <a href="/">Open App</a> &nbsp;·&nbsp;
+    <a href="/mcp/setup.php">MCP Setup</a>
+  </p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Purple Pill Solutions</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f9fa;
+    }
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+    header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.25rem; }
+    header p { font-size: 0.9rem; opacity: 0.7; }
+    .container {
+      max-width: 760px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem 4rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 2.5rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin: 2rem 0 0.6rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid #e8e8f0;
+    }
+    h2:first-of-type { margin-top: 0; }
+    p { margin-bottom: 1rem; color: #333; }
+    ul { margin: 0.5rem 0 1rem 1.5rem; }
+    ul li { margin-bottom: 0.4rem; color: #333; }
+    a { color: #5c6bc0; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .effective-date {
+      display: inline-block;
+      background: #eef0fb;
+      color: #5c6bc0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      margin-bottom: 1.75rem;
+    }
+    code {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.85em;
+      background: #f0f0f8;
+      padding: 0.1em 0.4em;
+      border-radius: 3px;
+    }
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+      color: #888;
+    }
+    footer a { color: #5c6bc0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Privacy Policy</h1>
+  <p>Purple Pill Solutions — TaskStick</p>
+</header>
+
+<div class="container">
+  <div class="card">
+    <span class="effective-date">Effective Date: April 20, 2026</span>
+
+    <h2>Overview</h2>
+    <p>Purple Pill Solutions ("we," "our," or "us"), based in Raleigh, NC, USA, operates TaskStick, available at <a href="https://tasks.tesh.ai">tasks.tesh.ai</a>. This Privacy Policy explains what information we collect, how we use it, and your rights with respect to that information.</p>
+
+    <h2>Information We Collect</h2>
+    <p>When you sign in with your Google account, we receive the following from Google via OAuth 2.0:</p>
+    <ul>
+      <li>Your name and email address</li>
+      <li>Your Google profile picture</li>
+      <li>Access to your Google Tasks data (task lists and individual tasks, including notes and due dates)</li>
+    </ul>
+    <p>If you use the <strong>Connections</strong> feature to share task lists with other TaskStick users, we also store:</p>
+    <ul>
+      <li>The email addresses of users you invite or connect with</li>
+      <li>Pending invitation tokens (temporary, discarded once an invitation is accepted or declined)</li>
+    </ul>
+    <p>We do not collect any additional personal information beyond what is described above.</p>
+
+    <h2>Google API Scopes Requested</h2>
+    <p>TaskStick requests the following Google OAuth 2.0 scopes at sign-in:</p>
+    <ul>
+      <li><code>openid</code> — standard OpenID Connect identifier, required for secure authentication</li>
+      <li><code>email</code> — your Google account email address, used to identify your account within TaskStick</li>
+      <li><code>profile</code> — your display name and profile picture, used to personalise the interface</li>
+      <li><code>https://www.googleapis.com/auth/tasks</code> — read and write access to your Google Tasks, required for all core task management features</li>
+    </ul>
+    <p>TaskStick does <strong>not</strong> request access to your Gmail, Google Calendar, Google Drive, contacts, or any other Google service.</p>
+
+    <h2>How We Use Your Information</h2>
+    <p>We use your information solely to provide TaskStick functionality:</p>
+    <ul>
+      <li>To authenticate you and maintain your session</li>
+      <li>To display, create, update, complete, and delete your Google Tasks on your behalf</li>
+      <li>To personalise the interface with your display name and profile picture</li>
+      <li>To enable the Connections feature — letting you send and receive invitations to share task visibility with other TaskStick users</li>
+    </ul>
+    <p>We do not use your information for advertising, marketing, analytics, or any purpose beyond operating the app.</p>
+
+    <h2>Data Storage</h2>
+    <p>The following data is stored on our servers:</p>
+    <ul>
+      <li><strong>OAuth tokens</strong> — your Google access token and refresh token are stored server-side in your session to keep you signed in between visits. They are never exposed to the browser.</li>
+      <li><strong>Connection data</strong> — if you use the Connections feature, the email addresses of your connected users and any pending invitation records are stored in a server-side file. This data is deleted when you remove a connection or decline an invitation.</li>
+    </ul>
+    <p>Your <strong>tasks data</strong> (task titles, notes, due dates, etc.) is <strong>not</strong> stored on our servers — it is retrieved directly from Google's servers each time you use the app and written back to Google when you make changes.</p>
+
+    <h2>Data Sharing</h2>
+    <p>We do not sell, rent, trade, or share your personal information or Google Tasks data with any third parties. When you use the Connections feature, only the information necessary to establish a connection (your name and email) is visible to the user you choose to connect with — and only after you initiate the invitation.</p>
+
+    <h2>Google API Services User Data Policy</h2>
+    <p>TaskStick's use and transfer of information received from Google APIs complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+    <h2>Data Retention</h2>
+    <p>OAuth session tokens are retained for as long as your session is active (up to 24 hours) or until you sign out. You can permanently revoke access at any time by visiting your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a> and removing TaskStick. Connection data is retained until you remove the connection or delete your account data — contact us to request deletion.</p>
+
+    <h2>Security</h2>
+    <p>We take reasonable precautions to protect your information. OAuth tokens are stored server-side and are not exposed to the browser. All communication between your browser and our server uses HTTPS. However, no method of transmission or storage is 100% secure, and we cannot guarantee absolute security.</p>
+
+    <h2>Your Rights</h2>
+    <p>You have the right to:</p>
+    <ul>
+      <li>Revoke the app's access to your Google account at any time via <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account settings</a></li>
+      <li>Request deletion of any data we hold about you by contacting us at <a href="mailto:tesh@tesh.ai">tesh@tesh.ai</a></li>
+      <li>Receive a copy of the personal data we store about you upon request</li>
+    </ul>
+
+    <h2>Children's Privacy</h2>
+    <p>TaskStick is not directed at children under the age of 13. We do not knowingly collect personal information from children.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated effective date. Continued use of TaskStick after any changes constitutes your acceptance of the updated policy.</p>
+
+    <h2>Contact Us</h2>
+    <p>If you have questions or concerns about this Privacy Policy, please contact us at:<br>
+    <strong>Purple Pill Solutions</strong><br>
+    Raleigh, NC, USA<br>
+    <a href="mailto:tesh@tesh.ai">tesh@tesh.ai</a></p>
+  </div>
+</div>
+
+<footer>
+  <p>&copy; 2026 Purple Pill Solutions &nbsp;·&nbsp; <a href="https://tasks.tesh.ai/terms.html">Terms of Service</a> &nbsp;·&nbsp; <a href="https://tasks.tesh.ai">Back to App</a></p>
+</footer>
+
+</body>
+</html>

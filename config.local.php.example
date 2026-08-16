@@ -1,0 +1,19 @@
+<?php
+/**
+ * Copy this file to config.local.php (same directory) and fill in real
+ * values. config.local.php is loaded automatically by config.php if it
+ * exists, and is git-ignored — never commit it.
+ *
+ * Get these from:
+ *   - GOOGLE_CLIENT_ID / SECRET: Google Cloud Console → APIs & Services →
+ *     Credentials, for the OAuth 2.0 Client used by this app.
+ *   - DB_*: IONOS control panel → Hosting → Databases → your database.
+ */
+
+define('GOOGLE_CLIENT_ID',     'YOUR_ID.apps.googleusercontent.com');
+define('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET');
+
+define('DB_HOST', 'YOUR_DB_HOST');
+define('DB_NAME', 'YOUR_DB_NAME');
+define('DB_USER', 'YOUR_DB_USER');
+define('DB_PASS', 'YOUR_DB_PASSWORD');

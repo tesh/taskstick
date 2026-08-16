@@ -1,0 +1,21 @@
+# MCP server directory
+# Block direct web access to sensitive files
+
+# Pass Authorization header through to PHP (Apache strips it by default on some hosts)
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Deny access to JSON token file
+<Files "tokens.json">
+    Order deny,allow
+    Deny from all
+</Files>
+
+# Deny access to config file
+<Files "config.php">
+    Order deny,allow
+    Deny from all
+</Files>
+
+# Allow PHP files to be executed normally
+# (index.php and setup.php are intentionally accessible)

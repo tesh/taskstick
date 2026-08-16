@@ -1,0 +1,39 @@
+Options -Indexes
+
+# Without explicit cache headers, browsers fall back to heuristic caching
+# (roughly 10% of file age) — meaning manifest.json/index.html/sw.js can be
+# served from the browser's own HTTP cache without ever re-checking the
+# server, even on a "fresh" revisit or PWA reinstall. That's why an icon
+# update didn't show up after deleting and reinstalling the app: the
+# manifest itself was stale, so it never pointed at the new icon URL.
+# Force these three to always revalidate with the server (cheap 304s when
+# unchanged, but guarantees updates are seen on the very next request).
+<IfModule mod_headers.c>
+  <FilesMatch "^(manifest\.json|index\.html|sw\.js)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+# Route /auth/login  → auth/login.php
+RewriteRule ^auth/login$  auth/login.php  [L]
+# Route /auth/callback → auth/callback.php
+RewriteRule ^auth/callback$ auth/callback.php [L]
+# Route /auth/logout  → auth/logout.php
+RewriteRule ^auth/logout$  auth/logout.php  [L]
+
+# Route /api/lists → api/lists.php
+RewriteRule ^api/lists$  api/lists.php  [L,QSA]
+# Route /api/tasks → api/tasks.php
+RewriteRule ^api/tasks$  api/tasks.php  [L,QSA]
+# Route /api/auth/status → api/auth-status.php
+RewriteRule ^api/auth/status$ api/auth-status.php [L]
+
+# Serve index.html for all other routes (SPA fallback)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.html [L]

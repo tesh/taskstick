@@ -1,0 +1,25 @@
+# Secrets — never commit these. Real values live only on the server / your
+# dev machine. See config.local.php.example and deploy_local.py.example.
+config.local.php
+deploy_local.py
+
+# Live user data (per-user JSON files, tokens, admin registry). Lives only
+# on the server.
+data/*
+!data/.htaccess
+
+# MCP per-user API keys / OAuth tokens
+mcp/tokens.json
+
+# Stale, unreferenced snapshot predating the TaskStick rebrand — kept out of
+# git rather than deleted in case it's still wanted; safe to remove later.
+index_fixed.html
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# macOS
+.DS_Store

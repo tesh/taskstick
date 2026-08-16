@@ -1,0 +1,12 @@
+# Real SFTP credentials — git-ignored, never commit this file.
+# Copy this to deploy_local.py (same directory) and fill in real values.
+# Get these from: IONOS control panel -> Hosting -> FTP & SFTP Access.
+
+SFTP_HOST = "your-host.1and1-data.host"
+SFTP_USER = "your-sftp-username"
+SFTP_PASS = "your-sftp-password"
+SFTP_PORT = 22
+
+# Remote path (relative to the SFTP account root) that this repo's contents
+# map onto, e.g. the IONOS webspace folder for tasks.tesh.ai.
+REMOTE_ROOT = "/tasks-app"

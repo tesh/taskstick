@@ -1,0 +1,4556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskStick — tesh.ai</title>
+  <!-- PWA: Web App Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- PWA: iOS / Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TaskStick" />
+  <link rel="apple-touch-icon" href="/icons/icon-180.png?v=2" />
+
+  <!-- PWA: theme colour -->
+  <meta name="theme-color" content="#0d0b1e" />
+
+  <!-- Favicon (real file, no base64 needed) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+
+<style>
+/* ============================================================
+   CSS VARIABLES — Theme System
+   ============================================================ */
+:root {
+  --transition: 0.3s ease;
+}
+
+/* NOTEBOOK THEME */
+body.theme-notebook {
+  --bg:            #f5f0e8;
+  --bg-secondary:  #ede8dc;
+  --card-bg:       #faf7f0;
+  --card-shadow:   2px 3px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08);
+  --card-border:   1px solid #d4c9a8;
+  --header-bg:     #0d0b1e;
+  --header-text:   #e8e2f5;
+  --title-font:    'Caveat', cursive;
+  --body-font:     'Kalam', cursive;
+  --ui-font:       'Inter', sans-serif;
+  --title-size:    1.5rem;
+  --task-size:     1.05rem;
+  --text-primary:  #2c2416;
+  --text-secondary:#6b5d45;
+  --text-muted:    #9b8c72;
+  --accent:        #c0392b;
+  --accent-light:  #e74c3c22;
+  --done-color:    #9b8c72;
+  --done-line:     line-through;
+  --rule-color:    transparent; /* no divider lines in notebook theme */
+  --add-btn-bg:    #2c3e50;
+  --add-btn-color: #f5f0e8;
+  --tag-bg:        #2c3e50;
+  --tag-text:      #f5f0e8;
+  --input-bg:      transparent;
+  --input-border:  #b8a88022;
+  --scrollbar:     #b8a88066;
+  --paper-lines:   repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #d4c9a855 27px,
+    #d4c9a855 28px
+  );
+}
+
+/* MODERN THEME */
+body.theme-modern {
+  --bg:            #0f1117;
+  --bg-secondary:  #1a1d27;
+  --card-bg:       #1e2130;
+  --card-shadow:   0 4px 24px rgba(0,0,0,0.4), 0 1px 6px rgba(0,0,0,0.3);
+  --card-border:   1px solid #2d3348;
+  --header-bg:     #0d0b1e;
+  --header-text:   #e8e2f5;
+  --title-font:    'Inter', sans-serif;
+  --body-font:     'Inter', sans-serif;
+  --ui-font:       'Inter', sans-serif;
+  --title-size:    1rem;
+  --task-size:     0.9rem;
+  --text-primary:  #e2e8f0;
+  --text-secondary:#94a3b8;
+  --text-muted:    #64748b;
+  --accent:        #6366f1;
+  --accent-light:  #6366f122;
+  --done-color:    #475569;
+  --done-line:     line-through;
+  --rule-color:    #2d334822;
+  --add-btn-bg:    #6366f1;
+  --add-btn-color: #ffffff;
+  --tag-bg:        #6366f1;
+  --tag-text:      #ffffff;
+  --input-bg:      #252a3a;
+  --input-border:  #2d3348;
+  --scrollbar:     #2d334888;
+  --paper-lines:   none;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* overflow-x on html (not body) — prevents horizontal scroll without creating
+   an iOS Safari scroll trap that locks vertical touch-scrolling on body */
+html { height: 100%; overflow-x: hidden; }
+
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--body-font);
+  transition: background var(--transition), color var(--transition);
+  -webkit-overflow-scrolling: touch; /* momentum scroll on iOS */
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+#app-header {
+  background: var(--header-bg);
+  color: var(--header-text);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  gap: 12px;
+  transition: background var(--transition);
+  flex-wrap: wrap;
+}
+
+#app-header h1 {
+  font-family: var(--title-font);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+
+/* Logo mark in header — transparent PNG, adapts to any background naturally */
+.logo-mark {
+  height: 32px;
+  width: auto;
+  vertical-align: middle;
+  margin-right: 6px;
+  image-rendering: auto; /* let browser smooth-scale the hi-res PNG */
+}
+
+/* Header accent border */
+#app-header {
+  border-bottom: 1px solid rgba(120, 85, 210, 0.35);
+}
+
+/* Theme toggle */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: var(--header-text);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.18); }
+.theme-toggle .toggle-icon { font-size: 1rem; }
+
+/* Sync indicator */
+.sync-indicator {
+  font-family: var(--ui-font);
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.55);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.sync-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  display: inline-block;
+}
+.sync-dot.syncing { background: #fbbf24; animation: pulse 1s infinite; }
+.sync-dot.error   { background: #f87171; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* User avatar + dropdown */
+.user-menu {
+  position: relative;
+}
+.user-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(160, 80, 255, 0.6);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  display: block;
+}
+.user-avatar:hover {
+  border-color: rgba(180, 110, 255, 0.9);
+  box-shadow: 0 0 8px rgba(160, 80, 255, 0.5);
+}
+
+/* Dropdown panel */
+.user-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #1a1630;
+  border: 1px solid rgba(160, 80, 255, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  min-width: 180px;
+  z-index: 1000;
+  overflow: hidden;
+}
+.user-dropdown.open { display: block; }
+
+.user-dropdown-header {
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.user-dropdown-name {
+  font-family: var(--ui-font);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-dropdown-email {
+  font-family: var(--ui-font);
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 14px;
+  font-family: var(--ui-font);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+.user-dropdown-item:hover { background: rgba(160,80,255,0.15); color: #fff; }
+.user-dropdown-item .item-icon { font-size: 0.95rem; opacity: 0.8; }
+.user-dropdown-item.danger { color: rgba(255, 100, 100, 0.8); }
+.user-dropdown-item.danger:hover { background: rgba(255,60,60,0.12); color: #ff8080; }
+
+/* Settings modal */
+.settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 2000;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+}
+.settings-overlay.open { display: flex; }
+
+.settings-modal {
+  background: #1a1630;
+  border: 1px solid rgba(160, 80, 255, 0.3);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+}
+#admin-overlay .settings-modal {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* Admin + Feedback + scope-warning modals follow the user's selected theme
+   instead of the fixed dark chrome the Settings modal uses — readable on
+   every theme. */
+#admin-overlay .settings-modal,
+#feedback-overlay .settings-modal,
+#scope-warning-overlay .settings-modal {
+  background: var(--card-bg);
+  border: var(--card-border);
+  color: var(--text-primary);
+}
+#admin-overlay .settings-modal-header,
+#feedback-overlay .settings-modal-header,
+#scope-warning-overlay .settings-modal-header {
+  border-bottom: var(--card-border);
+}
+#admin-overlay .settings-modal-header h3,
+#feedback-overlay .settings-modal-header h3,
+#scope-warning-overlay .settings-modal-header h3 {
+  color: var(--text-primary);
+}
+#admin-overlay .settings-close-btn,
+#feedback-overlay .settings-close-btn {
+  color: var(--text-muted);
+}
+#admin-overlay .settings-close-btn:hover,
+#feedback-overlay .settings-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+#admin-overlay .settings-row-label,
+#feedback-overlay .settings-row-label {
+  color: var(--text-primary);
+}
+#admin-overlay .settings-row-desc,
+#feedback-overlay .settings-row-desc {
+  color: var(--text-muted);
+}
+.modal-dismiss-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: none;
+  border: none;
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: center;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+.modal-dismiss-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+#admin-overlay .admin-row {
+  border-bottom: var(--card-border);
+}
+#admin-overlay .admin-row-name,
+#feedback-overlay .admin-row-name {
+  color: var(--text-primary);
+}
+#admin-overlay .admin-row-meta,
+#admin-overlay .admin-summary,
+#admin-overlay .admin-loading,
+#admin-overlay .admin-empty,
+#feedback-overlay .admin-empty {
+  color: var(--text-muted);
+}
+#admin-overlay .admin-row-desc {
+  color: var(--text-secondary);
+}
+#admin-overlay .admin-status-select,
+#feedback-overlay .admin-status-select,
+#feedback-overlay #feedback-description {
+  color: var(--text-primary);
+  background: var(--input-bg, var(--card-bg));
+  border: 1px solid var(--input-border, var(--card-border));
+}
+#admin-overlay .admin-status-select option,
+#feedback-overlay .admin-status-select option {
+  color: var(--text-primary);
+  background: var(--card-bg);
+}
+#feedback-overlay #feedback-description::placeholder {
+  color: var(--text-muted);
+}
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.settings-modal-header h3 {
+  font-family: var(--ui-font);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  margin: 0;
+}
+.settings-close-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.settings-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+.settings-section {
+  padding: 14px 18px;
+}
+.settings-section + .settings-section {
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.settings-section-title {
+  font-family: var(--ui-font);
+  font-size: 0.67rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(160, 80, 255, 0.7);
+  margin-bottom: 10px;
+}
+
+/* Toggle row */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+.settings-row-label {
+  font-family: var(--ui-font);
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.8);
+  flex: 1;
+}
+.settings-row-desc {
+  font-family: var(--ui-font);
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 2px;
+}
+
+/* Pill toggle switch */
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  left: 3px; top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch input:checked + .toggle-track {
+  background: #7c3aed;
+}
+.toggle-switch input:checked + .toggle-track::after {
+  transform: translateX(18px);
+}
+
+/* Admin panel */
+.admin-loading, .admin-empty {
+  font-family: var(--ui-font);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.4);
+  padding: 12px 0;
+}
+.admin-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.admin-row:last-child { border-bottom: none; }
+.admin-row-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: rgba(255,255,255,0.1);
+}
+.admin-row-body { flex: 1; min-width: 0; }
+.admin-row-name {
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: inherit;
+}
+.admin-row-meta {
+  font-family: var(--ui-font);
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 2px;
+}
+.admin-row-desc {
+  font-family: var(--ui-font);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.75);
+  margin-top: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.admin-feedback-row { align-items: flex-start; }
+.admin-status-select {
+  font-family: var(--ui-font);
+  font-size: 0.75rem;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: inherit;
+  flex-shrink: 0;
+}
+.admin-summary {
+  font-family: var(--ui-font);
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 6px;
+}
+.admin-badge {
+  display: inline-block;
+  font-family: var(--ui-font);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: rgba(124, 58, 237, 0.25);
+  color: #c4b5fd;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.admin-badge-you {
+  background: rgba(20, 184, 166, 0.2);
+  color: #5eead4;
+}
+
+/* Refresh button */
+.refresh-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7);
+  border-radius: 50%;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.refresh-btn.spinning { animation: spin 1s linear infinite; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   LOGIN SCREEN
+   ============================================================ */
+#login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 60px);
+  gap: 24px;
+  padding: 40px 20px;
+}
+
+.login-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 16px;
+  padding: 40px 36px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  box-shadow: var(--card-shadow);
+}
+
+.login-icon { font-size: 3rem; margin-bottom: 14px; }
+
+.login-card h2 {
+  font-family: var(--title-font);
+  font-size: 1.8rem;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.login-tagline {
+  font-family: var(--ui-font);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 20px !important;
+}
+
+.login-card p {
+  font-family: var(--ui-font);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* Feature list on login screen */
+.login-features {
+  background: var(--accent-light);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+.login-features p {
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.6;
+}
+.login-features ul {
+  margin: 8px 0 0 0;
+  padding-left: 18px;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+/* Data access notice */
+.login-data-notice {
+  border: 1px solid var(--card-border, #d4c9a8);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+/* Only the direct-child strong (the "Data access & transparency" title) gets block display.
+   Inline <strong> tags inside paragraphs (e.g. "not") remain inline. */
+.login-data-notice > strong {
+  font-family: var(--ui-font);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 6px;
+}
+.login-data-notice p {
+  font-family: var(--ui-font);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.55;
+}
+.login-data-notice code {
+  font-size: 0.75rem;
+  background: rgba(0,0,0,0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.google-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-family: var(--ui-font);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.google-btn:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.15); transform: translateY(-1px); }
+.google-btn svg { width: 18px; height: 18px; }
+
+.login-note {
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 16px;
+}
+.login-note a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.login-note a:hover { text-decoration: underline; }
+
+/* ============================================================
+   BOARD (task list grid)
+   ============================================================ */
+#board {
+  padding: 24px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+  /* min-height removed — on mobile it over-constrains height and fights with
+     the browser chrome, compounding the iOS scroll issue */
+}
+
+/* ============================================================
+   TASK LIST CARD
+   ============================================================ */
+.list-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: box-shadow 0.2s, transform 0.2s, background var(--transition);
+  cursor: default;
+  overflow: hidden;
+}
+
+body.theme-notebook .list-card {
+  background-image: var(--paper-lines);
+  background-color: var(--card-bg);
+}
+
+.list-card:hover { box-shadow: var(--card-shadow), 0 0 0 2px var(--accent)22; }
+
+/* Drag states */
+.list-card.sortable-chosen { opacity: 0.85; transform: rotate(1.5deg) scale(1.02); }
+.list-card.sortable-ghost  { opacity: 0.35; }
+
+/* Card header */
+.list-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 14px 8px;
+  gap: 8px;
+  cursor: grab;
+}
+.list-card-header:active { cursor: grabbing; }
+
+.list-title {
+  font-family: var(--title-font);
+  font-size: var(--title-size);
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+body.theme-notebook .list-title {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+body.theme-modern .list-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 6px;
+}
+
+/* Task count badge */
+.task-count {
+  font-family: var(--ui-font);
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 10px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+/* Task list */
+.task-list {
+  list-style: none;
+  padding: 4px 14px 8px;
+  flex: 1;
+  min-height: 20px;
+}
+
+/* Task item — column container: row of controls above, notes panel below */
+.task-item {
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--rule-color);
+  position: relative;
+}
+
+.task-item:last-child { border-bottom: none; }
+
+/* Inner row holds all the horizontal controls */
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  min-height: 24px;
+  width: 100%;
+}
+
+/* Subtask indentation */
+.task-item.subtask {
+  margin-left: 18px;
+  padding-left: 6px;
+  border-left: 2px solid var(--rule-color);
+}
+
+/* Drag handle */
+.drag-handle {
+  opacity: 0;
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  padding: 2px 1px;
+  line-height: 1;
+  transition: opacity 0.15s;
+  user-select: none;
+  margin-top: 3px;
+}
+.task-item:hover .drag-handle { opacity: 0.45; }
+.drag-handle:active { cursor: grabbing; opacity: 1 !important; }
+.task-item.subtask .drag-handle { display: none; }
+
+/* ── Checkbox: number-in-circle ── */
+/* Label wraps the hidden input + visible circle */
+.task-check-wrap {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* Hide the native checkbox but keep it accessible/functional */
+.task-check {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  opacity: 0;
+}
+
+/* The visible numbered circle */
+.task-check-circle {
+  width: 21px; height: 21px;
+  border: 2px solid var(--text-muted);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ui-font);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: all 0.2s;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Number shown via data-num attribute */
+.task-check-circle::before { content: attr(data-num); }
+
+/* Hover */
+.task-check-wrap:hover .task-check-circle { border-color: var(--accent); }
+
+/* Checked → filled with accent + checkmark */
+.task-check-wrap:has(.task-check:checked) .task-check-circle {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.task-check-wrap:has(.task-check:checked) .task-check-circle::before {
+  content: '✓';
+  font-size: 0.78rem;
+}
+
+/* Task text */
+.task-text {
+  font-family: var(--body-font);
+  font-size: var(--task-size);
+  color: var(--text-primary);
+  flex: 1;
+  line-height: 1.35;
+  word-break: break-word;
+  cursor: text;
+  padding: 1px 0;
+  transition: color var(--transition);
+  min-width: 0;
+}
+
+.task-item.completed .task-text {
+  color: var(--done-color);
+  text-decoration: var(--done-line);
+  opacity: 0.7;
+}
+
+/* Starred task: bold text */
+.task-item.starred .task-text {
+  font-weight: 700;
+}
+
+/* Modern theme: starred tasks get a warm amber accent to stand out from non-starred */
+body.theme-modern .task-item.starred {
+  background: rgba(245, 158, 11, 0.07);
+  border-left: 2px solid rgba(245, 158, 11, 0.55);
+  border-radius: 4px;
+  padding-left: 6px;
+  margin-left: -8px;
+}
+
+body.theme-modern .task-item.starred .task-text {
+  color: #fde68a; /* warm amber-tinted white, distinct from cool #e2e8f0 */
+}
+
+/* Notebook theme: make the circle number use the handwritten font */
+body.theme-notebook .task-check-circle {
+  font-family: 'Caveat', cursive;
+  font-size: 0.82rem;
+}
+
+/* Task edit textarea */
+.task-edit-input {
+  font-family: var(--body-font);
+  font-size: var(--task-size);
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: none;
+  border-bottom: 2px solid var(--accent);
+  outline: none;
+  flex: 1;
+  padding: 1px 2px;
+  width: 100%;
+  line-height: 1.35;
+  resize: none;
+  overflow: hidden;
+  min-height: 1.5em;
+  display: block;
+}
+
+/* Star button */
+.star-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 1px;
+  line-height: 1;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 3px;
+  transition: opacity 0.15s, color 0.15s;
+}
+.task-item:hover .star-btn    { opacity: 0.6; }
+.task-item.starred .star-btn  { opacity: 1; color: #f59e0b; }
+.star-btn:hover               { opacity: 1 !important; color: #f59e0b; }
+
+/* Due date chip */
+.task-due {
+  font-family: var(--ui-font);
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  background: var(--accent-light);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 4px;
+  transition: all 0.15s;
+  line-height: 1.5;
+}
+.task-due:hover   { border-color: var(--accent); color: var(--accent); }
+.task-due.overdue { color: #e74c3c; background: #e74c3c18; }
+
+/* Add due date button */
+.due-add-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 0 1px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  transition: opacity 0.15s, color 0.15s;
+  line-height: 1;
+}
+.task-item:hover .due-add-btn { opacity: 0.5; }
+.due-add-btn:hover             { opacity: 1 !important; color: var(--accent); }
+
+/* Inline date input */
+.task-due-input {
+  font-family: var(--ui-font);
+  font-size: 0.63rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 1px 3px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  outline: none;
+  flex-shrink: 0;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+/* Task delete button */
+.task-delete-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 0 2px;
+  line-height: 1;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.task-item:hover .task-delete-btn { opacity: 0.6; }
+.task-delete-btn:hover             { opacity: 1 !important; color: #e74c3c; }
+
+/* ── Notes button ── */
+.notes-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: 0 1px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 3px;
+  transition: opacity 0.15s, color 0.15s;
+}
+.task-item:hover .notes-btn     { opacity: 0.5; }
+.task-item.has-notes .notes-btn { opacity: 1; color: var(--accent); }
+.notes-btn:hover                { opacity: 1 !important; color: var(--accent); }
+
+/* ── Notes panel (below the task row) ── */
+.task-notes-panel {
+  display: none;
+  margin: 5px 0 2px 26px;   /* indent to align under task text */
+  padding: 7px 10px;
+  background: var(--accent-light);
+  border: 1px solid var(--rule-color);
+  border-radius: 6px;
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+.task-notes-panel.open { display: block; }
+
+/* Notes view — rendered text with linkified URLs */
+.task-notes-view {
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 6px;
+}
+.task-notes-view a {
+  color: var(--accent);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+/* Notes edit textarea */
+.task-notes-edit-input {
+  width: 100%;
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  background: var(--card-bg);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 5px 7px;
+  outline: none;
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.5;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* Notes action buttons row */
+.task-notes-actions { display: flex; gap: 6px; }
+
+.notes-action-btn {
+  font-family: var(--ui-font);
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--text-muted);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.notes-action-btn:hover    { border-color: var(--accent); color: var(--accent); }
+.notes-action-btn.primary  { background: var(--accent); color: #fff; border-color: var(--accent); }
+.notes-action-btn.primary:hover { opacity: 0.85; }
+
+/* Task sortable states */
+.task-item.sortable-chosen { background: var(--accent-light); border-radius: 4px; }
+.task-item.sortable-ghost  { opacity: 0.3; }
+
+/* ============================================================
+   ADD TASK AREA
+   ============================================================ */
+.add-task-area {
+  padding: 6px 14px 14px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.add-task-input {
+  flex: 1;
+  font-family: var(--body-font);
+  font-size: var(--task-size);
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.add-task-input:focus { border-color: var(--accent); }
+.add-task-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+body.theme-notebook .add-task-input {
+  border: none;
+  border-bottom: 1px dashed var(--text-muted);
+  border-radius: 0;
+  padding: 4px 2px;
+  background: transparent;
+}
+
+.add-task-btn {
+  background: var(--add-btn-bg);
+  color: var(--add-btn-color);
+  border: none;
+  border-radius: 6px;
+  width: 28px; height: 28px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.add-task-btn:hover { opacity: 0.85; transform: scale(1.08); }
+
+/* ============================================================
+   SKELETON LOADER
+   ============================================================ */
+.skeleton-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 12px;
+  width: 300px;
+  height: 200px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-family: var(--ui-font);
+  width: 100%;
+}
+.empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+.empty-state p { font-size: 0.9rem; }
+
+/* ============================================================
+   ERROR TOAST
+   ============================================================ */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #2d3748;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s;
+  max-width: 320px;
+}
+#toast.show    { transform: translateY(0); opacity: 1; }
+#toast.success { background: #276749; }
+#toast.error   { background: #9b2335; }
+
+#update-banner {
+  z-index: 10000;
+  background: #4338ca;
+  color: #fff;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+}
+#update-banner button {
+  background: #fff;
+  color: #4338ca;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-family: var(--ui-font);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+#update-banner button:hover { opacity: 0.85; }
+
+/* ============================================================
+   COLLAPSE / EXPAND TOGGLE
+   ============================================================ */
+.collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+  padding: 2px 3px;
+  line-height: 1;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: color 0.15s, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(0deg);
+}
+.collapse-btn:hover { color: #fff; }
+.list-card.collapsed .collapse-btn { transform: rotate(-90deg); }
+
+/* Animated body wrapper */
+.list-card-body {
+  overflow: hidden;
+  max-height: 3000px;
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.list-card.collapsed .list-card-body { max-height: 0; }
+
+/* ============================================================
+   DELETE LIST BUTTON  (header — only shown when list is empty)
+   ============================================================ */
+.list-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.35);
+  font-size: 0.75rem;
+  padding: 2px 3px;
+  line-height: 1;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.list-delete-btn:hover { color: #ef4444; }
+
+/* Light themes (Notebook, Rose) — header buttons use dark tones so they're
+   visible against the cream/white card backgrounds.                         */
+body.theme-notebook .collapse-btn,
+body.theme-rose     .collapse-btn {
+  color: rgba(0,0,0,0.28);
+}
+body.theme-notebook .collapse-btn:hover,
+body.theme-rose     .collapse-btn:hover {
+  color: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.05);
+}
+body.theme-notebook .list-delete-btn,
+body.theme-rose     .list-delete-btn {
+  color: rgba(0,0,0,0.18);
+}
+body.theme-notebook .list-delete-btn:hover,
+body.theme-rose     .list-delete-btn:hover { color: #e74c3c; }
+
+/* ============================================================
+   ADD NEW LIST CARD
+   ============================================================ */
+.add-list-card {
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
+  height: 76px;
+  background: transparent;
+  border: 2px dashed var(--text-muted);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--ui-font);
+  font-size: 0.88rem;
+  font-weight: 500;
+  gap: 6px;
+  opacity: 0.5;
+  transition: opacity 0.2s, border-color 0.2s, color 0.2s;
+  align-self: flex-start;
+}
+.add-list-card:hover {
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ============================================================
+   PRIORITY CARD — starred tasks aggregated across all lists
+   ============================================================ */
+
+/* Slide-in animation when the card appears / updates */
+@keyframes priorityAppear {
+  from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);     }
+}
+
+.priority-card {
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: default;
+  border-radius: 12px;
+  transition: box-shadow 0.2s, background var(--transition);
+  animation: priorityAppear 0.28s ease;
+  /* Not draggable — no list-card-header handle */
+  /* touch-action: pan-y — browser-level instruction: always allow vertical
+     scroll on this element. This bypasses any JS event listener (including
+     Sortable.js's non-passive touchstart on the parent board) that would
+     otherwise preventDefault() and swallow the scroll gesture. */
+  touch-action: pan-y;
+}
+/* Propagate pan-y down to every child so no descendant element blocks scroll */
+.priority-card * {
+  touch-action: pan-y;
+}
+
+/* ── Notebook theme ── */
+body.theme-notebook .priority-card {
+  background: #fffdf5;
+  border: 2px solid #f59e0b;
+  box-shadow: 3px 4px 18px rgba(245,158,11,0.28), 0 1px 4px rgba(0,0,0,0.1);
+  background-image: var(--paper-lines);
+  background-color: #fffdf5;
+}
+
+body.theme-notebook .priority-card:hover {
+  box-shadow: 3px 4px 22px rgba(245,158,11,0.38), 0 1px 4px rgba(0,0,0,0.12);
+}
+
+/* ── Modern theme ── */
+body.theme-modern .priority-card {
+  background: #1e2130;
+  border: 1px solid #f59e0b55;
+  box-shadow: 0 0 0 1px #f59e0b22, 0 4px 28px rgba(0,0,0,0.45);
+}
+
+body.theme-modern .priority-card:hover {
+  box-shadow: 0 0 0 1px #f59e0b44, 0 6px 32px rgba(245,158,11,0.12);
+}
+
+/* ── Card header ── */
+.priority-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 10px;
+  gap: 8px;
+}
+
+body.theme-notebook .priority-card-header {
+  background: #b45309;
+}
+
+body.theme-modern .priority-card-header {
+  background: linear-gradient(120deg, #78350f 0%, #b45309 60%, #d97706 100%);
+  border-bottom: 1px solid #f59e0b44;
+}
+
+/* ── Card title ── */
+.priority-card-title {
+  font-family: var(--title-font);
+  font-size: var(--title-size);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+body.theme-modern .priority-card-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Count badge (inverted to show on coloured header) ── */
+.priority-card .task-count {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+/* ── Text + source label stacked vertically inside the flex row ── */
+.priority-task-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Inside the column wrapper, task-text doesn't need its own flex:1 */
+.priority-task-body .task-text {
+  flex: none;
+  width: 100%;
+}
+
+/* ── Source list label — sits below the task title ── */
+.task-source-label {
+  font-family: var(--ui-font);
+  font-size: 0.57rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #b45309;
+  background: #f59e0b18;
+  border: 1px solid #f59e0b35;
+  border-radius: 3px;
+  padding: 1px 5px;
+  display: inline-block;
+  align-self: flex-start;
+  line-height: 1.6;
+}
+
+body.theme-modern .task-source-label {
+  color: #fbbf24;
+  background: #f59e0b12;
+  border-color: #f59e0b28;
+}
+
+/* ── Priority items always show star button ── */
+.priority-card .star-btn {
+  opacity: 1;
+  color: #f59e0b;
+}
+
+/* ── Subtle left-edge accent on notebook priority items ── */
+body.theme-notebook .priority-card .task-item {
+  border-bottom-color: #f59e0b22;
+}
+
+/* ── Rule colour inside modern priority card ── */
+body.theme-modern .priority-card .task-item {
+  border-bottom-color: #f59e0b14;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+/* ============================================================
+   RESPONSIVE / MOBILE
+   ============================================================ */
+@media (max-width: 640px) {
+  #board { padding: 12px 8px; gap: 12px; }
+  .list-card { width: 100%; max-width: 100%; min-width: unset; }
+  .priority-card { width: 100%; max-width: 100%; min-width: unset; }
+  #app-header { padding: 10px 12px; gap: 8px; }
+  #app-header h1 { font-size: 1.2rem; }
+  .header-controls { gap: 6px; }
+  .theme-toggle { padding: 3px 8px; font-size: 0.72rem; }
+  .sync-indicator { font-size: 0.66rem; }
+  /* Always show action buttons on touch */
+  .drag-handle, .star-btn, .task-delete-btn, .due-add-btn, .notes-btn { opacity: 0.35; }
+  .task-item.starred .star-btn { opacity: 1; }
+  .add-task-input { font-size: 16px; } /* prevent iOS zoom */
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+#app-footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid rgba(120, 85, 210, 0.18);
+  padding: 10px 20px;
+  text-align: center;
+  font-family: var(--ui-font);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+#app-footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+#app-footer a:hover { color: var(--accent); text-decoration: underline; }
+
+/* ============================================================
+   PARTIAL-COMPLETE BUTTON
+   ============================================================ */
+.partial-btn {
+  opacity: 0; background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 0.88rem; padding: 0 1px;
+  line-height: 1; flex-shrink: 0; margin-top: 3px;
+  transition: opacity 0.15s, color 0.15s;
+}
+.task-item:hover .partial-btn { opacity: 0.6; }
+.partial-btn:hover             { opacity: 1 !important; color: #f59e0b; }
+
+/* ── Follow-up list card ── */
+.list-card.followup-card { border-top: 3px solid #f59e0b; }
+.list-card.followup-card .list-title { color: #d97706; }
+body.theme-modern .list-card.followup-card .list-title { color: #fbbf24; }
+
+.list-card.ritual-card { border-top: 3px solid #14b8a6; }
+.list-card.ritual-card .list-title { color: #0d9488; }
+body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
+
+.invite-send-btn {
+  font-family: var(--ui-font); font-size: 0.78rem;
+  background: #6366f1; color: #fff; border: none;
+  border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  white-space: nowrap; transition: opacity 0.2s;
+}
+/* ============================================================
+   TASK ACTIONS ROW — slides in below task text on hover
+   ============================================================ */
+.task-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end; /* right-align under task text */
+  gap: 2px;
+  padding: 0 4px 0 0;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.18s ease, opacity 0.15s ease, padding-bottom 0.18s ease;
+}
+/* Show on hover only — consistent for all task types */
+.task-item:hover .task-actions-row {
+  max-height: 30px;
+  opacity: 1;
+  padding-bottom: 4px;
+}
+/* Buttons in actions row are always visible within the row */
+.task-actions-row .star-btn,
+.task-actions-row .task-delete-btn,
+.task-actions-row .notes-btn,
+.task-actions-row .partial-btn,
+.task-actions-row .due-add-btn {
+  opacity: 0.5;
+  margin-top: 0;
+  font-size: 1rem;
+  padding: 2px 5px;
+}
+.task-actions-row .star-btn:hover,
+.task-actions-row .task-delete-btn:hover,
+.task-actions-row .notes-btn:hover,
+.task-actions-row .partial-btn:hover,
+.task-actions-row .due-add-btn:hover { opacity: 1 !important; }
+.task-actions-row .task-due { margin-top: 0; font-size: 0.65rem; }
+.task-item.starred .task-actions-row .star-btn   { opacity: 1; color: #f59e0b; }
+.task-item.has-notes .task-actions-row .notes-btn { opacity: 1; color: var(--accent); }
+/* Always show on touch screens */
+@media (max-width: 640px) {
+  .task-actions-row {
+    max-height: 30px !important;
+    opacity: 0.55 !important;
+    padding-bottom: 4px !important;
+  }
+}
+
+/* ============================================================
+   TETRIS STACKING MODE
+   ============================================================ */
+#board.tetris-mode {
+  display: block;
+  columns: 300px;
+  column-gap: 20px;
+  padding: 24px 20px;
+}
+#board.tetris-mode .list-card,
+#board.tetris-mode .add-list-card {
+  break-inside: avoid;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 20px;
+}
+#board.tetris-mode .priority-card {
+  break-inside: avoid;
+  width: 100%;
+  margin-bottom: 20px;
+}
+/* In tetris mode the task-actions-row must NOT animate height — any height
+   change on a card forces the browser to rebalance all CSS columns, which
+   causes the jittery stacking. Fix: pre-allocate the row height at all times
+   and transition opacity only, so the card's rendered height never changes. */
+#board.tetris-mode .task-actions-row {
+  max-height: 30px;
+  padding-bottom: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+#board.tetris-mode .task-item:hover .task-actions-row {
+  max-height: 30px;   /* already set — keeps specificity parity */
+  opacity: 1;
+}
+
+/* ============================================================
+   ALL TASKS VIEW — flat multi-column list across all lists
+   ============================================================ */
+#board.all-tasks-mode {
+  /* Override the flex-row board layout with CSS columns */
+  display: block !important;
+  columns: 280px;
+  column-gap: 20px;
+  padding: 20px 24px;
+  align-items: unset;
+}
+/* Hide the normal cards when in all-tasks mode */
+#board.all-tasks-mode .list-card,
+#board.all-tasks-mode .priority-card,
+#board.all-tasks-mode .add-list-card { display: none !important; }
+
+.all-tasks-group {
+  break-inside: avoid;
+  margin-bottom: 20px;
+}
+.all-tasks-list-label {
+  font-family: var(--ui-font);
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 0 5px;
+  border-bottom: 1px solid var(--rule-color);
+  margin-bottom: 4px;
+}
+.all-tasks-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 5px 4px;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+.all-tasks-item:hover { background: var(--accent-light); }
+.all-tasks-item.at-starred .all-tasks-text { font-weight: 700; }
+.all-tasks-star {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  flex-shrink: 0;
+  width: 13px;
+  line-height: 1.5;
+}
+.all-tasks-text {
+  font-family: var(--body-font);
+  font-size: var(--task-size);
+  color: var(--text-primary);
+  line-height: 1.35;
+  word-break: break-word;
+  flex: 1;
+}
+
+/* ============================================================
+   LIST TITLE INLINE EDIT INPUT
+   ============================================================ */
+.list-title-edit-input {
+  font-family: var(--title-font);
+  font-size: var(--title-size);
+  font-weight: 700;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--accent);
+  outline: none;
+  flex: 1;
+  padding: 1px 2px;
+  width: 100%;
+  line-height: 1.2;
+}
+
+/* ============================================================
+   HELP MODAL
+   ============================================================ */
+.help-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.help-overlay.open { opacity: 1; pointer-events: all; }
+
+.help-modal {
+  background: var(--bg-card, #1a1730);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+  width: min(900px, 94vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 0 0 24px;
+  font-family: var(--ui-font);
+}
+/* Mobile: use the full screen instead of a floating card, so there's
+   maximum room to scroll through a now-fairly-long list of help cards. */
+@media (max-width: 640px) {
+  .help-overlay { align-items: stretch; justify-content: stretch; }
+  .help-modal {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+  .help-modal-header { border-radius: 0; }
+}
+.help-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  position: sticky; top: 0;
+  background: var(--bg-card, #1a1730);
+  border-radius: 16px 16px 0 0;
+  z-index: 1;
+}
+.help-modal-header h3 {
+  margin: 0; font-size: 1.05rem; font-weight: 700;
+  color: rgba(255,255,255,0.9); display: flex; align-items: center; gap: 8px;
+}
+.help-close-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.4); font-size: 1.1rem; padding: 4px 8px;
+  transition: color 0.15s;
+}
+.help-close-btn:hover { color: rgba(255,255,255,0.85); }
+
+.help-section-title {
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: rgba(255,255,255,0.35);
+  padding: 20px 20px 10px;
+}
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px; padding: 0 16px;
+}
+.help-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; padding: 14px 14px 12px;
+  transition: background 0.15s;
+}
+.help-card:hover { background: rgba(255,255,255,0.09); }
+.help-card-icon { font-size: 1.6rem; line-height: 1; margin-bottom: 7px; }
+.help-card-name {
+  font-size: 0.82rem; font-weight: 700;
+  color: rgba(255,255,255,0.88); margin-bottom: 4px;
+}
+.help-card-desc {
+  font-size: 0.72rem; color: rgba(255,255,255,0.45); line-height: 1.4;
+}
+.help-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 20px 4px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  margin-top: 8px;
+}
+.help-version {
+  font-size: 0.72rem; color: rgba(255,255,255,0.28);
+  font-variant-numeric: tabular-nums;
+}
+.help-feedback {
+  font-size: 0.72rem; color: rgba(255,255,255,0.28);
+}
+
+/* Help button in header */
+.help-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.45); font-size: 1rem;
+  padding: 6px 8px; border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  font-family: var(--ui-font);
+}
+.help-btn:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.08); }
+
+/* ============================================================
+   THEME CHIPS (in settings Display section)
+   ============================================================ */
+.theme-chip {
+  font-family: var(--ui-font);
+  font-size: 0.74rem;
+  padding: 5px 11px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.theme-chip:hover { background: rgba(255,255,255,0.13); color: #fff; }
+.theme-chip.active {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ============================================================
+   COMPACT THEME
+   ============================================================ */
+body.theme-compact {
+  --bg:            #0f1117;
+  --bg-secondary:  #1a1d27;
+  --card-bg:       #1a1d27;
+  --card-shadow:   0 2px 10px rgba(0,0,0,0.3);
+  --card-border:   1px solid #252a3a;
+  --header-bg:     #0d0b1e;
+  --header-text:   #e8e2f5;
+  --title-font:    'Inter', sans-serif;
+  --body-font:     'Inter', sans-serif;
+  --ui-font:       'Inter', sans-serif;
+  --title-size:    0.78rem;
+  --task-size:     0.8rem;
+  --text-primary:  #cbd5e1;
+  --text-secondary:#94a3b8;
+  --text-muted:    #64748b;
+  --accent:        #818cf8;
+  --accent-light:  #818cf818;
+  --done-color:    #475569;
+  --done-line:     line-through;
+  --rule-color:    #25303822;
+  --add-btn-bg:    #6366f1;
+  --add-btn-color: #ffffff;
+  --tag-bg:        #312e81;
+  --tag-text:      #c7d2fe;
+  --input-bg:      #1e2130;
+  --input-border:  #2d3348;
+  --scrollbar:     #2d334888;
+  --paper-lines:   none;
+}
+/* Tighter padding in compact mode */
+body.theme-compact .list-card { border-radius: 8px; }
+body.theme-compact .list-card-header { padding: 8px 10px 5px; }
+body.theme-compact .task-list { padding: 2px 10px 4px; }
+body.theme-compact .task-item { padding: 3px 0; }
+body.theme-compact .add-task-area { padding: 4px 10px 8px; }
+body.theme-compact .task-check-circle { width: 17px; height: 17px; font-size: 0.6rem; }
+/* compact theme — row stays right-aligned, no override needed */
+
+/* ============================================================
+   OCEAN THEME
+   ============================================================ */
+body.theme-ocean {
+  --bg:            #040d1a;
+  --bg-secondary:  #071e34;
+  --card-bg:       #0b2540;
+  --card-shadow:   0 4px 20px rgba(0,20,60,0.5), 0 1px 4px rgba(0,10,30,0.4);
+  --card-border:   1px solid #1a4a70;
+  --header-bg:     #021222;
+  --header-text:   #93d8f5;
+  --title-font:    'Inter', sans-serif;
+  --body-font:     'Inter', sans-serif;
+  --ui-font:       'Inter', sans-serif;
+  --title-size:    1rem;
+  --task-size:     0.9rem;
+  --text-primary:  #bde3f5;
+  --text-secondary:#6bb8d4;
+  --text-muted:    #3d7a9a;
+  --accent:        #0ea5e9;
+  --accent-light:  #0ea5e918;
+  --done-color:    #2a6080;
+  --done-line:     line-through;
+  --rule-color:    #1a4a7033;
+  --add-btn-bg:    #0284c7;
+  --add-btn-color: #ffffff;
+  --tag-bg:        #0c4a6e;
+  --tag-text:      #7dd3fc;
+  --input-bg:      #0a1e30;
+  --input-border:  #1a4a70;
+  --scrollbar:     #1a4a7088;
+  --paper-lines:   none;
+}
+body.theme-ocean .list-card:hover {
+  box-shadow: var(--card-shadow), 0 0 0 2px rgba(14,165,233,0.2);
+}
+body.theme-ocean .priority-card-header {
+  background: linear-gradient(120deg, #064e3b 0%, #065f46 60%, #047857 100%) !important;
+}
+
+/* ── Compact theme priority card ── */
+body.theme-compact .priority-card {
+  background: #1a1d27;
+  border: 1px solid #f59e0b55;
+  box-shadow: 0 0 0 1px #f59e0b22, 0 4px 20px rgba(0,0,0,0.45);
+}
+body.theme-compact .priority-card:hover {
+  box-shadow: 0 0 0 1px #f59e0b44, 0 6px 24px rgba(245,158,11,0.12);
+}
+body.theme-compact .priority-card-header {
+  background: linear-gradient(120deg, #78350f 0%, #b45309 60%, #d97706 100%);
+  border-bottom: 1px solid #f59e0b44;
+}
+body.theme-compact .priority-card .task-item {
+  border-bottom-color: #f59e0b14;
+}
+
+/* ── Rose theme priority card ── */
+body.theme-rose .priority-card {
+  background: #fff8f0;
+  border: 2px solid #f59e0b;
+  box-shadow: 3px 4px 18px rgba(245,158,11,0.22), 0 1px 4px rgba(190,50,90,0.08);
+  background-image: none;
+}
+body.theme-rose .priority-card:hover {
+  box-shadow: 3px 4px 22px rgba(245,158,11,0.32), 0 1px 4px rgba(190,50,90,0.10);
+}
+body.theme-rose .priority-card-header {
+  background: linear-gradient(120deg, #92400e 0%, #b45309 60%, #d97706 100%);
+  border-bottom: 1px solid #f59e0b55;
+}
+body.theme-rose .priority-card .task-item {
+  border-bottom-color: #f59e0b22;
+}
+body.theme-rose .task-source-label {
+  color: #92400e;
+  background: #f59e0b14;
+  border-color: #f59e0b30;
+}
+body.theme-rose .priority-card .task-text { color: #4c0519; }
+
+/* ============================================================
+   ROSE THEME
+   ============================================================ */
+body.theme-rose {
+  --bg:            #fff1f5;
+  --bg-secondary:  #ffe4ec;
+  --card-bg:       #ffffff;
+  --card-shadow:   2px 3px 14px rgba(190,50,90,0.09), 0 1px 3px rgba(190,50,90,0.06);
+  --card-border:   1px solid #fecdd3;
+  --header-bg:     #881337;
+  --header-text:   #ffe4ec;
+  --title-font:    'Inter', sans-serif;
+  --body-font:     'Inter', sans-serif;
+  --ui-font:       'Inter', sans-serif;
+  --title-size:    1rem;
+  --task-size:     0.9rem;
+  --text-primary:  #4c0519;
+  --text-secondary:#9f1239;
+  --text-muted:    #be185d;
+  --accent:        #e11d48;
+  --accent-light:  #e11d4814;
+  --done-color:    #fda4af;
+  --done-line:     line-through;
+  --rule-color:    #fecdd344;
+  --add-btn-bg:    #e11d48;
+  --add-btn-color: #ffffff;
+  --tag-bg:        #fda4af;
+  --tag-text:      #4c0519;
+  --input-bg:      #fff;
+  --input-border:  #fecdd3;
+  --scrollbar:     #fecdd388;
+  --paper-lines:   none;
+}
+body.theme-rose .task-check-wrap:has(.task-check:checked) .task-check-circle {
+  background: #e11d48;
+  border-color: #e11d48;
+}
+</style>
+<meta name="google-site-verification" content="r_E0wsAVoAGO0nZd9JJ77yRm8mWRoDS5HXWxsi_MVHY" />
+</head>
+<body class="theme-notebook">
+
+<!-- ── HEADER ── -->
+<header id="app-header">
+  <h1><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABmJLR0QA/wD/AP+gvaeTAAAgAElEQVR4nO2de7QlVX3nP7vq3Me53bcfNA3dQDcNNA9pFJtuDAIKKEaDTkwmg4mQcYmPWZnoaHDNLGXECKNGXZM4yziYZYJGlxpnbJMscYyIDwzdikFEUVEQu+HyfjT9vs9zav/mj6pzbtU5VXXqnntefffvsxbc2lW//ajdv++vdlXtUxsURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURekeImLkwIdXy76PrOx3WxSll5h+N6CfiNzgMVn+IPBOYCzaCRAAh0AqwBFgFpgCmQGmEabCfTIJzAGHwVbBHAITYOwBECHw9kNgwTuI2ABjDmFtBY8jDJdmmfOnWDkyY8y7pvtw+orieAA4/NG3Y/hEmKj/r3a00ZrF2WXkq++SKTBRUJEoqFAlDEQBwgFAELsfD4s1B/FMAMEhxFQwHEHsLNabwjCDDaYx/hR+MEvVTFKSOXxzmECqrNx9yJgdQcsOUpY8bgeAIx/9V+ClAyD+/DIXZdeQlsSxA9GO/RgscBCRcPRjTQVjw9GPMVNIEI5+jJlCJAxU4oWBSqSKBIfwvShQBYL192PFUp49SFAKzJpPHEIZONwOAJMffRDL5mxhScNmL8W/gCAhBdrVZJdTZmG7Fu1K75MwkCAzINOImcHINDCDMI2R8G/NTmQGY0J7YX9oa2awMo2xMxhvGhPMUPWnMdUZvNI0nj/DVDDNxr060mmB2wHg8EceBU6K7SF1uyvi79AI4egSf3aZRewk51jiUOJY7DmNqYJMIPIZc8LNX0DB63cD+kx5fnPAHL1r4heyz7Xb4k+pW9LsUvK1J36AZcBqkI1gTwW5DMPn5fE3vx1FA0D4pweOnmqXkq99R0+vu+MjhLx2xeou0nepQS4lX6E+kRZ9Ek8KGG4QcXsEDA4HABExwGjPHL1n4i9i15DumPjJONdeiL+IHfFzXcPjbzgGx3E2AMCNIyCx81+go7e0i9L9vMrltSvVLqdMyRjVxLdTz7UTfdKi7nYDZ0lmcJxSvxvQNw6OlPFriU5fDaN0W45exK5F3W0/G0ixKzJySexqp0+6HThJP9fjZ5wPAO6OAIa85vv/IuLv2hBXxZ9vl5JvcX0yp68IXR4BVEwZvw3xZx2LpwfL0RdgF0t3TPyd6LuUfEX6JP/fVKdf43IA8CtlMEvD0QsLokC7Uu0y8vVkhJCSb/HiB9AAgMu3AJ5XVvGn5Btk8UujXdviR0cAIe6OAKwpg23YOSCOvhBBtGpXfbMd8XciSBQos4hdx99qGA0AOB0AgvL8NJABcvSeir/bI4QCZfZF/KAjgBB3A4CR0fCnEEve0RdpF0t3rE+koZhe9kltWwMAOB0ATDnTaTrp6IXs6KKjt7Jr0a62+qSFXVfFX7jvnJ8DAC4HALHl5I8hu+DoiV19c/Tsujsp/tTzzLNrUXfX+0TfAoDLAcCYcpPTLr2rXHbdbYs/xa5n4u/oqEkDAC4HADHl0BEW4Oipdin5BsvRU+zy6ltgkOio+LsdOGPHjL4FAJcDgJH5ZwBL2dGb7Fq0K7FrSfeJBgBcnggUVMNPgDslfsk+1nXxt6i7k30iaXaNaasBAEcDgMgNHpUjV3VH/D109FS7DFH35LcOeX2SU/ei+yRWd5F/UwCrtwDgaABgz69fhrUnHNWOnmsXSzcJIqPuRYu/iF1Kvo70SXyzcJ9oAMDVZwDGrk99BRhPLx1Hz29XYleLuvvRJ917q6EBAGcDgPcMXi0AdMfRn3p4FffctonxY6e48DUP4g/ZFNt2BFGgXal2Gfl6MkJIyVfErpuvNPUtAOBqAEAmwruf7jj6ow+s4a//8yuZnQ6796F7j+MNN9zRXEZqeTl1LwXxD8x8Bn0ICK4+AyhVJzBZswATGyzU0Y/sH+Xmd19SFz/APd85BbEZtxyJn7jm1N22o0t6vp6Iv6HugfpCsY4AwNEAYDbsmMaYSpjqnKMHVY/PvPel7H96eSLXcRsOYjxpztePT3Gn2mXka9knUd1F+q4frzTrm2nHNACAowEAAOPPddrR//nj2/nNT9YlqvGHLK+/7vvN+ZbKL/r6Jv4idjnHTKABAGefAQCG8IOQhcTf2u6ub5zGHV85q6maK9/1b5zy/Gfpm6PH0wsSfws7yTmWONSO+DsRJFq0S0cAgNMBwEhRR5+bKTE8Wm0+FjFx37H8n49c0FTFxb9/Pxe+9oGErQQBkwcOYG0V43kY4+H50d+Sh2c8vJIPInj+UOxRRafFn2KXGuRS8i1a/N0eIbSoD4GqpwEAlwOAeAaT71BH9o1y83suYc/P1nLSGfu45kN3sPakwwm7Q8+Vufk9l1Kd8xMlnXru0/zBtXclbGcOH2Livp9RnZ2j2SnjVc8fM8bglcJ/Js/38TyD5/vzgQOD8f35IOKb6K+P8Qye54Vl+D7GGPxSCRHBHyphMPhDPgL43rx9Xp8c3eJPjOb0ewC4HACM57e6v73tc+ew52drAXjs18dw0ztewbWf+gYr104BUJ3z+fR7LuHg3rFE0auOm+TNf3E7fin22XkRHv3lfQsSf5gUgkr4vLL2N73NRfZn2DaYh4EgDAj1kUlttBIFIADPL2EM+KUw7ZdKYMD3fYyZP248H8+A8WsjnLAsYwjL9RpfyTacQ+FpzEXtgAP7x1t0jBO4GwCww/OzAdOvcof3jSZy7HtyGTe943Le+TffZNmqGXb85Yt46BfHJWyGhgPe8uHvMr46NsIUYXZqkrmZaRYi/hzDNo+l2KaYixUCGws2swtoS+YIIRvP91h57BrWnXISnufTdfEjMHXkB/L9lzyG4W958c4PGdP0hVgn8FubLD1ErvSZPe7GKBU/kkguXzXDj249hXAd0ZAjB0Z58J71TB0e5jtfOKep7Kvfu4uzX/x4vLLwT2B57vFH8xpVtPVtHkuxzTRvsy1tiB8EEWFmcpLZyWlWrj0mlr2dZxsZ+Rqfbxw6BCIrgMt4ZOPIjZ955DsFG7ykcPM14NMnR5f2LPELIGze+jRXX39n7B1+yCO/WsMtN21rKvayP7qP81+1O1bkfL6h0RHGVqxKb8/AiF8WUE5nxB/n8P4DVGbnui9+SPa5MW+X+7YMF2z0ksLNADC2vJwv/nnOf9Vufv8dd7cs8oztT/Lat/0oVmSzI27Ycg7LV69OZuyp+COBZ4q/KJ0Xf43qXIWuix9p7PflPLM2+SDHEdx8BlCplPFrdz/Z4q+lL/3DXzF1aJhbP3NuanHHrJvkjTd+D6+21mDGk+3SUImTn38u1UqFYHYOawPEBlgr2CB8zWirVQQhqFSB2oM/IagGiAg2CBCx9XzhX4utBoi1iFhsEP5NO5dBFr9fKjGybDTHrh3xp9g1B9295rLvHchr8VLFzQAwNFTGWoqIv7Z9xVt+ytThYe7Y8byE1fBolbd+9NssXz3TUF5zGTVKpSFKpVKGXSy9SEcPA4wQBFUMEFSq4VuFahVjojRR8KgFDmujIDMfbGr754NLGLCsFWw1COsKgoKDmXQjz3icuHkTnvEy7LLOtY2+a2yo0HqIt0RxMwAE0apABcVfS/7BO+9i+vAwP7r1NACMJ1x9/U5OPH1fylUlw0nbduCFO7rn+eBJ+JpOYGh4pHWZRfokY4QjAjYI3x7YIMAG8WBi50cu0XY4grF4vs/4qhUMjQw315V7rm0GzsbRkcdPcBQ3A4Bny9gWV5radkwQxoM/vn4Xm7c+zWO/Xs25l0xwxvYnB1L8zXYFyixilzNxxxgJ5wIQzgVo2a76ZlaZnei7lHxNgxDRAOAU1k9+EhwoKgjjCS/+dw/EzDoh/i45emJXTt2JYtoTf/YIIafMfi1gYhtGAGLvwVHcDABiy4kvgi1FR0/sUvEnzjVZ90Eu/MEeHMXNAOBJGUmbBcjScPSidl0Vfyf6rkW7MkZpLe0ScwD4iTHNNwWu4GYAsF45/CHQUeToRe1SBZGSb9Hi73bgzKuv6AgnSjfaxR8CCs4O/8HVAOBJ88rAg+zoLe2itIq/ufw0u2Q7nH0ACK4GAJFyQzqeyNjOs2tID4qjp+UrJP5OBImGdLd+1JNXd1afxJOBjgDcwzBad7Z+OHpRu66Jv9sjhIb0oC1gYuv7pnhqXeyVjnu4GQBqI4Al6+gp+foh/twRTp5dRr5OiB/ibb/XvG5H7KMN7uFoAKDcuCN9m6NQ/J0IEi3KPOpXL4oeAoo4PfwHZwOAlOc/trdIR0+x2/v4Cn749TMZG5/jotfex8hYpU+O3mHxD/IrzcSuVn1S2+c5/QAQXA0AxmsxE7CoIJqPPfvYCj72J7/H5IHwV2333bmB//Lxr9EZB1bx59sVqFuYPxfP7QeA4Or3AJDm7wHEt9sU/+zUEDdf99t18QM8eM8JHDmQ/LRYvqP3S/w5dfdkPkOXxR9fgSl8CDjHyufuw3EcHQFQTnWaRTi6iOHzH7yMJx86JlHCimOmGRufiWdsLrMbV7lWdoM8nyHVLiNfO+capn9httw3h+O4GQDq8wA65+jf/OxWfnbHpkQJxhOuuu726EMhKv7ei18aiknkc374D64GACh30tF/vutkvvH3zd8IfM1b7+LsCx6hb47etE0XxN+JIBFLF+mT1P7Is0trs7s/AY7jaACIzQRs4cCzU0MMl6s0fzU6tHv64dV8/gOXNaz+C1tftpvLr/5pojyxlsmDB8PPfwn1xTq8Um3RDg+orRQUHl+YIFKOJQ61I/5ujxBi6V6Iv3YLoK8AAWcDQDQPIMeBZ6dKfPq9L+f+u07i2BMPcc3/+A4bztybsJs+MsLfXffbzEwmPyh74ubnuPq62zFmPmjMTk/zyC9+Ea0N0Ip5BzZetChHtAqQPxQGi3C/wfOiD3CUSvNBo744h8GLgoqfWEWIaJGPKNh4YcDJ/4hHQ7rfv+jLq7tlQBTL5LKfozgaAAzl2HRQ0hzqjn88m/vvOgmAvY+v4JPvuoJ33vQ11m3aF1pYw+duuIxnHl2ZyLls5Qxv+YtbGR5NruLzxAMPLFj8YT2WwFqohscquYt0ZJxPpiDS8aMg4kUr/NS/8lPygHDVIM8Lg1C4ilB8uTITLUUWBhyv5IEYSkMlRsZGMI3zL3oufkCYMK+8bbJlRziAmwHA2nL6qkDz6SP7k5MFJw+OcNO1v8Of3XQLa044zP/7u+388ocbEzaeL1xz47dYs/5QorygWmHq8CFa0+jAze0qVEZmslgZQRB9kbhajfbEo06BMjLEOjw6zEmnn0J5eeMz2B6KHwHML7Oa7hqOzgMwzW8BGtIXvOZ+hkeqiaMHn13GJ6+9gjv+cQvf/sILm0p97Z/eyRnbHmsqz5jwapjPYIg/366o+CXVdm5mjkd+vRsrtovib6w71U6H/xGOBoCGtwBA4/3t+lP289aP3kZpKPlbkWcfX8lX/tdFieXCAM5/5YNc9rp7m8uT8Ou8K45dk9OcpSb+bIPqbIXpg1MpZS7k2cAiHwwa+WlOI53C0QAgDVPz0h9unbn9Mf74+u/h+fnrRm4861n+6L99r7m8mGOecPrprFhzbMo4IEv86VfRdI4O8ddp+hpTjx8MemV9AxDh3DMAkRuG2TcVe9ydLv7a/vNevpvKbIl/+PBLm676AOOrp3jzh25lqH67kP5wy/N9NjzvTILqadigSrVSBSxBxUK00Ea48EbzohzWBkgQfkPf2gAbhItxBFUb/a3W8yDhKkJN55bfK20ei5sUK6NUKjE2PpZ6LKvv0ttRUPxpbyvK3lM5jXUK5wIA+54bDd8CNl41s53tt664n8P7R7nlb34rsd8vWd70wdtYfdyRZL4cB/ZLJfySz9DISFevcvPBBMRWo0BSW5hD6iv9BFHQqAWeejpaiiyoBmBqS5aBrVoEGy1VZpFAonKzAkBM/MNDbDxjEyZ19Z9uiz+2fWTdDArgYgCojpcpxV7RNV290h3q8qt+ytShEb79xfmHf//hz3Zx2gueTOZLvRp22dFT7MKJRaUoHQ14ujxxpx5grIQjkaCKWMFWLZ4Po2NjGC/nZ9i9ED9Ys/1vk+9oHca9ADBsy/VJfQt09N/9kx+y8axneOjn6zjz/Eejab7NdqllNNkVqHtxjp5jl1N3m+IHwfMMeKUo3AhDDHW2Tzrz7cZCMylcwb0AENjYuoALd/QXXrqbF166u6Vdc5mdEP+CHD3DLqfM3D7pRJDIyNfyXKWhmMX0iUyh1HEvAKT9EnCQHL2QHUtD/IVE3UnxAxidARjDvQDg500DXipXuTS7nDKP1h/1JA4V7pMi87Gdwb0AYONrAvRS/D139Dbscupuu09S7Hom/lQ7DQAx3AsAQrQw6FJy9Ib00bJGX17d3RE/aABI4F4A8ChnOs1RKf5OBImcMnPPVRp29bJP2u47DQAx3AsAknELUMTRW9pF6cFw9Oy6B2mZrsxz7VLgFB0BxHEwAKTcAvR1ma68MlX8+XYt6k7rE08DQBz3AkDjLYAra/QVGbmk2mXkW1SfdDlw5p6r3gLEcS8A1JYF65KjH3hmGTu/+gJ8z/KSf38v46unUu26L/6igoilO9YnfRw15Ysf9BYggXsBgNqaAJ0X/8G9Y3zsba/jwDPLAfjpv57Ge/7+i/OfBVfxN5dfpE86Op9BRwBx3PsegLT4GMiCHH3egasVj0+/74q6+AGemljDUxPHUNjRC1/lpI/il5wyuy3+nLqLBgmMBoAY7o0AREaTX+XIc/QiduHGjo9dxsO/XJ/IMTI2x+rjDrch/k5cDXOOxdM9HyFE6bbEX8Qup24BjN4CxHEvAHgZy4ItwtF3/vMLuPNfzm6q6nXXfpfyslkaMjSnB3nWXqpdRr4i4u/3fAZ9BpDAvQCQdwvQhqPv+fl6/ul/v7Spmpf94Y85/xX3Z5dRT/ZS/J0IEhn5WopfGorpZZ8k9uvHQGK4FwCwye995zj67HSJoeFqcm2/mKPvf2acT7/v1QTV5KOUM7c9wu/+p10N5QuThw5SmZ2LVv7xosU5wu/r+374jf1wkQ6DX4p/tawdR8+zyzmWaHPOsdp2IVEPivgBfQiYwL0AkLYycIOjVys+n7vxFdx7x2mMr57iP77vW5y1/ZGE+CuzJW6+/tUc3h//vh2sWX+IN77/XxJBozI3x8QvfsXsdOyVYKYgkoSBIFpowzPRoh0G3/fAmHDVIM/Dqy3GYQzG9/CMh1fyMFDf7/klkHCBj/kFPyR23M/sk+Z2Ck392NIu5VjiUDviX2CQEE8DQAz3AkBtHkCOo9992+nce8dpABzeP8bN113Bn/7lLZz6gsfrNl/6ny/n0QeOS+QbHq3y1g/ewrIVM4kyn9yzpy3xA/UPfAbVPLv8MpJm+eWEq/n4GAgDSW0JsmiVoPoIJVpGLFwtKAxUnuexbNVyRkZH5itctPg7PUKwegsQw70AEF8TIGMoPHkoeZcwNzvEp657De/4+D9x4uZn+e7/PY+7v3VmwsYY4er3fJMTTtvbVOaRfQcbq0hL5NBt8UtsS+ZXBKpm2GZWKRhjOH7jetasXzOA4gd8fwSljoPzACRjJuD89vbLH2D5quRIcfrICJ/8r69l11fP4ZZPXdhU7OVX3c3WSx9MLdPzvcYqGhN5DW7zWKNZa/EXKihH/AAiwtOPPMnczFxGHY23Bx0UvzTapZU5tCqt9a7iXgBInQmYdJqVa4/wtr/6KuXlye9HHt4/xpc/9jJskOy2s86f4NVvujOzzFXHH9sf8dcF0Rvx11MiTB48UmtAhl2Hnw2k/pum5LNmdVPzHcbNAJDnbJFjnrj5Wd7ywa8zNJw6Dq5z3IYDXPP+r+P58SXEkuUfv2EDx6w7Pvokdg/F34nRQ822oPhr+EN5S433QvwZdpa1qQ12FAefAWR9EixKy/z26Vsf45obb+Xm61+NDZpXBRoZm+PNH7ilYaTQ7OjG81h/2iaOP2UDQaWKDYL6Cj/hwh3h9/SDhpV9wnvxWLoSpmv5aqsH1RfzsBYJbPhd/q6LP7uM4dEhxlctz7AtKP5cURe1i6VrdsbTABDDwQBA9srAMfHXOOfC3Vz17m/xxQ+/IrE0mPGEN7z3G6zf9FyyjNTywrTneXgjw811d2Fef22lH7ESBolqw8o/9SXIqlEwsQ1Lk1msCBLY2CpC4TJmQRCEC37YcJXf+kNDY1g2PsaJp56YvfpPIfG3uo9vr0+iRq5DqeNUABDB8CwjqU6TIv7a9ote+Stmjozwlb++pH7k1dfcyfMv2tNcTm27z47u+X7i2NBIo11emUXtonSqXUN6cCYznYhSp9Wi9UsKefTaMiPV5hfyBR39gbs38usfb2DjWU9z7ksfzLDtv/hzy1yQXYG6Fyz+TgSJAu3KsjOrJ82pX1qOArgWAA5eewyz1WjM3gVH7/jVsEC7FmWXka9In/T7Rz1t262GKmvNmV/ai+LYW4BK2izAxAapTppp1+DAKv6Cdg3pXv/QyTcnowCuBQA7W16Qo+eKP57staP3S/zSR/FL9rHCfRcNeI1sQgEcewiI9cp4FHR0so8lDnXD0YvYtWjXQsRfZOTS9T7pxaipjo4AItwaAZTs6LyTqPjdEr9A7TWu0VuAGo6NAEzr7wEuCUdvUUauXUq+RfdJFwNny3NttAOs3gLUcCsASGMAOIocvb5Z1NF7Kf4+jZraET+A0VuAGm4FgPosQDiqxL9gRz+Kxd8U5DLKXJBdbaP+1nsTCuDaMwCxKdOAF+Lo/RK/5LcrsavT4m9Rd1fFn1F3W+JPsFJ2X7mycaeLuBUAvJRbgH44eqpdpx29qPhT6u7kCEFYhPiL2GXkSzuH+LQ3421CcSwAJD4I2umhMMUdveND4RbtyhV/EbuUfEXFnzty6aH4m9qsbwLAtWcAYuZvAXom/qKCiKU7Jv5OBImUfIXEX6D99c1O90mWXex6Z/U5ALgWAGofA1nyjt5oV6DuIn0yyPMZCtnF0LkAgGsBQFp8DCS+reIn+1w7ESQKtGtRdmn5Er990wCAawEg72Mg8e2OXg1zjsXTXQkSLcoc5PkMLe1i6SJ90qR/DQDgXAAwZbCx9BJ09MSunLqLjHBgafRJPZmIAJtQHHsLkHcLsFQcfaDFL9nHFtonkmaXki+1PwA4Vu5/03jjTtdwKwB4kn4LMMiOnmqXki/h6P0Sf07dPfmtQyvxN3z/xp/dgOO4FQDSVgYeZEfPtCt6leu1+IvYZdSdekVfiPiL2DXg6Y+CHHsGIMk1v/QXfc35lvJvHUzT9e7kxh2u4VgAYLS+NchPwPsi/m6PEDLKbOqPPLsW7WrVJ0LDXYB1PgC4dQtgahOB+nSVK/JsYCmIXxrtMsrspfj9cSwNz/z09wCOBQCR8pK/ymXa9VD8TWX0q0+iuv0V2PJLEGkY8FodAbh1CyA53wNI2LUj/qKCyKh70Y5exC4lXxHxp4p6oXaxdMf6pIBdaTUsu4igMoInDes86nRgx0YAqTMBi4o/diVrGuKq+AdT/Gth/CUIw9iqgBefBAbAOnnojaONO13CwQDQrvjjm7129A6LP7GGQU6Z/ZjPkLBbhPiHN8Dyi0F8qrMgYjFNt2sY7PTGxp0u4VgAyJgJKNJH8S/S0ePpouJP7M8Tf0YZHemTjLo7ETiHT4Fl2wEIqkQLokb/NWK8k5t3uoMzAUDkSh8YilLxA42W6dtdE38RuwJ1tyX+InY5dS9K/EXsUvIl4kZKmaNnwLKtoalAdVZAwtWNm6cBAHB86l5HcOch4LNry1DhqHH0xK6cMgd5PkNLu1i6qPjz6iufA6On18+hMiOIBIjY8OqfthKm5YmUvc7gTgCYMyP4R4mjJ3bl1N1KEPVkp8Xfh1FTq3Md2wojm+rJyqxgg3nxCzZN/7s47Uu3N+92B2duATjxpn3APmCwxd9qiBu3a9UuGGzxS5pdSr5EfzSW6cGyFyXFPycEler8lV8s2DkAi/AEsBMxf86y0quMaarcKZwZARiDyJPyfoRPJI8M4lVukVfDerId8XciSLRoV+a5FrWL0qYUin/o+MSVf1784X+CRWwFxksrzLrPT6LUSbsrWtLIE2+6GuFNGDaBlMCMA8Mgy+aNBszRU+1alDmQP+qJ0h0R/xAsfzGU1oSmApUZGxv2R+KvbQdH7LLnfcRHSeBcAGiFPHplGTs0ihktM8IoNigjjDI792kw59YNjWHeMU3UkxJtR3/jDmzStqO0E+LvRJCI0t4ILL8I/JUg4au+ymxS+KH4g/kgEBwKlp/9V86MeIuiHdKA2bBjGpgG9sf3y57X34vIubE95G8XvbWMRYN6UIn/ZT64CM3BA6KAE7epBR9J5k9k7dBty4LtMo7F07niH4Pxi8Bbjg2gOifYIHallwBEkuIXC0E1ZRKAogGgMDLR9QGTwHwdJn1/0bjSsqJopCKxEUl85p8BsJFpXMA2ymsb8tSCjyUhYtNJ8Y/D8ouxUqY6A7ZqgUbxz6fjIwIr9shCesgVNAAUxpvokPoGgFowMSRvVWKk6dTacLxtg3C7GqWDKlQrKbcKtepMMq7V0rV9XtQWj7AMr+G4AbwhgvJmgiMHETlcPyjGC6/s1vNErMGUGsQfvgJEgr0L6yM30ABQFGGi303oOjYm6KAKgZ3fV62GgmqH3N8eFCXAP3gXiad4hl+aC3duSbOe+fGVmytUh7xKaWwm8DzMrD7vSkEDQFHEexhzlN9GNgq8GruiB9XsK/igItyTdWh0247f9LIpRysaAIoyO/sIoyXL4E6eqiD2AMoP9B4AAAK3SURBVEFQJQiGqFZWUQ1KCcEvOeQn/W7B0Y4GgIKYLTvm5DevfwrDCX1qwiyGxxH2YGQP4j2J8ASGPQTs4fTKhDE76kMUuf3SEkOVM/HMNsTbhrANeCGGZTl1HF2IrwFgkeh90QKQ3a/fCVzcpeIPARPAwxgeDrdlApEJZHjCbP78M4utQL58pc/6J08GtuB520C2ARcAxy627D4gWFljXrJrf2tTJQsNAAtAdl/1bpCPtJXZ8BxiQlHDBJiHsTxMiQk8JszJ/9A3R5ZdF52AmG31oCBsx7CuX+0pyG5z0c7N/W7E0Y7eAiyE/cs/xurDFwC/l3L0KWACCQUdXr39Cax9iLnqhNmyY2DfQ5uLv/8E8ATwtdq++aDA2WC2YNiG8DwG5qJhMh8AKsUZkH/Mowt58PUvxjOn4rE3vKKPPGxO+exMv9vVbeT2S1cxVD0Hz9uGyLYoKJxFPx6MCv/dXLzzwz2vd4mhAUBZFLLronEw58aCwtkIzweGu1qxkd8xF+66tat1OIAGAKXjyN3bhpgZPWP+DYRsw3AeUG6ZuSj+3Dpzwb893bHyHEUDgNIT5L4twxxcswXLeWEwkK3AucBYG8U9ai7a6fTXfDuFBgClb8iXr/RZ99SZ+JwHbMVwHsJWYGV+Rj5gLt755z1p5BJHA4AyUIhg+MGFp2K888BsRaLgAMcRftX1s4xMvc1s/3Glvy1VFKVnyN2Xr5S7t7Vzu6AoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoiqIoyhLj/wPce+w9CMh9OQAAAABJRU5ErkJggg==" class="logo-mark" alt="TaskStick logo"> TaskStick</h1>
+
+  <div class="header-controls">
+    <div class="sync-indicator" id="sync-status">
+      <span class="sync-dot" id="sync-dot"></span>
+      <span id="sync-text">Loading…</span>
+    </div>
+
+    <button class="refresh-btn" id="refresh-btn" title="Refresh now" onclick="refreshAll()">↻</button>
+    <button class="help-btn" title="Help &amp; features" onclick="openHelp()">?</button>
+
+    <div id="user-area"></div>
+  </div>
+</header>
+
+<!-- ── MAIN CONTENT ── -->
+<main id="main-content">
+  <div id="login-screen" style="display:none">
+    <div class="login-card">
+      <div class="login-icon"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAABmJLR0QA/wD/AP+gvaeTAAAgAElEQVR4nO2de7QlVX3nP7vq3Me53bcfNA3dQDcNNA9pFJtuDAIKKEaDTkwmg4mQcYmPWZnoaHDNLGXECKNGXZM4yziYZYJGlxpnbJMscYyIDwzdikFEUVEQu+HyfjT9vs9zav/mj6pzbtU5VXXqnntefffvsxbc2lW//ajdv++vdlXtUxsURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURVEURekeImLkwIdXy76PrOx3WxSll5h+N6CfiNzgMVn+IPBOYCzaCRAAh0AqwBFgFpgCmQGmEabCfTIJzAGHwVbBHAITYOwBECHw9kNgwTuI2ABjDmFtBY8jDJdmmfOnWDkyY8y7pvtw+orieAA4/NG3Y/hEmKj/r3a00ZrF2WXkq++SKTBRUJEoqFAlDEQBwgFAELsfD4s1B/FMAMEhxFQwHEHsLNabwjCDDaYx/hR+MEvVTFKSOXxzmECqrNx9yJgdQcsOUpY8bgeAIx/9V+ClAyD+/DIXZdeQlsSxA9GO/RgscBCRcPRjTQVjw9GPMVNIEI5+jJlCJAxU4oWBSqSKBIfwvShQBYL192PFUp49SFAKzJpPHEIZONwOAJMffRDL5mxhScNmL8W/gCAhBdrVZJdTZmG7Fu1K75MwkCAzINOImcHINDCDMI2R8G/NTmQGY0J7YX9oa2awMo2xMxhvGhPMUPWnMdUZvNI0nj/DVDDNxr060mmB2wHg8EceBU6K7SF1uyvi79AI4egSf3aZRewk51jiUOJY7DmNqYJMIPIZc8LNX0DB63cD+kx5fnPAHL1r4heyz7Xb4k+pW9LsUvK1J36AZcBqkI1gTwW5DMPn5fE3vx1FA0D4pweOnmqXkq99R0+vu+MjhLx2xeou0nepQS4lX6E+kRZ9Ek8KGG4QcXsEDA4HABExwGjPHL1n4i9i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" style="width:132px;height:132px;" alt="TaskStick logo"></div>
+      <h2>TaskStick</h2>
+      <p class="login-tagline">Your tasks. Your priorities.<br>by <strong>Purple Pill Solutions</strong></p>
+
+      <div class="login-features">
+        <p>TaskStick gives you a fast, beautiful interface for your Google Tasks. You can:</p>
+        <ul>
+          <li>Create new lists and add tasks to them in seconds</li>
+          <li>Star tasks to pin them to your Priority view</li>
+          <li>Add due dates and notes to any task</li>
+          <li>Set up a Daily Ritual checklist that resets itself every day</li>
+          <li>Everything syncs instantly with Google Tasks — nothing lives only in this app</li>
+        </ul>
+      </div>
+
+      <div class="login-data-notice">
+        <p>Details on what data is accessed and how it is used can be found in our <a href="https://tasks.tesh.ai/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+      </div>
+
+      <a href="/auth/login" class="google-btn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Sign in with Google
+      </a>
+      <p class="login-note">
+        By signing in you agree to our
+        <a href="https://tasks.tesh.ai/terms.html">Terms of Service</a> and
+        <a href="https://tasks.tesh.ai/privacy.html">Privacy Policy</a>.
+      </p>
+    </div>
+  </div>
+
+  <div id="board"></div>
+</main>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   VERSION
+   ============================================================ */
+const APP_VERSION = 'v2.3';
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  user:         null,
+  lists:        [],
+  loading:      true,
+  theme:        localStorage.getItem('tasks-theme') || 'notebook',
+  stars:        JSON.parse(localStorage.getItem('tasks-stars') || '{}'),
+  collapsed:    JSON.parse(localStorage.getItem('tasks-collapsed') || '{}'),
+  settings:     JSON.parse(localStorage.getItem('tasks-settings') || '{"hideCompleted":false,"tetrisMode":false,"alphabeticalSort":false,"allTasksMode":false,"ritualEnabled":false}'),
+  refreshTimer: null,
+  REFRESH_MS:   120_000,  // 2 min — avoids interrupting typing
+};
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', async () => {
+  applyTheme(state.theme, true); // re-applying the local cache pre-auth — nothing to save yet
+  // Apply persisted tetris mode before first render
+  if (state.settings.tetrisMode) {
+    const board = document.getElementById('board');
+    if (board) board.classList.add('tetris-mode');
+  }
+  // Apply persisted all-tasks mode before first render
+  if (state.settings.allTasksMode) {
+    const board = document.getElementById('board');
+    if (board) board.classList.add('all-tasks-mode');
+  }
+  await checkAuth();
+});
+
+/* ============================================================
+   AUTH
+   ============================================================ */
+async function checkAuth() {
+  try {
+    const res  = await fetch('/api/auth-status.php');
+    const data = await res.json();
+    if (data.authenticated) {
+      state.user = data.user;
+      showApp();
+      if (state.user.hasTasksAccess === false) {
+        // No point calling the Google Tasks API — it would just fail and
+        // leave the loading skeletons stuck on screen. Explain instead.
+        openScopeWarning();
+        renderNoTasksAccessBoard();
+        setSyncStatus('idle');
+      } else {
+        await loadAll();
+        startPolling();
+      }
+    } else {
+      showLogin();
+    }
+  } catch (e) {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('board').style.display       = 'none';
+  setSyncStatus('idle');
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('board').style.display       = '';
+  renderUserArea();
+}
+
+function renderUserArea() {
+  const ua = document.getElementById('user-area');
+  if (!state.user) { ua.innerHTML = ''; return; }
+  const name  = escHtml(state.user.name  || '');
+  const email = escHtml(state.user.email || '');
+  const pic   = escHtml(state.user.picture || '');
+  ua.innerHTML = `
+    <div class="user-menu" id="user-menu">
+      <img class="user-avatar" src="${pic}" alt="${name}"
+           onclick="toggleUserMenu(event)"
+           onerror="this.style.display='none'" />
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="user-dropdown-header">
+          <div class="user-dropdown-name">${name}</div>
+          ${email ? `<div class="user-dropdown-email">${email}</div>` : ''}
+        </div>
+        <button class="user-dropdown-item" onclick="openSettings()">
+          <span class="item-icon">⚙</span> Settings
+        </button>
+        <button class="user-dropdown-item" onclick="openFeedback()">
+          <span class="item-icon">💬</span> Send Feedback
+        </button>
+        ${state.user.isAdmin ? `
+        <button class="user-dropdown-item" onclick="openAdmin()">
+          <span class="item-icon">🛡</span> Admin
+        </button>` : ''}
+        <a href="/auth/logout" class="user-dropdown-item danger">
+          <span class="item-icon">→</span> Sign out
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('user-dropdown');
+  if (dd) dd.classList.toggle('open');
+}
+
+// Close dropdown when clicking anywhere outside it
+document.addEventListener('click', function() {
+  const dd = document.getElementById('user-dropdown');
+  if (dd) dd.classList.remove('open');
+});
+
+function openSettings() {
+  // Close the user dropdown first
+  const dd = document.getElementById('user-dropdown');
+  if (dd) dd.classList.remove('open');
+  // Sync toggle states to current prefs
+  const cb = document.getElementById('pref-hide-completed');
+  if (cb) cb.checked = !!state.settings.hideCompleted;
+  const tetrisCb = document.getElementById('pref-tetris');
+  if (tetrisCb) tetrisCb.checked = !!state.settings.tetrisMode;
+  const alphaCb = document.getElementById('pref-alpha-sort');
+  if (alphaCb) alphaCb.checked = !!state.settings.alphabeticalSort;
+  const allTasksCb = document.getElementById('pref-all-tasks');
+  if (allTasksCb) allTasksCb.checked = !!state.settings.allTasksMode;
+  const ritualCb = document.getElementById('pref-ritual-enabled');
+  if (ritualCb) ritualCb.checked = !!state.settings.ritualEnabled;
+  // Render theme picker chips
+  renderThemePicker();
+  document.getElementById('settings-overlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function openHelp() {
+  const vLabel = document.getElementById('help-version-label');
+  if (vLabel) vLabel.textContent = APP_VERSION;
+  document.getElementById('help-overlay').classList.add('open');
+}
+function closeHelp() {
+  document.getElementById('help-overlay').classList.remove('open');
+}
+function handleHelpOverlayClick(e) {
+  if (e.target === document.getElementById('help-overlay')) closeHelp();
+}
+
+function handleSettingsOverlayClick(e) {
+  // Close if clicking the dim backdrop (not the modal itself)
+  if (e.target === document.getElementById('settings-overlay')) closeSettings();
+}
+
+/* ============================================================
+   FEEDBACK
+   ============================================================ */
+function openFeedback() {
+  const dd = document.getElementById('user-dropdown');
+  if (dd) dd.classList.remove('open');
+  document.getElementById('feedback-type').value = 'bug';
+  document.getElementById('feedback-description').value = '';
+  document.getElementById('feedback-status-msg').textContent = '';
+  document.getElementById('feedback-overlay').classList.add('open');
+}
+function closeFeedback() {
+  document.getElementById('feedback-overlay').classList.remove('open');
+}
+function handleFeedbackOverlayClick(e) {
+  if (e.target === document.getElementById('feedback-overlay')) closeFeedback();
+}
+
+/* ============================================================
+   TASKS-SCOPE WARNING — shown when Google sign-in succeeded but the
+   user didn't grant the Tasks scope (unchecked it on the consent screen)
+   ============================================================ */
+function openScopeWarning() {
+  document.getElementById('scope-warning-overlay').classList.add('open');
+}
+function closeScopeWarning() {
+  document.getElementById('scope-warning-overlay').classList.remove('open');
+}
+async function submitFeedback() {
+  const type        = document.getElementById('feedback-type').value;
+  const description = document.getElementById('feedback-description').value.trim();
+  const statusMsg    = document.getElementById('feedback-status-msg');
+  if (!description) {
+    statusMsg.textContent = 'Please describe your feedback first.';
+    statusMsg.style.color = '#e74c3c';
+    return;
+  }
+  const btn = document.getElementById('feedback-submit-btn');
+  btn.disabled = true;
+  try {
+    const res  = await fetch('/api/feedback.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ type, description }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to submit');
+    showToast('Thanks for the feedback! 🙏', 'success');
+    closeFeedback();
+  } catch (e) {
+    statusMsg.textContent = e.message || 'Could not submit feedback';
+    statusMsg.style.color = '#e74c3c';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ============================================================
+   ADMIN
+   ============================================================ */
+function openAdmin() {
+  const dd = document.getElementById('user-dropdown');
+  if (dd) dd.classList.remove('open');
+  document.getElementById('admin-overlay').classList.add('open');
+  loadAdminUsers();
+  loadAdminFeedback();
+}
+function closeAdmin() {
+  document.getElementById('admin-overlay').classList.remove('open');
+}
+function handleAdminOverlayClick(e) {
+  if (e.target === document.getElementById('admin-overlay')) closeAdmin();
+}
+
+async function loadAdminUsers() {
+  const wrap = document.getElementById('admin-users-wrap');
+  wrap.innerHTML = '<div class="admin-loading">Loading users…</div>';
+  try {
+    const res  = await fetch('/api/admin.php?resource=users');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load users');
+    renderAdminUsers(data.users || []);
+  } catch (e) {
+    wrap.innerHTML = `<div class="admin-empty">${escHtml(e.message)}</div>`;
+  }
+}
+
+function renderAdminUsers(users) {
+  const wrap = document.getElementById('admin-users-wrap');
+  if (!users.length) { wrap.innerHTML = '<div class="admin-empty">No users yet.</div>'; return; }
+
+  const myEmail   = ((state.user || {}).email || '').toLowerCase();
+  const adminCount = users.filter(u => u.is_admin).length;
+
+  const summary = `<div class="admin-summary">${users.length} user${users.length === 1 ? '' : 's'} · ${adminCount} admin${adminCount === 1 ? '' : 's'}</div>`;
+
+  const rows = users.map(u => {
+    const isSelf = (u.email || '').toLowerCase() === myEmail;
+    const toggle = isSelf
+      ? `<label class="toggle-switch" title="You can't remove your own admin access">
+           <input type="checkbox" checked disabled />
+           <span class="toggle-track"></span>
+         </label>`
+      : `<label class="toggle-switch" title="${u.is_admin ? 'Remove admin' : 'Make admin'}">
+           <input type="checkbox" ${u.is_admin ? 'checked' : ''}
+                  onchange="toggleUserAdmin('${escHtml(u.email)}', this)" />
+           <span class="toggle-track"></span>
+         </label>`;
+    return `
+    <div class="admin-row">
+      <img class="admin-row-avatar" src="${escHtml(u.picture || '')}" onerror="this.style.visibility='hidden'" />
+      <div class="admin-row-body">
+        <div class="admin-row-name">${escHtml(u.name || u.email)}${u.is_admin ? ' <span class="admin-badge">Admin</span>' : ''}${isSelf ? ' <span class="admin-badge admin-badge-you">You</span>' : ''}</div>
+        <div class="admin-row-meta">${escHtml(u.email)}</div>
+        <div class="admin-row-meta">Last active ${escHtml(formatRelative(u.last_seen))} · Joined ${escHtml(formatRelative(u.first_seen))}</div>
+      </div>
+      ${toggle}
+    </div>`;
+  }).join('');
+
+  wrap.innerHTML = summary + rows;
+}
+
+async function toggleUserAdmin(email, checkbox) {
+  checkbox.disabled = true;
+  try {
+    const res  = await fetch('/api/admin.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'toggle_admin', email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    showToast(data.is_admin ? `${email} is now an admin` : `${email} is no longer an admin`, 'success');
+  } catch (e) {
+    checkbox.checked = !checkbox.checked;
+    showToast(e.message || 'Could not update admin status', 'error');
+  } finally {
+    checkbox.disabled = false;
+  }
+}
+
+async function loadAdminFeedback() {
+  const wrap = document.getElementById('admin-feedback-wrap');
+  wrap.innerHTML = '<div class="admin-loading">Loading feedback…</div>';
+  try {
+    const res  = await fetch('/api/admin.php?resource=feedback');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load feedback');
+    renderAdminFeedback(data.feedback || []);
+  } catch (e) {
+    wrap.innerHTML = `<div class="admin-empty">${escHtml(e.message)}</div>`;
+  }
+}
+
+const FEEDBACK_TYPE_LABEL = { bug: '🐛 Bug', feature: '✨ Feature', suggestion: '💡 Suggestion' };
+
+function renderAdminFeedback(items) {
+  const wrap = document.getElementById('admin-feedback-wrap');
+  if (!items.length) { wrap.innerHTML = '<div class="admin-empty">No feedback submitted yet.</div>'; return; }
+  wrap.innerHTML = items.map(f => `
+    <div class="admin-row admin-feedback-row">
+      <div class="admin-row-body">
+        <div class="admin-row-name">${FEEDBACK_TYPE_LABEL[f.type] || f.type} — ${escHtml(f.submitter_name)} (${escHtml(f.submitter_email)})</div>
+        <div class="admin-row-desc">${escHtml(f.description)}</div>
+        <div class="admin-row-meta">${escHtml(formatRelative(f.created_at))}</div>
+      </div>
+      <select class="admin-status-select" onchange="updateFeedbackStatus(${f.id}, this.value)">
+        <option value="new" ${f.status === 'new' ? 'selected' : ''}>New</option>
+        <option value="reviewed" ${f.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+        <option value="resolved" ${f.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+      </select>
+    </div>
+  `).join('');
+}
+
+async function updateFeedbackStatus(id, status) {
+  try {
+    const res  = await fetch('/api/admin.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'update_feedback_status', id, status }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+  } catch (e) {
+    showToast(e.message || 'Could not update status', 'error');
+  }
+}
+
+function formatRelative(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const diffMs  = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1)   return 'just now';
+  if (diffMin < 60)  return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24)   return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30)  return `${diffDay}d ago`;
+  return d.toLocaleDateString();
+}
+
+function setHideCompleted(val) {
+  state.settings.hideCompleted = val;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+  renderBoard();  // re-render lists to show/hide completed tasks
+}
+
+function setTetrisMode(val) {
+  state.settings.tetrisMode = val;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+  const board = document.getElementById('board');
+  if (board) board.classList.toggle('tetris-mode', val);
+}
+
+function setAlphabeticalSort(val) {
+  state.settings.alphabeticalSort = val;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+  renderBoard(); // re-render with new sort order
+}
+
+function setAllTasksMode(val) {
+  state.settings.allTasksMode = val;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+  renderBoard();
+}
+
+/* ── Daily Ritual: find-or-create the list, toggle its visibility ── */
+async function setRitualEnabled(val) {
+  state.settings.ritualEnabled = val;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+
+  if (val && !state.lists.find(l => l.title === 'Daily Ritual')) {
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch('/api/lists.php', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title: 'Daily Ritual' }),
+      });
+      if (!res.ok) throw new Error('Could not create Daily Ritual list');
+      const newList = await res.json();
+      state.lists.push({ ...newList, tasks: [] });
+      setSyncStatus('ok');
+    } catch (e) {
+      setSyncStatus('error');
+      showToast('Failed to create Daily Ritual list: ' + e.message, 'error');
+      state.settings.ritualEnabled = false;
+      localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+      savePrefs();
+      const cb = document.getElementById('pref-ritual-enabled');
+      if (cb) cb.checked = false;
+      return;
+    }
+  }
+  renderBoard();
+}
+
+/* Any Ritual task completed before today (local time) gets reset to
+   needsAction, so the checklist starts fresh every day at local midnight. */
+async function resetRitualIfNewDay() {
+  if (!state.settings.ritualEnabled) return;
+  const ritual = state.lists.find(l => l.title === 'Daily Ritual');
+  if (!ritual) return;
+
+  const todayLocal = new Date().toDateString();
+  const stale = ritual.tasks.filter(t =>
+    t.status === 'completed' && t.completed &&
+    new Date(t.completed).toDateString() !== todayLocal
+  );
+  if (!stale.length) return;
+
+  for (const t of stale) {
+    try {
+      await fetch(
+        `/api/tasks.php?listId=${encodeURIComponent(ritual.id)}&taskId=${encodeURIComponent(t.id)}`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'needsAction' }) }
+      );
+      t.status = 'needsAction';
+    } catch (e) { /* leave it — will retry on next load */ }
+  }
+  rerenderCard(ritual);
+  renderPriorityCard();
+}
+
+/* Returns state.lists in display order — alphabetical when that mode is on.
+   Priority card is always first (handled separately by renderPriorityCard).
+   Within alphabetical mode, "Follow-up" and "Daily Ritual" are pinned to the top.
+   "Daily Ritual" is hidden entirely unless the Settings toggle is on. */
+function getDisplayLists() {
+  const base = state.settings.ritualEnabled
+    ? state.lists
+    : state.lists.filter(l => l.title !== 'Daily Ritual');
+  if (!state.settings.alphabeticalSort) return base;
+  const pinned = ['Follow-up', 'Daily Ritual'];
+  const sorted = [...base].sort((a, b) => {
+    const aPin = pinned.includes(a.title) ? 0 : 1;
+    const bPin = pinned.includes(b.title) ? 0 : 1;
+    if (aPin !== bPin) return aPin - bPin;
+    return a.title.localeCompare(b.title);
+  });
+  return sorted;
+}
+
+/* ============================================================
+   LOAD DATA
+   ============================================================ */
+async function loadAll(showSpinner = true) {
+  if (showSpinner) renderSkeletons();
+  setSyncStatus('syncing');
+
+  try {
+    // On full load, fetch lists AND server-side prefs in parallel
+    const fetches = [fetch('/api/lists.php')];
+    if (showSpinner) fetches.push(fetch('/api/prefs.php'));
+
+    const [listsRes, prefsRes] = await Promise.all(fetches);
+    const listsData = await listsRes.json();
+
+    if (!listsRes.ok || listsData.error) {
+      if (listsRes.status === 401) { showLogin(); return; }
+      throw new Error(listsData.error || 'Failed to load lists');
+    }
+
+    // Apply server-side prefs (authoritative — overrides localStorage)
+    if (prefsRes && prefsRes.ok) {
+      const prefs = await prefsRes.json();
+      if (prefs.stars) {
+        state.stars = prefs.stars;
+        localStorage.setItem('tasks-stars', JSON.stringify(state.stars));
+      }
+      if (prefs.collapsed) {
+        state.collapsed = prefs.collapsed;
+        localStorage.setItem('tasks-collapsed', JSON.stringify(state.collapsed));
+      }
+      if (prefs.listOrder && prefs.listOrder.length) {
+        localStorage.setItem('tasks-list-order', JSON.stringify(prefs.listOrder));
+      }
+      applyServerSettings(prefs.settings);
+    }
+
+    const rawLists = listsData.items || [];
+
+    // Fetch tasks for each list in parallel
+    const withTasks = await Promise.all(rawLists.map(async list => {
+      try {
+        const r = await fetch(`/api/tasks.php?listId=${encodeURIComponent(list.id)}`);
+        const d = await r.json();
+        return { ...list, tasks: (d.items || []).filter(t => t.title) };
+      } catch {
+        return { ...list, tasks: [] };
+      }
+    }));
+
+    state.lists = mergeOrder(withTasks);
+    renderBoard();
+    setSyncStatus('ok');
+    resetRitualIfNewDay();
+
+  } catch (e) {
+    setSyncStatus('error');
+    showToast('Failed to load tasks: ' + e.message, 'error');
+  }
+}
+
+async function refreshAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  await loadAll(false);
+  btn.classList.remove('spinning');
+}
+
+/* Maintain custom drag order across refreshes */
+function mergeOrder(freshLists) {
+  const saved = JSON.parse(localStorage.getItem('tasks-list-order') || '[]');
+  if (!saved.length) return freshLists;
+  const byId   = Object.fromEntries(freshLists.map(l => [l.id, l]));
+  const seen   = new Set();
+  const result = [];
+  for (const id of saved) {
+    if (byId[id]) { result.push(byId[id]); seen.add(id); }
+  }
+  for (const l of freshLists) {
+    if (!seen.has(l.id)) result.push(l);
+  }
+  return result;
+}
+
+function saveListOrder() {
+  const order = state.lists.map(l => l.id);
+  localStorage.setItem('tasks-list-order', JSON.stringify(order));
+  savePrefs(); // persist to server so all browsers stay in sync
+}
+
+// Apply settings/theme fetched from the server (authoritative — this is
+// what makes them follow the user across devices instead of resetting to
+// defaults on a new device or after browser storage is cleared).
+function applyServerSettings(serverSettings) {
+  if (!serverSettings || typeof serverSettings !== 'object') return;
+  const { theme: serverTheme, ...rest } = serverSettings;
+  if (Object.keys(rest).length) {
+    state.settings = { ...state.settings, ...rest };
+    localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  }
+  if (serverTheme && serverTheme !== state.theme) {
+    applyTheme(serverTheme, true); // true = just loaded this, don't re-save it
+  }
+}
+
+// Persist stars + list order + collapsed state + display settings/theme to
+// the server, so they follow the user across devices instead of living only
+// in this browser's localStorage. Falls back silently — localStorage always
+// has a local copy, so nothing is lost if this fails.
+async function savePrefs() {
+  try {
+    await fetch('/api/prefs.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        stars:     state.stars,
+        listOrder: state.lists.map(l => l.id),
+        collapsed: state.collapsed,
+        settings:  { ...state.settings, theme: state.theme },
+      }),
+    });
+  } catch (_) { /* silent — local state already saved */ }
+}
+
+/* ============================================================
+   POLLING
+   ============================================================ */
+function startPolling() {
+  stopPolling();
+  state.refreshTimer = setInterval(() => {
+    // Skip the refresh if the user is actively typing — prevents losing typed text
+    const active = document.activeElement;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+    loadAll(false);
+  }, state.REFRESH_MS);
+}
+function stopPolling() {
+  if (state.refreshTimer) clearInterval(state.refreshTimer);
+}
+
+/* ============================================================
+   TASK HIERARCHY — build parent/child tree for display
+   ============================================================ */
+function buildDisplayOrder(tasks) {
+  // Separate roots and subtasks
+  const roots    = [];
+  const byParent = {};
+  for (const t of tasks) {
+    if (t.parent) {
+      (byParent[t.parent] = byParent[t.parent] || []).push(t);
+    } else {
+      roots.push(t);
+    }
+  }
+  // Interleave: root → its children → next root…
+  const ordered = [];
+  for (const root of roots) {
+    ordered.push(root);
+    const children = byParent[root.id] || [];
+    for (const child of children) ordered.push(child);
+  }
+  return ordered;
+}
+
+/* ============================================================
+   RENDER BOARD
+   ============================================================ */
+function renderSkeletons() {
+  const board = document.getElementById('board');
+  board.innerHTML = [1,2,3,4].map(() => `<div class="skeleton-card"></div>`).join('');
+}
+
+function renderNoTasksAccessBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🔒</div>
+      <p>TaskStick can't show your lists or tasks without access to Google Tasks.</p>
+      <a href="/auth/login" class="google-btn" style="margin-top:14px">Grant Task Access</a>
+    </div>`;
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+
+  if (!state.lists.length) {
+    board.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>No task lists found.<br>Create one in Google Tasks and refresh.</p>
+      </div>`;
+    return;
+  }
+
+  // Re-apply mode classes (survive innerHTML resets)
+  board.classList.toggle('tetris-mode',    !!state.settings.tetrisMode);
+  board.classList.toggle('all-tasks-mode', !!state.settings.allTasksMode);
+
+  if (state.settings.allTasksMode) {
+    renderAllTasksView(board);
+    return;
+  }
+
+  board.innerHTML = '';
+  const displayLists = getDisplayLists();
+  displayLists.forEach((list, listIdx) => {
+    const card = createListCard(list, listIdx);
+    board.appendChild(card);
+  });
+
+  // "Add new list" button — sits after all list cards
+  const addListBtn = document.createElement('button');
+  addListBtn.className = 'add-list-card';
+  addListBtn.innerHTML = '＋ New list';
+  addListBtn.onclick   = addNewList;
+  board.appendChild(addListBtn);
+
+  // Drag-and-drop for list cards (reorder columns) — disabled when alphabetical sort is on
+  Sortable.create(board, {
+    animation:   180,
+    ghostClass:  'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    handle:      '.list-card-header',
+    filter:      '.priority-card, .add-list-card, .collapse-btn, .list-delete-btn, .task-count',
+    // Disable drag when alphabetical sort is active so order stays managed by the setting
+    disabled:    !!state.settings.alphabeticalSort,
+    // preventOnFilter: false — by default Sortable calls event.preventDefault() on filtered
+    // elements (like .priority-card), which cancels the native iOS touch-scroll gesture before
+    // the browser sees it. Setting this to false lets scroll events pass through normally.
+    preventOnFilter: false,
+    onEnd() {
+      const newOrder = Array.from(board.querySelectorAll('.list-card'))
+        .map(el => el.dataset.listId);
+      state.lists = newOrder.map(id => state.lists.find(l => l.id === id)).filter(Boolean);
+      saveListOrder();
+    }
+  });
+
+  // Render priority card after all list cards
+  renderPriorityCard();
+}
+
+/* ── All Tasks flat view ─────────────────────────────────────── */
+function renderAllTasksView(board) {
+  board.innerHTML = '';
+  const byPos = (a, b) => (a.position || '') > (b.position || '') ? 1 : -1;
+  const hideCompleted = !!state.settings.hideCompleted;
+
+  const displayLists = getDisplayLists();
+  displayLists.forEach(list => {
+    const activeTasks = list.tasks
+      .filter(t => t.status !== 'completed' && !t.parent)
+      .sort((a, b) => {
+        const aS = !!state.stars[a.id], bS = !!state.stars[b.id];
+        if (aS !== bS) return aS ? -1 : 1;
+        return byPos(a, b);
+      });
+    const completedTasks = hideCompleted ? [] :
+      list.tasks.filter(t => t.status === 'completed' && !t.parent).sort(byPos);
+    const visibleTasks = [...activeTasks, ...completedTasks];
+    if (!visibleTasks.length) return; // skip empty lists
+
+    const group = document.createElement('div');
+    group.className = 'all-tasks-group';
+
+    const label = document.createElement('div');
+    label.className   = 'all-tasks-list-label';
+    label.textContent = list.title;
+    group.appendChild(label);
+
+    visibleTasks.forEach(task => {
+      const isStarred   = !!state.stars[task.id];
+      const isCompleted = task.status === 'completed';
+      const item = document.createElement('div');
+      item.className = 'all-tasks-item' + (isStarred ? ' at-starred' : '') + (isCompleted ? ' at-done' : '');
+
+      const starEl = document.createElement('span');
+      starEl.className   = 'all-tasks-star';
+      starEl.textContent = isStarred ? '★' : '';
+
+      const textEl = document.createElement('span');
+      textEl.className   = 'all-tasks-text';
+      textEl.textContent = task.title || '(no title)';
+      if (isCompleted) textEl.style.textDecoration = 'line-through';
+
+      item.appendChild(starEl);
+      item.appendChild(textEl);
+      group.appendChild(item);
+    });
+
+    board.appendChild(group);
+  });
+}
+
+function createListCard(list, listIdx) {
+  const card = document.createElement('div');
+  card.className      = 'list-card';
+  card.dataset.listId = list.id;
+
+  // Google Tasks API returns tasks descending by position; GT web UI shows ascending (lower position = top)
+  const byPos = (a, b) => (a.position || '') > (b.position || '') ? 1 : -1;
+  // Starred (priority) tasks always render before unstarred tasks.
+  // Within each group the existing API position order is preserved.
+  const activeTasks = list.tasks
+    .filter(t => t.status !== 'completed' && !t.parent)
+    .sort((a, b) => {
+      const aS = !!state.stars[a.id], bS = !!state.stars[b.id];
+      if (aS !== bS) return aS ? -1 : 1;   // starred floats to top
+      return byPos(a, b);                    // secondary: API position order
+    });
+  const completedTasks = list.tasks.filter(t => t.status === 'completed'  && !t.parent).sort(byPos);
+  // When hideCompleted is on, omit completed roots AND their subtasks
+  const hideCompleted  = !!state.settings.hideCompleted;
+  const completedIds   = new Set(completedTasks.map(t => t.id));
+  const visibleRoots   = hideCompleted ? activeTasks : [...activeTasks, ...completedTasks];
+  const visibleSubs    = list.tasks.filter(t => t.parent && !(hideCompleted && completedIds.has(t.parent)));
+  const orderedRoots   = visibleRoots;
+
+  // Insert subtasks after their parents
+  const display = buildDisplayOrder([...orderedRoots, ...visibleSubs]);
+
+  // Only active (non-completed) root tasks get a sequential number in the circle
+  let displayIndex = 0;
+  const taskItemsHtml = display.map(task => {
+    const isActiveRoot = !task.parent && task.status !== 'completed';
+    if (isActiveRoot) displayIndex++;
+    return renderTaskItem(task, isActiveRoot ? displayIndex : 0, list.id);
+  }).join('');
+
+  const isCollapsed  = !!state.collapsed[list.id];
+  const isFollowUp   = list.title === 'Follow-up';
+  const isRitual     = list.title === 'Daily Ritual';
+  if (isFollowUp) card.classList.add('followup-card');
+  if (isRitual)   card.classList.add('ritual-card');
+
+  card.innerHTML = `
+    <div class="list-card-header">
+      <div class="list-title" ${(isFollowUp || isRitual) ? '' : `ondblclick="editListTitle('${escHtml(list.id)}',this)" title="Double-click to rename"`}>${isFollowUp ? '◑ ' : ''}${isRitual ? '🔁 ' : ''}${escHtml(list.title)}</div>
+      <span class="task-count">${activeTasks.length}</span>
+      <button class="list-delete-btn"
+              onclick="deleteList('${escHtml(list.id)}', this)"
+              title="Delete list">🗑</button>
+      <button class="collapse-btn"
+              onclick="toggleCollapse('${escHtml(list.id)}')"
+              title="${isCollapsed ? 'Expand list' : 'Collapse list'}">▾</button>
+    </div>
+    <div class="list-card-body">
+      <ul class="task-list" data-list-id="${escHtml(list.id)}">
+        ${taskItemsHtml}
+      </ul>
+      <div class="add-task-area">
+        <input class="add-task-input"
+               placeholder="Add task…"
+               data-list-id="${escHtml(list.id)}"
+               onkeydown="handleAddKey(event, this)" />
+        <button class="add-task-btn"
+                onclick="addTaskFromInput(this.previousElementSibling)"
+                title="Add task">+</button>
+      </div>
+    </div>
+  `;
+
+  if (isCollapsed) card.classList.add('collapsed');
+
+  // Drag-and-drop for tasks within and across lists
+  const taskListEl = card.querySelector('.task-list');
+  Sortable.create(taskListEl, {
+    group:       'tasks',
+    animation:   150,
+    handle:      '.drag-handle',
+    filter:      '.subtask',
+    ghostClass:  'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    async onEnd(evt) {
+      const taskId   = evt.item.dataset.taskId;
+      const fromEl   = evt.from;
+      const toEl     = evt.to;
+      const fromList = fromEl.dataset.listId;
+      const toList   = toEl.dataset.listId;
+
+      if (fromList === toList) {
+        // Within-list reorder — sync state then call move API
+        const listState = state.lists.find(l => l.id === toList);
+        if (listState) {
+          const items   = Array.from(toEl.querySelectorAll('.task-item[data-task-id]'));
+          const taskMap = Object.fromEntries(listState.tasks.map(t => [t.id, t]));
+          listState.tasks = items.map(li => taskMap[li.dataset.taskId]).filter(Boolean);
+        }
+        const items  = Array.from(toEl.querySelectorAll('.task-item[data-task-id]'));
+        const newIdx = items.findIndex(li => li.dataset.taskId === taskId);
+        const prevId = newIdx > 0 ? items[newIdx - 1].dataset.taskId : undefined;
+        await moveTaskWithinList(toList, taskId, prevId);
+
+      } else {
+        // Cross-list move — get task data, update state, call API
+        const fromListState = state.lists.find(l => l.id === fromList);
+        const toListState   = state.lists.find(l => l.id === toList);
+        if (fromListState && toListState) {
+          const task = fromListState.tasks.find(t => t.id === taskId);
+          if (task) {
+            fromListState.tasks = fromListState.tasks.filter(t => t.id !== taskId);
+            toListState.tasks.unshift(task);
+            await crossListMoveAPI(fromList, toList, task);
+            // Re-render both cards to get correct IDs after API create
+            rerenderCard(fromListState);
+            rerenderCard(toListState);
+          }
+        }
+      }
+    }
+  });
+
+  return card;
+}
+
+function renderTaskItem(task, index, listId) {
+  const done         = task.status === 'completed';
+  const starred      = !!state.stars[task.id];
+  const isChild      = !!task.parent;
+  const displayNotes = stripOriginMarker(task.notes || '');
+  const hasNotes     = !!(displayNotes && displayNotes.trim());
+  const dueStr       = task.due || '';
+  const dueFmt       = dueStr ? formatDue(dueStr) : '';
+  const overdue      = !done && isOverdue(dueStr);
+  const checked      = done ? 'checked' : '';
+  const starIcon     = starred ? '★' : '☆';
+  const currentList  = state.lists.find(l => l.id === listId);
+  const isFollowUp   = !!(currentList && currentList.title === 'Follow-up');
+  const originListId = getOriginListId(task.notes);
+  // Number shown inside the circle: subtasks → dot, completed → empty (CSS shows ✓), active root → number
+  const dataNum  = isChild ? '·' : (done ? '' : (index || ''));
+
+  const duePart = dueFmt
+    ? `<span class="task-due${overdue ? ' overdue' : ''}"
+             onclick="editDue('${escHtml(listId)}','${escHtml(task.id)}','${escHtml(dueStr)}',this)"
+             title="Click to change due date">${dueFmt}</span>`
+    : `<button class="due-add-btn"
+               onclick="editDue('${escHtml(listId)}','${escHtml(task.id)}','',this)"
+               title="Set due date">📅</button>`;
+
+  // Notes panel content (view mode — clicking Notes btn opens edit directly)
+  const notesPanelContent = hasNotes
+    ? `<div class="task-notes-view">${renderNoteText(displayNotes)}</div>`
+    : '';
+
+  return `
+    <li class="task-item${done ? ' completed' : ''}${starred ? ' starred' : ''}${isChild ? ' subtask' : ''}${hasNotes ? ' has-notes' : ''}"
+        data-task-id="${escHtml(task.id)}"
+        data-list-id="${escHtml(listId)}"
+        data-index="${index}">
+      <div class="task-row">
+        ${isChild ? '' : '<span class="drag-handle" title="Drag to reorder">⠿</span>'}
+        <label class="task-check-wrap" title="Complete task">
+          <input type="checkbox" class="task-check" ${checked}
+                 onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
+          <span class="task-check-circle" data-num="${escHtml(String(dataNum))}"></span>
+        </label>
+        <span class="task-text"
+              ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
+              title="Double-click to edit">${escHtml(task.title)}</span>
+      </div>
+      <div class="task-actions-row">
+        ${duePart}
+        <button class="notes-btn"
+                onclick="toggleNotes(this)"
+                title="${hasNotes ? 'View/edit notes' : 'Add notes'}">📝</button>
+        ${!done ? (
+          isFollowUp && originListId
+            ? `<button class="partial-btn" title="Return to original list"
+                       onclick="moveBackFromFollowUp('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
+            : `<button class="partial-btn" title="Move to Follow-up"
+                       onclick="markPartialComplete('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
+        ) : ''}
+        <button class="star-btn"
+                onclick="toggleStar('${escHtml(task.id)}',this)"
+                title="${starred ? 'Unstar' : 'Star'}">${starIcon}</button>
+        <button class="task-delete-btn"
+                onclick="deleteTask('${escHtml(listId)}','${escHtml(task.id)}',this)"
+                title="Delete task">✕</button>
+      </div>
+      <div class="task-notes-panel"
+           data-task-id="${escHtml(task.id)}"
+           data-list-id="${escHtml(listId)}">
+        ${notesPanelContent}
+      </div>
+    </li>
+  `;
+}
+
+/* ============================================================
+   DUE DATE HELPERS
+   ============================================================ */
+function formatDue(dueStr) {
+  if (!dueStr) return '';
+  const d = new Date(dueStr);
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function isOverdue(dueStr) {
+  if (!dueStr) return false;
+  const due   = new Date(dueStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return due < today;
+}
+
+/* ============================================================
+   STAR TOGGLE
+   ============================================================ */
+function toggleStar(taskId, btn) {
+  const isStarred = !!state.stars[taskId];
+  if (isStarred) {
+    delete state.stars[taskId];
+  } else {
+    state.stars[taskId] = true;
+  }
+  localStorage.setItem('tasks-stars', JSON.stringify(state.stars));
+  savePrefs(); // sync to server so stars appear on all browsers
+
+  const li = btn.closest('.task-item');
+  if (li) {
+    li.classList.toggle('starred', !isStarred);
+    btn.textContent = isStarred ? '☆' : '★';
+    btn.title       = isStarred ? 'Star' : 'Unstar';
+    const txt = li.querySelector('.task-text');
+    if (txt) txt.style.fontWeight = isStarred ? '' : '700';
+  }
+
+  // When starring a task, move it to just after any already-starred tasks
+  // so all priority items stay grouped at the top of their list.
+  if (!isStarred) {
+    for (const list of state.lists) {
+      const taskIndex = list.tasks.findIndex(t => t.id === taskId);
+      if (taskIndex !== -1 && !list.tasks[taskIndex].parent) {
+        // Count starred tasks in this list that are NOT the one we just starred.
+        // Those tasks own positions 0..N-1; insert this task at position N.
+        const otherStarredCount = list.tasks.filter(
+          (t, i) => i !== taskIndex && state.stars[t.id] && !t.parent
+        ).length;
+        const insertAt = otherStarredCount;
+
+        if (taskIndex > insertAt) {
+          // Task is below the starred zone — move it up
+          const [task] = list.tasks.splice(taskIndex, 1);
+          list.tasks.splice(insertAt, 0, task);
+          rerenderCard(list);
+          // Persist the new order to Google Tasks API (same path as drag-and-drop)
+          const prevId = insertAt > 0 ? list.tasks[insertAt - 1].id : undefined;
+          moveTaskWithinList(list.id, taskId, prevId);
+        }
+        break;
+      }
+    }
+  }
+
+  // Keep priority card in sync — adds/removes tasks as stars change
+  renderPriorityCard();
+}
+
+/* ============================================================
+   DUE DATE EDIT
+   ============================================================ */
+function editDue(listId, taskId, currentDue, triggerEl) {
+  const input    = document.createElement('input');
+  input.type     = 'date';
+  input.className = 'task-due-input';
+  if (currentDue) input.value = currentDue.substring(0, 10);
+
+  triggerEl.replaceWith(input);
+  input.focus();
+
+  let saved = false;
+
+  async function saveDue() {
+    if (saved) return;
+    saved = true;
+
+    const newDue = input.value ? input.value + 'T00:00:00.000Z' : null;
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch(
+        `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ due: newDue }) }
+      );
+      if (!res.ok) throw new Error('Failed');
+
+      // Update local state
+      const list = state.lists.find(l => l.id === listId);
+      if (list) {
+        const task = list.tasks.find(t => t.id === taskId);
+        if (task) task.due = newDue;
+      }
+      setSyncStatus('ok');
+    } catch (e) {
+      setSyncStatus('error');
+      showToast('Failed to update due date', 'error');
+    }
+
+    // Re-render the task item in place
+    const li = input.closest('.task-item');
+    if (li) {
+      const list = state.lists.find(l => l.id === listId);
+      if (list) {
+        const task = list.tasks.find(t => t.id === taskId);
+        if (task) {
+          const idx  = parseInt(li.dataset.index) || 0;
+          const html = renderTaskItem(task, idx, listId);
+          li.outerHTML = html;
+        }
+      }
+    }
+  }
+
+  input.addEventListener('change', saveDue);
+  input.addEventListener('blur',   () => setTimeout(saveDue, 80));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      saved = true;
+      input.replaceWith(triggerEl);
+    }
+    if (e.key === 'Enter') input.blur();
+  });
+}
+
+/* ============================================================
+   TASK ACTIONS
+   ============================================================ */
+
+// Toggle complete / incomplete
+async function toggleComplete(checkbox, listId, taskId) {
+  const li     = checkbox.closest('.task-item');
+  const status = checkbox.checked ? 'completed' : 'needsAction';
+  li.classList.toggle('completed', checkbox.checked);
+
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }) }
+    );
+    if (!res.ok) throw new Error('Update failed');
+
+    const list = state.lists.find(l => l.id === listId);
+    if (list) {
+      const task = list.tasks.find(t => t.id === taskId);
+      if (task) task.status = status;
+      updateCardCount(listId, list);
+    }
+    renumberCard(listId); // reflow active-task numbers after completion change
+    renderPriorityCard(); // completed tasks drop out of priority view
+    setSyncStatus('ok');
+  } catch (e) {
+    checkbox.checked = !checkbox.checked;
+    li.classList.toggle('completed', checkbox.checked);
+    setSyncStatus('error');
+    showToast('Failed to update task', 'error');
+  }
+}
+
+// Inline edit — double-click opens auto-growing textarea
+function startEdit(span, listId, taskId) {
+  if (span.querySelector('textarea')) return;
+
+  const original = span.textContent;
+  const ta       = document.createElement('textarea');
+  ta.className   = 'task-edit-input';
+  ta.value       = original;
+  ta.rows        = 1;
+
+  span.textContent = '';
+  span.appendChild(ta);
+
+  function resize() {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+  ta.addEventListener('input', resize);
+  setTimeout(resize, 0);
+
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+
+  let committed = false;
+  async function commit() {
+    if (committed) return;
+    committed = true;
+    const newTitle = ta.value.trim();
+    if (!newTitle || newTitle === original) { span.textContent = original; return; }
+    span.textContent = newTitle;
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch(
+        `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle }) }
+      );
+      if (!res.ok) throw new Error('Update failed');
+      const list = state.lists.find(l => l.id === listId);
+      if (list) {
+        const task = list.tasks.find(t => t.id === taskId);
+        if (task) task.title = newTitle;
+      }
+      setSyncStatus('ok');
+      showToast('Task updated', 'success');
+    } catch (e) {
+      span.textContent = original;
+      setSyncStatus('error');
+      showToast('Failed to update task', 'error');
+    }
+  }
+
+  ta.addEventListener('blur', commit);
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+    if (e.key === 'Escape') { committed = true; span.textContent = original; }
+  });
+}
+
+// Add a new task
+function handleAddKey(e, input) {
+  if (e.key === 'Enter') addTaskFromInput(input);
+}
+
+async function addTaskFromInput(input) {
+  const title  = input.value.trim();
+  const listId = input.dataset.listId;
+  if (!title || !listId) return;
+
+  input.value    = '';
+  input.disabled = true;
+
+  try {
+    setSyncStatus('syncing');
+    const res  = await fetch(`/api/tasks.php?listId=${encodeURIComponent(listId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ title }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Create failed');
+
+    const list = state.lists.find(l => l.id === listId);
+    if (list) {
+      list.tasks.unshift({ ...data, status: 'needsAction' });
+      rerenderCard(list);
+    }
+    setSyncStatus('ok');
+    showToast('Task added', 'success');
+  } catch (e) {
+    setSyncStatus('error');
+    showToast('Failed to add task: ' + e.message, 'error');
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// Delete a task
+async function deleteTask(listId, taskId, btn) {
+  const li = btn.closest('.task-item');
+  li.style.opacity = '0.4';
+
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+      { method: 'DELETE' }
+    );
+    if (!res.ok) throw new Error('Delete failed');
+
+    const list = state.lists.find(l => l.id === listId);
+    if (list) {
+      list.tasks = list.tasks.filter(t => t.id !== taskId);
+      updateCardCount(listId, list);
+    }
+    li.remove();
+    renumberCard(listId); // reflow active-task numbers after deletion
+    renderPriorityCard(); // remove from priority card if it was starred
+    setSyncStatus('ok');
+    showToast('Task deleted', 'success');
+  } catch (e) {
+    li.style.opacity = '';
+    setSyncStatus('error');
+    showToast('Failed to delete task', 'error');
+  }
+}
+
+/* ============================================================
+   TASK MOVE — within same list (reorder)
+   ============================================================ */
+async function moveTaskWithinList(listId, taskId, previousId) {
+  try {
+    const body = { action: 'move' };
+    if (previousId) body.previous = previousId;
+    const res = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body) }
+    );
+    if (!res.ok) throw new Error('Move failed');
+    setSyncStatus('ok');
+  } catch (e) {
+    showToast('Could not save new order', 'error');
+  }
+}
+
+/* ============================================================
+   TASK MOVE — across lists (delete + create)
+   ============================================================ */
+async function crossListMoveAPI(fromListId, toListId, task) {
+  try {
+    setSyncStatus('syncing');
+
+    // Create in destination list
+    const createRes = await fetch(`/api/tasks.php?listId=${encodeURIComponent(toListId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title:  task.title,
+        notes:  task.notes  || undefined,
+        due:    task.due    || undefined,
+        status: task.status || 'needsAction',
+      }),
+    });
+    if (!createRes.ok) throw new Error('Create failed');
+    const newTask = await createRes.json();
+
+    // Delete from source list
+    await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(fromListId)}&taskId=${encodeURIComponent(task.id)}`,
+      { method: 'DELETE' }
+    );
+
+    // Update task ID in destination state
+    const toList = state.lists.find(l => l.id === toListId);
+    if (toList) {
+      const idx = toList.tasks.findIndex(t => t.id === task.id);
+      if (idx >= 0) toList.tasks[idx] = { ...task, ...newTask };
+    }
+
+    // Transfer star to new ID
+    if (state.stars[task.id]) {
+      state.stars[newTask.id] = true;
+      delete state.stars[task.id];
+      localStorage.setItem('tasks-stars', JSON.stringify(state.stars));
+    }
+
+    setSyncStatus('ok');
+    showToast('Task moved', 'success');
+  } catch (e) {
+    setSyncStatus('error');
+    showToast('Failed to move task: ' + e.message, 'error');
+    loadAll(false);
+  }
+}
+
+/* ============================================================
+   RE-RENDER HELPERS
+   ============================================================ */
+function rerenderCard(list) {
+  const existing = document.querySelector(`.list-card[data-list-id="${CSS.escape(list.id)}"]`);
+  if (!existing) return;
+  const listIdx = state.lists.indexOf(list);
+  const newCard = createListCard(list, listIdx);
+  existing.replaceWith(newCard);
+}
+
+function updateCardCount(listId, list) {
+  const card = document.querySelector(`.list-card[data-list-id="${CSS.escape(listId)}"]`);
+  if (!card) return;
+  const badge = card.querySelector('.task-count');
+  if (badge) badge.textContent = list.tasks.filter(t => t.status !== 'completed' && !t.parent).length;
+}
+
+/* ============================================================
+   COLLAPSE / EXPAND
+   ============================================================ */
+function toggleCollapse(listId) {
+  const nowCollapsed = !state.collapsed[listId];
+  if (nowCollapsed) {
+    state.collapsed[listId] = true;
+  } else {
+    delete state.collapsed[listId];
+  }
+  localStorage.setItem('tasks-collapsed', JSON.stringify(state.collapsed));
+  savePrefs(); // keep collapse state in sync across browsers
+
+  const card = document.querySelector(`.list-card[data-list-id="${CSS.escape(listId)}"]`);
+  if (!card) return;
+  card.classList.toggle('collapsed', nowCollapsed);
+  const btn = card.querySelector('.collapse-btn');
+  if (btn) btn.title = nowCollapsed ? 'Expand list' : 'Collapse list';
+}
+
+/* ============================================================
+   ADD NEW LIST
+   ============================================================ */
+async function addNewList() {
+  const title = prompt('New list name:');
+  if (!title || !title.trim()) return;
+
+  try {
+    setSyncStatus('syncing');
+    const res  = await fetch('/api/lists.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ title: title.trim() }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Create failed');
+
+    // Add to state and re-render the board
+    state.lists.push({ ...data, tasks: [] });
+    renderBoard();
+    setSyncStatus('ok');
+    showToast('List created', 'success');
+  } catch (e) {
+    setSyncStatus('error');
+    showToast('Failed to create list: ' + e.message, 'error');
+  }
+}
+
+/* ============================================================
+   DELETE LIST  (only when empty)
+   ============================================================ */
+function editListTitle(listId, titleEl) {
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+  const current = list.title;
+  const header  = titleEl.closest('.list-card-header');
+
+  // Replace title div with an input
+  const input = document.createElement('input');
+  input.className = 'list-title-edit-input';
+  input.value     = current;
+  titleEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  async function commit() {
+    const newTitle = input.value.trim();
+    if (!newTitle || newTitle === current) {
+      // Restore original title without saving
+      const div = document.createElement('div');
+      div.className = 'list-title';
+      div.setAttribute('ondblclick', `editListTitle('${escHtml(listId)}',this)`);
+      div.setAttribute('title', 'Double-click to rename');
+      div.textContent = current;
+      input.replaceWith(div);
+      return;
+    }
+
+    input.disabled = true;
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch(`/api/lists.php?listId=${encodeURIComponent(listId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Rename failed');
+
+      // Update state
+      list.title = newTitle;
+      setSyncStatus('ok');
+
+      // Re-render the card header title div
+      const div = document.createElement('div');
+      div.className = 'list-title';
+      div.setAttribute('ondblclick', `editListTitle('${escHtml(listId)}',this)`);
+      div.setAttribute('title', 'Double-click to rename');
+      div.textContent = newTitle;
+      input.replaceWith(div);
+    } catch (e) {
+      setSyncStatus('error');
+      showToast('Failed to rename list: ' + e.message, 'error');
+      input.disabled = false;
+      input.focus();
+    }
+  }
+
+  input.addEventListener('blur',    commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') {
+      input.removeEventListener('blur', commit);
+      const div = document.createElement('div');
+      div.className = 'list-title';
+      div.setAttribute('ondblclick', `editListTitle('${escHtml(listId)}',this)`);
+      div.setAttribute('title', 'Double-click to rename');
+      div.textContent = current;
+      input.replaceWith(div);
+    }
+  });
+}
+
+async function deleteList(listId, btn) {
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+
+  const taskCount = list.tasks.filter(t => t.title && t.status !== 'completed').length;
+  const countNote = taskCount > 0
+    ? ` It contains ${taskCount} active task${taskCount !== 1 ? 's' : ''} that will also be permanently deleted.`
+    : '';
+  if (!confirm(`Delete the list "${list.title}"?${countNote} This cannot be undone.`)) return;
+
+  btn.disabled = true;
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(`/api/lists.php?listId=${encodeURIComponent(listId)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Delete failed');
+
+    state.lists = state.lists.filter(l => l.id !== listId);
+    saveListOrder();
+    delete state.collapsed[listId];
+    localStorage.setItem('tasks-collapsed', JSON.stringify(state.collapsed));
+
+    const card = document.querySelector(`.list-card[data-list-id="${CSS.escape(listId)}"]`);
+    if (card) card.remove();
+
+    setSyncStatus('ok');
+    showToast('List deleted', 'success');
+  } catch (e) {
+    btn.disabled = false;
+    setSyncStatus('error');
+    showToast('Failed to delete list: ' + e.message, 'error');
+  }
+}
+
+/* ============================================================
+   PRIORITY CARD — virtual card aggregating starred tasks
+   ============================================================ */
+
+function renderPriorityCard() {
+  const board = document.getElementById('board');
+  if (!board) return;
+
+  // Remove any existing priority card
+  const existing = document.getElementById('priority-card');
+  if (existing) existing.remove();
+
+  // Collect starred, active (not completed), top-level tasks across all lists.
+  // Follow-up tasks are intentionally excluded: they have their own card and
+  // should not also appear in Priority (fixes double-listing bug).
+  const starredItems = [];
+  for (const list of state.lists) {
+    if (list.title === 'Follow-up') continue;
+    for (const task of list.tasks) {
+      if (state.stars[task.id] && task.status !== 'completed' && !task.parent) {
+        starredItems.push({ task, list });
+      }
+    }
+  }
+
+  // Nothing starred — don't show the card at all
+  if (!starredItems.length) return;
+
+  // Apply saved drag order (localStorage)
+  const savedOrder = JSON.parse(localStorage.getItem('tasks-priority-order') || '[]');
+  if (savedOrder.length) {
+    starredItems.sort((a, b) => {
+      const ai = savedOrder.indexOf(a.task.id);
+      const bi = savedOrder.indexOf(b.task.id);
+      return (ai === -1 ? 9999 : ai) - (bi === -1 ? 9999 : bi);
+    });
+  }
+
+  const card = document.createElement('div');
+  card.className = 'priority-card';
+  card.id        = 'priority-card';
+
+  const taskItemsHtml = starredItems.map(({ task, list }) =>
+    renderPriorityTaskItem(task, list)
+  ).join('');
+
+  card.innerHTML = `
+    <div class="priority-card-header">
+      <div class="priority-card-title">★ Priority</div>
+      <span class="task-count">${starredItems.length}</span>
+    </div>
+    <ul class="task-list" id="priority-task-list">
+      ${taskItemsHtml}
+    </ul>
+  `;
+
+  // Always first — insert before the first regular list card
+  board.insertBefore(card, board.firstChild);
+
+  // Drag-and-drop within Priority card — order saved to localStorage only
+  const priorityList = card.querySelector('#priority-task-list');
+  if (priorityList) {
+    Sortable.create(priorityList, {
+      animation:   150,
+      handle:      '.drag-handle',
+      ghostClass:  'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      onEnd() {
+        const items    = Array.from(priorityList.querySelectorAll('.task-item[data-task-id]'));
+        const newOrder = items.map(li => li.dataset.taskId);
+        localStorage.setItem('tasks-priority-order', JSON.stringify(newOrder));
+      }
+    });
+  }
+}
+
+function renderPriorityTaskItem(task, list) {
+  const done         = task.status === 'completed';
+  const displayNotes = stripOriginMarker(task.notes || '');
+  const hasNotes     = !!(displayNotes && displayNotes.trim());
+  const dueStr       = task.due || '';
+  const dueFmt       = dueStr ? formatDue(dueStr) : '';
+  const overdue      = !done && isOverdue(dueStr);
+  const checked      = done ? 'checked' : '';
+  const listId       = list.id;
+  const isFollowUp   = list.title === 'Follow-up';
+  const originListId = getOriginListId(task.notes);
+
+  const duePart = dueFmt
+    ? `<span class="task-due${overdue ? ' overdue' : ''}"
+             onclick="editDue('${escHtml(listId)}','${escHtml(task.id)}','${escHtml(dueStr)}',this)"
+             title="Click to change due date">${dueFmt}</span>`
+    : `<button class="due-add-btn"
+               onclick="editDue('${escHtml(listId)}','${escHtml(task.id)}','',this)"
+               title="Set due date">📅</button>`;
+
+  const notesPanelContent = hasNotes
+    ? `<div class="task-notes-view">${renderNoteText(displayNotes)}</div>`
+    : '';
+
+  // ◑ button: on Follow-up tasks moves back; on others moves to Follow-up
+  const partialBtn = !done ? (
+    isFollowUp && originListId
+      ? `<button class="partial-btn" title="Return to original list"
+                 onclick="moveBackFromFollowUp('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
+      : `<button class="partial-btn" title="Move to Follow-up"
+                 onclick="markPartialComplete('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
+  ) : '';
+
+  return `
+    <li class="task-item starred${done ? ' completed' : ''}${hasNotes ? ' has-notes' : ''}"
+        data-task-id="${escHtml(task.id)}"
+        data-list-id="${escHtml(listId)}"
+        data-index="0">
+      <div class="task-row">
+        <span class="drag-handle" title="Drag to reorder priority">⠿</span>
+        <label class="task-check-wrap" title="Complete task">
+          <input type="checkbox" class="task-check" ${checked}
+                 onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
+          <span class="task-check-circle" data-num="★"></span>
+        </label>
+        <div class="priority-task-body">
+          <span class="task-text"
+                ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
+                title="Double-click to edit">${escHtml(task.title)}</span>
+          <span class="task-source-label">${escHtml(list.title)}</span>
+        </div>
+      </div>
+      <div class="task-actions-row">
+        ${duePart}
+        <button class="notes-btn"
+                onclick="toggleNotes(this)"
+                title="${hasNotes ? 'View/edit notes' : 'Add notes'}">📝</button>
+        ${partialBtn}
+        <button class="star-btn"
+                onclick="toggleStar('${escHtml(task.id)}',this)"
+                title="Unstar">★</button>
+        <button class="task-delete-btn"
+                onclick="deleteTask('${escHtml(listId)}','${escHtml(task.id)}',this)"
+                title="Delete task">✕</button>
+      </div>
+      <div class="task-notes-panel"
+           data-task-id="${escHtml(task.id)}"
+           data-list-id="${escHtml(listId)}">
+        ${notesPanelContent}
+      </div>
+    </li>
+  `;
+}
+
+/* ============================================================
+   THEME
+   ============================================================ */
+const THEMES = [
+  { id: 'notebook', label: '📓 Notebook' },
+  { id: 'modern',   label: '💻 Modern'   },
+  { id: 'compact',  label: '⚡ Compact'  },
+  { id: 'ocean',    label: '🌊 Ocean'    },
+  { id: 'rose',     label: '🌸 Rose'     },
+];
+
+// skipSave: true when applying a theme we just fetched FROM the server
+// (on load) — no point immediately POSTing the same value straight back.
+function applyTheme(theme, skipSave) {
+  // Preserve tetris-mode class when switching body className
+  const hasTetris = document.body.classList.contains('tetris-body');
+  document.body.className = 'theme-' + theme;
+  if (hasTetris) document.body.classList.add('tetris-body');
+  state.theme = theme;
+  localStorage.setItem('tasks-theme', theme);
+  renderThemePicker(); // keep picker in sync if settings is open
+  if (!skipSave) savePrefs();
+}
+
+function renderThemePicker() {
+  const picker = document.getElementById('theme-picker');
+  if (!picker) return;
+  picker.innerHTML = THEMES.map(t => `
+    <button class="theme-chip${state.theme === t.id ? ' active' : ''}"
+            onclick="applyTheme('${t.id}')">${t.label}</button>
+  `).join('');
+}
+
+/* ============================================================
+   SYNC STATUS
+   ============================================================ */
+function setSyncStatus(status) {
+  const dot  = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  if (!dot || !text) return;
+  dot.className = 'sync-dot';
+  if (status === 'syncing') {
+    dot.classList.add('syncing');
+    text.textContent = 'Syncing…';
+  } else if (status === 'ok') {
+    text.textContent = 'Synced ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } else if (status === 'error') {
+    dot.classList.add('error');
+    text.textContent = 'Sync error';
+  } else {
+    text.textContent = '';
+  }
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = 'show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
+
+/* ============================================================
+   UTILS
+   ============================================================ */
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* ============================================================
+   RENUMBER — update circle data-num after complete/delete
+   ============================================================ */
+function renumberCard(listId) {
+  const ul = document.querySelector(`.task-list[data-list-id="${CSS.escape(listId)}"]`);
+  if (!ul) return;
+  let num = 0;
+  ul.querySelectorAll('.task-item').forEach(li => {
+    const isCompleted = li.classList.contains('completed');
+    const isSubtask   = li.classList.contains('subtask');
+    const circle      = li.querySelector('.task-check-circle');
+    if (!circle) return;
+    if (isSubtask) {
+      circle.dataset.num = '·';
+    } else if (!isCompleted) {
+      num++;
+      circle.dataset.num = String(num);
+      li.dataset.index   = num;
+    }
+    // Completed tasks: data-num doesn't matter; :checked CSS shows ✓
+  });
+}
+
+/* ============================================================
+   NOTES PANEL
+   ============================================================ */
+
+// Toggle the notes panel open/closed
+// Track panels where Esc was pressed so blur doesn't auto-save
+const _notesEscaping = new Set();
+
+function toggleNotes(btn) {
+  const li    = btn.closest('.task-item');
+  const panel = li && li.querySelector('.task-notes-panel');
+  if (!panel) return;
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+  } else {
+    _openNotesEdit(panel);
+  }
+}
+
+// Open a notes panel directly in edit mode (textarea, no intermediate view)
+function _openNotesEdit(panel) {
+  const taskId = panel.dataset.taskId;
+  const listId = panel.dataset.listId;
+
+  // Look up current notes from state
+  let currentNotes = '';
+  for (const list of state.lists) {
+    if (list.id === listId) {
+      const task = list.tasks.find(t => t.id === taskId);
+      if (task) currentNotes = task.notes || '';
+      break;
+    }
+  }
+
+  _notesEscaping.delete(panel.dataset.taskId);
+  panel.innerHTML = `
+    <textarea class="task-notes-edit-input"
+              onkeydown="handleNotesKey(event,this)"
+              onblur="_autosaveNotes(this)"
+              placeholder="Notes… (Ctrl+Enter to save, Esc to cancel)"
+    >${escHtml(currentNotes)}</textarea>
+  `;
+  panel.classList.add('open');
+
+  const ta = panel.querySelector('textarea');
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  // Auto-grow
+  function resize() { ta.style.height = 'auto'; ta.style.height = Math.max(60, ta.scrollHeight) + 'px'; }
+  ta.addEventListener('input', resize);
+  setTimeout(resize, 0);
+}
+
+// Legacy entry point kept for any "Edit" buttons that may still exist in rendered HTML
+function editNotes(btn) {
+  const panel = btn.closest('.task-notes-panel');
+  if (panel) _openNotesEdit(panel);
+}
+
+// Keyboard shortcuts inside the notes textarea
+function handleNotesKey(e, ta) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    // Save immediately, then blur naturally triggers autosave guard
+    const panel = ta.closest('.task-notes-panel');
+    if (panel) _notesEscaping.delete(panel.dataset.taskId); // ensure not marked as escaping
+    ta.blur();
+  }
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    const panel = ta.closest('.task-notes-panel');
+    if (panel) {
+      _notesEscaping.add(panel.dataset.taskId); // signal: don't autosave
+      // Revert to original notes
+      let orig = '';
+      for (const list of state.lists) {
+        if (list.id === panel.dataset.listId) {
+          const task = list.tasks.find(t => t.id === panel.dataset.taskId);
+          if (task) orig = task.notes || '';
+          break;
+        }
+      }
+      _renderNotesPanelView(panel, orig);
+    }
+  }
+}
+
+// Auto-save triggered by textarea blur
+async function _autosaveNotes(ta) {
+  const panel  = ta.closest('.task-notes-panel');
+  if (!panel) return;
+  const taskId = panel.dataset.taskId;
+  // Skip save if Esc was pressed
+  if (_notesEscaping.has(taskId)) {
+    _notesEscaping.delete(taskId);
+    return;
+  }
+  const listId = panel.dataset.listId;
+  const notes  = ta.value;
+
+  // Check if notes actually changed
+  let originalNotes = '';
+  for (const list of state.lists) {
+    if (list.id === listId) {
+      const task = list.tasks.find(t => t.id === taskId);
+      if (task) originalNotes = task.notes || '';
+      break;
+    }
+  }
+  if (notes === originalNotes) {
+    // No change — just switch to view mode silently
+    _renderNotesPanelView(panel, notes);
+    return;
+  }
+
+  try {
+    setSyncStatus('syncing');
+    const res = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }) }
+    );
+    if (!res.ok) throw new Error('Update failed');
+
+    // Update in-memory state
+    for (const list of state.lists) {
+      if (list.id === listId) {
+        const task = list.tasks.find(t => t.id === taskId);
+        if (task) task.notes = notes;
+        break;
+      }
+    }
+
+    // Update has-notes class + button appearance on the li
+    const li = panel.closest('.task-item');
+    if (li) {
+      const hasNotes = !!notes.trim();
+      li.classList.toggle('has-notes', hasNotes);
+      const notesBtn = li.querySelector('.notes-btn');
+      if (notesBtn) notesBtn.title = hasNotes ? 'View/edit notes' : 'Add notes';
+    }
+
+    setSyncStatus('ok');
+    _renderNotesPanelView(panel, notes);
+  } catch (err) {
+    setSyncStatus('error');
+    showToast('Failed to save notes', 'error');
+  }
+}
+
+/* ============================================================
+   PWA — Service Worker Registration
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // updateViaCache:'none' stops the browser from serving sw.js itself out
+    // of the HTTP cache on update checks — installed/home-screen PWAs (iOS
+    // especially) can otherwise go a long time before ever re-checking.
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        console.log('[SW] Registered, scope:', reg.scope);
+        reg.update().catch(() => {});
+      })
+      .catch(err => console.warn('[SW] Registration failed:', err));
+  });
+}
+
+/* ============================================================
+   UPDATE CHECK — detects a stale cached copy of the app (common on
+   installed PWAs, especially iOS home-screen apps that rarely re-check
+   their service worker on their own) and offers a one-tap force-refresh.
+   ============================================================ */
+let _buildVersion = null;
+
+async function checkForUpdate() {
+  try {
+    const res = await fetch('/api/version.php', { cache: 'no-store' });
+    const data = await res.json();
+    if (_buildVersion === null) {
+      _buildVersion = data.version;   // baseline, captured fresh (bypasses all caching)
+    } else if (data.version !== _buildVersion) {
+      showUpdateBanner();
+    }
+  } catch (e) { /* offline or blocked — just skip this check */ }
+}
+
+function showUpdateBanner() {
+  if (document.getElementById('update-banner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'update-banner';
+  bar.innerHTML = `<span>🔄 A new version of TaskStick is available.</span><button onclick="forceAppUpdate()">Update now</button>`;
+  document.body.insertBefore(bar, document.body.firstChild);
+}
+
+async function forceAppUpdate() {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+  } catch (e) {}
+  try {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  } catch (e) {}
+  location.reload();
+}
+
+// Check on load, on the regular poll cadence, and whenever the app is
+// brought back to the foreground (the case that matters most for mobile
+// PWAs, which are usually resumed rather than freshly loaded).
+window.addEventListener('load', checkForUpdate);
+setInterval(checkForUpdate, 120_000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkForUpdate();
+});
+
+// Save notes via PATCH then switch back to view mode (legacy — now called by Ctrl+Enter via blur)
+async function saveNotes(btn) {
+  const panel = btn ? btn.closest('.task-notes-panel') : null;
+  const ta    = panel && panel.querySelector('textarea');
+  if (ta) ta.blur(); // triggers _autosaveNotes via onblur
+}
+
+// Discard edits and revert to view mode (legacy — now handled by Esc key)
+function cancelNotes(btn) {
+  const panel = btn ? btn.closest('.task-notes-panel') : null;
+  if (!panel) return;
+  _notesEscaping.add(panel.dataset.taskId);
+  const ta = panel.querySelector('textarea');
+  if (ta) ta.blur();
+}
+
+// Shared helper — rebuild panel HTML in view mode (read-only; click Notes btn again to edit)
+function _renderNotesPanelView(panel, notes) {
+  const hasNotes = !!notes.trim();
+  if (hasNotes) {
+    panel.innerHTML = `<div class="task-notes-view">${renderNoteText(notes)}</div>`;
+    panel.classList.add('open');
+  } else {
+    panel.innerHTML = '';
+    panel.classList.remove('open');
+  }
+}
+
+// Convert plain text to HTML — escaping entities and making URLs clickable
+function renderNoteText(text) {
+  if (!text) return '';
+  const urlRe = /(https?:\/\/[^\s]+)/g;
+  const segments = [];
+  let lastIdx = 0, m;
+  urlRe.lastIndex = 0;
+  while ((m = urlRe.exec(text)) !== null) {
+    if (m.index > lastIdx) segments.push({ type: 'text', val: text.slice(lastIdx, m.index) });
+    segments.push({ type: 'url', val: m[0] });
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) segments.push({ type: 'text', val: text.slice(lastIdx) });
+  return segments.map(seg =>
+    seg.type === 'url'
+      ? `<a href="${escHtml(seg.val)}" target="_blank" rel="noopener noreferrer">${escHtml(seg.val)}</a>`
+      : escHtml(seg.val).replace(/\n/g, '<br>')
+  ).join('');
+}
+
+/* ============================================================
+   PARTIALLY COMPLETE — move task to Follow-up list
+   ============================================================ */
+/* ── Origin marker helpers (Follow-up ↔ original list tracking) ── */
+const ORIGIN_RE = /\n?\[(?:tasktical|taskstick)-origin:[^\]]+\]/g;
+
+function stripOriginMarker(notes) {
+  return (notes || '').replace(ORIGIN_RE, '').trim();
+}
+
+function getOriginListId(notes) {
+  const m = (notes || '').match(/\[(?:tasktical|taskstick)-origin:([^\]]+)\]/);
+  return m ? m[1] : null;
+}
+
+async function markPartialComplete(listId, taskId, btn) {
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+  const task = list.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  // Find or create "Follow-up" list
+  let followUp = state.lists.find(l => l.title === 'Follow-up');
+  if (!followUp) {
+    try {
+      setSyncStatus('syncing');
+      const res = await fetch('/api/lists.php', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title: 'Follow-up' }),
+      });
+      if (!res.ok) throw new Error('Could not create Follow-up list');
+      const newList = await res.json();
+      followUp = { ...newList, tasks: [] };
+      state.lists.push(followUp);
+    } catch (e) {
+      setSyncStatus('error');
+      showToast('Failed to create Follow-up list: ' + e.message, 'error');
+      return;
+    }
+  }
+
+  // Embed origin list ID in notes so ◑ can move it back later
+  task.notes = (stripOriginMarker(task.notes) + `\n[taskstick-origin:${listId}]`).trim();
+
+  // Optimistically move in state
+  list.tasks     = list.tasks.filter(t => t.id !== taskId);
+  followUp.tasks = [task, ...followUp.tasks];
+  rerenderCard(list);
+  rerenderCard(followUp);
+  renderPriorityCard();
+
+  // Move via API (cross-list: create in Follow-up, delete from source)
+  await crossListMoveAPI(listId, followUp.id, task);
+  showToast('Moved to Follow-up ◑', 'success');
+}
+
+async function moveBackFromFollowUp(followUpListId, taskId, btn) {
+  const followUp = state.lists.find(l => l.id === followUpListId);
+  if (!followUp) return;
+  const task = followUp.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  const originListId = getOriginListId(task.notes);
+  if (!originListId) { showToast('Original list not found', 'error'); return; }
+  const originList = state.lists.find(l => l.id === originListId);
+  if (!originList) { showToast('Original list no longer exists', 'error'); return; }
+
+  // Strip the origin marker from notes before moving back
+  task.notes = stripOriginMarker(task.notes) || undefined;
+
+  // Optimistically move in state
+  followUp.tasks  = followUp.tasks.filter(t => t.id !== taskId);
+  originList.tasks.unshift(task);
+  rerenderCard(followUp);
+  rerenderCard(originList);
+  renderPriorityCard();
+
+  // Move via API
+  await crossListMoveAPI(followUpListId, originListId, task);
+  showToast(`Returned to ${originList.title} ✓`, 'success');
+}
+
+</script>
+
+<!-- ── SETTINGS MODAL ── -->
+<div class="settings-overlay" id="settings-overlay" onclick="handleSettingsOverlayClick(event)">
+  <div class="settings-modal" role="dialog" aria-label="Settings">
+    <div class="settings-modal-header">
+      <h3>⚙ Settings</h3>
+      <button class="settings-close-btn" onclick="closeSettings()" title="Close">✕</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Display</div>
+
+      <div class="settings-row-label" style="margin-bottom:8px;font-size:0.78rem">Theme</div>
+      <div id="theme-picker" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Tetris stacking</div>
+          <div class="settings-row-desc">Pack cards into columns to cut whitespace</div>
+        </div>
+        <label class="toggle-switch" title="Tetris stacking">
+          <input type="checkbox" id="pref-tetris"
+                 onchange="setTetrisMode(this.checked)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Alphabetical sort</div>
+          <div class="settings-row-desc">Sort lists A–Z (Priority &amp; Follow-up always first)</div>
+        </div>
+        <label class="toggle-switch" title="Alphabetical sort">
+          <input type="checkbox" id="pref-alpha-sort"
+                 onchange="setAlphabeticalSort(this.checked)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">All tasks view</div>
+          <div class="settings-row-desc">Show every task as one continuous multi-column list</div>
+        </div>
+        <label class="toggle-switch" title="All tasks view">
+          <input type="checkbox" id="pref-all-tasks"
+                 onchange="setAllTasksMode(this.checked)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Tasks</div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Hide completed tasks</div>
+          <div class="settings-row-desc">Completed tasks are still saved — just not shown</div>
+        </div>
+        <label class="toggle-switch" title="Hide completed tasks">
+          <input type="checkbox" id="pref-hide-completed"
+                 onchange="setHideCompleted(this.checked)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Daily Ritual</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Daily Ritual list</div>
+          <div class="settings-row-desc">A checklist that resets itself every day at midnight, your time</div>
+        </div>
+        <label class="toggle-switch" title="Daily Ritual list">
+          <input type="checkbox" id="pref-ritual-enabled"
+                 onchange="setRitualEnabled(this.checked)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">AI Assistant</div>
+      <div class="settings-row-desc" style="margin-bottom:10px">
+        Connect Claude, ChatGPT, or another AI assistant so it can read and manage your tasks directly.
+      </div>
+      <a href="/mcp/setup.php" target="_blank" rel="noopener" class="invite-send-btn"
+         style="display:block;text-align:center;padding:9px;text-decoration:none">
+        Set Up AI Assistant Connection →
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── FEEDBACK MODAL ── -->
+<div class="settings-overlay" id="feedback-overlay" onclick="handleFeedbackOverlayClick(event)">
+  <div class="settings-modal" role="dialog" aria-label="Send Feedback">
+    <div class="settings-modal-header">
+      <h3>💬 Send Feedback</h3>
+      <button class="settings-close-btn" onclick="closeFeedback()" title="Close">✕</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-row-label" style="margin-bottom:8px;font-size:0.78rem">Type</div>
+      <select id="feedback-type" class="admin-status-select" style="width:100%;margin-bottom:14px">
+        <option value="bug">🐛 Bug</option>
+        <option value="feature">✨ Feature request</option>
+        <option value="suggestion">💡 Suggestion</option>
+      </select>
+      <div class="settings-row-label" style="margin-bottom:8px;font-size:0.78rem">Description</div>
+      <textarea id="feedback-description" rows="5" placeholder="What happened, or what would you like to see?"
+                style="width:100%;resize:vertical;font-family:var(--ui-font);font-size:0.85rem;padding:10px;
+                       border-radius:8px;box-sizing:border-box"></textarea>
+      <div id="feedback-status-msg" style="font-size:0.75rem;margin-top:8px;min-height:1em"></div>
+      <button id="feedback-submit-btn" class="invite-send-btn" style="margin-top:10px;width:100%"
+              onclick="submitFeedback()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TASKS-SCOPE WARNING MODAL ── -->
+<div class="settings-overlay" id="scope-warning-overlay">
+  <div class="settings-modal" role="dialog" aria-label="Google Tasks access needed">
+    <div class="settings-modal-header">
+      <h3>⚠️ Task Access Not Granted</h3>
+    </div>
+    <div class="settings-section">
+      <div class="settings-row-desc" style="font-size:0.85rem;line-height:1.5;color:var(--text-primary)">
+        You signed in, but didn't grant TaskStick access to your Google Tasks.
+        Without it, <strong>your tasks won't be backed up or synced to Google</strong>,
+        and most features (viewing lists, adding tasks, due dates, sharing) won't work.
+      </div>
+      <a href="/auth/login" class="invite-send-btn"
+         style="display:block;text-align:center;margin-top:16px;padding:10px;font-size:0.85rem;text-decoration:none">
+        Grant Task Access
+      </a>
+      <button class="modal-dismiss-btn" onclick="closeScopeWarning()">Continue with limited features</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADMIN MODAL ── -->
+<div class="settings-overlay" id="admin-overlay" onclick="handleAdminOverlayClick(event)">
+  <div class="settings-modal" role="dialog" aria-label="Admin">
+    <div class="settings-modal-header">
+      <h3>🛡 Admin</h3>
+      <button class="settings-close-btn" onclick="closeAdmin()" title="Close">✕</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Users</div>
+      <div id="admin-users-wrap"></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Feedback</div>
+      <div id="admin-feedback-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── HELP MODAL ── -->
+<div class="help-overlay" id="help-overlay" onclick="handleHelpOverlayClick(event)">
+  <div class="help-modal" role="dialog" aria-label="Help">
+    <div class="help-modal-header">
+      <h3>❓ Features &amp; Help</h3>
+      <button class="help-close-btn" onclick="closeHelp()" title="Close">✕</button>
+    </div>
+
+    <div class="help-section-title">Core features</div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-card-icon">★</div>
+        <div class="help-card-name">Priority List</div>
+        <div class="help-card-desc">Star any task (★/☆) to pin it to the Priority card at the top.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">◑</div>
+        <div class="help-card-name">Follow-up</div>
+        <div class="help-card-desc">Click ◑ to defer a task to Follow-up. Click ◑ again to return it to the original list.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🔁</div>
+        <div class="help-card-name">Daily Ritual</div>
+        <div class="help-card-desc">Settings → Daily Ritual list. A checklist that resets every task to incomplete at midnight in your local timezone.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">📅</div>
+        <div class="help-card-name">Due Dates</div>
+        <div class="help-card-desc">Hover a task and click 📅 to set a due date. Overdue dates glow red.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">📝</div>
+        <div class="help-card-name">Notes</div>
+        <div class="help-card-desc">Hover a task and click 📝 to attach notes. URLs become clickable links.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">✏️</div>
+        <div class="help-card-name">Inline Edit</div>
+        <div class="help-card-desc">Double-click any task title to rename it in place.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">✅</div>
+        <div class="help-card-name">Complete &amp; Hide</div>
+        <div class="help-card-desc">Check a task to complete it. Use Settings → Hide Completed to clean up the view.</div>
+      </div>
+    </div>
+
+    <div class="help-section-title">Organisation</div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-card-icon">⠿</div>
+        <div class="help-card-name">Drag &amp; Drop</div>
+        <div class="help-card-desc">Drag the ⠿ handle to reorder tasks. Drag a card header to reorder lists.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">▾</div>
+        <div class="help-card-name">Collapse Lists</div>
+        <div class="help-card-desc">Click ▾ on any list header to collapse it and save screen space.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🔤</div>
+        <div class="help-card-name">Alphabetical Sort</div>
+        <div class="help-card-desc">Settings → Alphabetical sort orders all lists A–Z. Priority &amp; Follow-up stay first.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🧱</div>
+        <div class="help-card-name">Tetris Stacking</div>
+        <div class="help-card-desc">Settings → Tetris stacking packs cards into columns to eliminate whitespace.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">＋</div>
+        <div class="help-card-name">New List / Task</div>
+        <div class="help-card-desc">Click "+ New list" on the board or type in the "Add task…" field at the bottom of any list.</div>
+      </div>
+    </div>
+
+    <div class="help-section-title">Display</div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-card-icon">🎨</div>
+        <div class="help-card-name">Themes</div>
+        <div class="help-card-desc">Settings → Theme — choose from Notebook, Modern, Compact, Ocean, or Rose.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">↻</div>
+        <div class="help-card-name">Auto-refresh</div>
+        <div class="help-card-desc">Tasks sync every 2 minutes automatically. Click ↻ in the header to refresh immediately.</div>
+      </div>
+    </div>
+
+    <div class="help-section-title">Install as an App</div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-card-icon">🖥️</div>
+        <div class="help-card-name">Mac (Chrome)</div>
+        <div class="help-card-desc">Click the install icon in the address bar (right side of the URL), then <strong>Install</strong>. Not visible? Use <strong>⋮ menu → Save and Share → Install TaskStick…</strong></div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🪟</div>
+        <div class="help-card-name">Windows (Chrome / Edge)</div>
+        <div class="help-card-desc">Same as Mac — click the install icon in the address bar, or <strong>⋮ menu → Apps → Install this site as an app</strong>.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">📱</div>
+        <div class="help-card-name">iPhone / iPad</div>
+        <div class="help-card-desc">Must use <strong>Safari</strong> (iOS doesn't allow Chrome to install apps). Tap the <strong>Share</strong> icon → scroll down → <strong>Add to Home Screen</strong> → <strong>Add</strong>.</div>
+      </div>
+    </div>
+
+    <div class="help-section-title">AI Assistants</div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-card-icon">🔌</div>
+        <div class="help-card-name">Connect an AI Assistant</div>
+        <div class="help-card-desc">Let Claude, ChatGPT, or another AI assistant read and manage your tasks directly. <a href="/mcp/setup.php" target="_blank" rel="noopener" style="color:#a78bfa">Set up the connection →</a></div>
+      </div>
+    </div>
+
+    <div class="help-footer">
+      <span class="help-version">TaskStick <span id="help-version-label"></span></span>
+      <span class="help-feedback">Backed by Google Tasks</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer id="app-footer">
+  <span>© 2025 Purple Pill Solutions</span>
+  <span>·</span>
+  <a href="https://tasks.tesh.ai/terms.html">Terms of Service</a>
+  <span>·</span>
+  <a href="https://tasks.tesh.ai/privacy.html">Privacy Policy</a>
+</footer>
+</body>
+</html>
