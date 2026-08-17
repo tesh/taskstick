@@ -8,6 +8,15 @@
 
 ## 🐛 Bugs
 
+### BUG-008 · fixed · 2026-08-17
+**Title:** Follow-up ◑ "Return to original list" silently did nothing
+**Reported by:** Tesh (screenshot of a stuck Follow-up task, "Halifax Bereavement BER-631760")
+**Root cause:** Two compounding bugs. (1) `api/tasks.php`'s POST/PATCH/DELETE handlers proxied Google's raw API response with a hardcoded 200 status — the same pattern BUG-003 already fixed in `lists.php` — so a failed Google Tasks call (e.g. the origin list ID captured in the task's `[taskstick-origin:...]` marker no longer being valid on Google's side) looked like success to the client. (2) `crossListMoveAPI()` caught its own errors internally and never told its callers it failed; `moveBackFromFollowUp()`/`markPartialComplete()` then unconditionally showed their own "success" toast right after `await`ing it, overwriting the real (briefly-visible) error toast, while the internal `loadAll(false)` revert silently put the task right back where it started — matching Tesh's report of a message flashing and the task staying in Follow-up.
+**Also fixed:** The optimistic re-render happened before the API call resolved and updated the task's real ID, so a click immediately after a move could bind the wrong task ID into the rendered button.
+**Fix:** Added the `if (!empty($result['error'])) jsonResponse($result, 500);` check (matching `lists.php`) to all three verbs in `api/tasks.php`. `crossListMoveAPI()` now returns `true`/`false` instead of swallowing failure; callers only show their success toast (and re-render to pick up the corrected task ID) when it actually returns `true`.
+**Files:** `api/tasks.php`, `index.html`
+**Resolved:** 2026-08-17
+
 ### BUG-007 · fixed · 2026-08-15
 **Title:** Reinstalling the PWA still showed the old icon — manifest.json itself was stale, not just the app cache
 **Reported by:** Tesh (deleted + reinstalled the Mac app per BUG-006's guidance; still got the old icon)
