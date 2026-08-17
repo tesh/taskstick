@@ -46,6 +46,9 @@ switch ($method) {
                 '/lists/' . urlencode($listId) . '/tasks/' . urlencode($taskId) . '/move' . $qs,
                 'POST'
             );
+            if (!empty($result['error'])) {
+                jsonResponse($result, 500);
+            }
             jsonResponse($result);
         }
         // Create a new task
@@ -57,6 +60,9 @@ switch ($method) {
         if (!empty($body['due']))   $task['due']   = $body['due'];
         if (!empty($body['status'])) $task['status'] = $body['status'];
         $result = googleApiRequest('/lists/' . urlencode($listId) . '/tasks', 'POST', $task);
+        if (!empty($result['error'])) {
+            jsonResponse($result, 500);
+        }
         jsonResponse($result);
 
     case 'PATCH':
@@ -73,15 +79,21 @@ switch ($method) {
             'PATCH',
             $update
         );
+        if (!empty($result['error'])) {
+            jsonResponse($result, 500);
+        }
         jsonResponse($result);
 
     case 'DELETE':
         // Delete a task
         if (!$taskId) jsonResponse(['error' => 'taskId required'], 400);
-        googleApiRequest(
+        $result = googleApiRequest(
             '/lists/' . urlencode($listId) . '/tasks/' . urlencode($taskId),
             'DELETE'
         );
+        if (!empty($result['error'])) {
+            jsonResponse($result, 500);
+        }
         jsonResponse(['success' => true]);
 
     default:

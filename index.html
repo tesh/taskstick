@@ -3460,10 +3460,11 @@ async function crossListMoveAPI(fromListId, toListId, task) {
     const newTask = await createRes.json();
 
     // Delete from source list
-    await fetch(
+    const deleteRes = await fetch(
       `/api/tasks.php?listId=${encodeURIComponent(fromListId)}&taskId=${encodeURIComponent(task.id)}`,
       { method: 'DELETE' }
     );
+    if (!deleteRes.ok) throw new Error('Moved, but could not remove the original — refreshing to reconcile');
 
     // Update task ID in destination state
     const toList = state.lists.find(l => l.id === toListId);
@@ -3480,11 +3481,12 @@ async function crossListMoveAPI(fromListId, toListId, task) {
     }
 
     setSyncStatus('ok');
-    showToast('Task moved', 'success');
+    return true;
   } catch (e) {
     setSyncStatus('error');
     showToast('Failed to move task: ' + e.message, 'error');
     loadAll(false);
+    return false;
   }
 }
 
@@ -4227,8 +4229,11 @@ async function markPartialComplete(listId, taskId, btn) {
   renderPriorityCard();
 
   // Move via API (cross-list: create in Follow-up, delete from source)
-  await crossListMoveAPI(listId, followUp.id, task);
-  showToast('Moved to Follow-up ◑', 'success');
+  const ok = await crossListMoveAPI(listId, followUp.id, task);
+  if (ok) {
+    rerenderCard(followUp); // task's real ID changed on the server — refresh so its buttons use it
+    showToast('Moved to Follow-up ◑', 'success');
+  }
 }
 
 async function moveBackFromFollowUp(followUpListId, taskId, btn) {
@@ -4253,8 +4258,11 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
   renderPriorityCard();
 
   // Move via API
-  await crossListMoveAPI(followUpListId, originListId, task);
-  showToast(`Returned to ${originList.title} ✓`, 'success');
+  const ok = await crossListMoveAPI(followUpListId, originListId, task);
+  if (ok) {
+    rerenderCard(originList); // task's real ID changed on the server — refresh so its buttons use it
+    showToast(`Returned to ${originList.title} ✓`, 'success');
+  }
 }
 
 </script>
