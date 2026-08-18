@@ -8,6 +8,30 @@
 
 ## 🐛 Bugs
 
+### BUG-012 · fixed · 2026-08-18
+**Title:** Admin toggle switch nearly invisible in light themes
+**Reported by:** Tesh (screenshot: Users tab, admin toggle unreadable)
+**Root cause:** `.toggle-track`'s off-state (`rgba(255,255,255,0.15)`, near-white) was designed for the Settings modal's fixed dark background. Once the Admin modal became theme-aware (ENH-028), that same near-white track rendered against light theme card backgrounds (Notebook, Rose) — nearly invisible.
+**Fix:** Added `#admin-overlay .toggle-switch input:not(:checked) + .toggle-track { background: rgba(128,128,128,0.35); border: 1px solid rgba(128,128,128,0.25); }` — a neutral mid-gray that reads on any theme, light or dark. Scoped with `:not(:checked)` specifically so it doesn't outrank (by ID specificity) the existing checked-state purple rule — an earlier version of this fix without that guard visually broke the "on" state too, caught via local browser testing before deploy.
+**Files:** `index.html`
+**Resolved:** 2026-08-18
+
+### BUG-011 · fixed · 2026-08-18
+**Title:** Priority card too narrow relative to other cards in Tetris stacking mode, at some window widths
+**Reported by:** Tesh (screenshot: Priority/Follow-up narrower than Tasktical/Purple Pill list cards)
+**Root cause:** In Tetris mode (`#board.tetris-mode`, CSS multi-column layout), `.list-card`'s override correctly sets `width: 100%; max-width: 100%;` to fill its column, but `.priority-card`'s override was missing `max-width: 100%` — so it stayed capped by the base (non-tetris) `.priority-card { max-width: 340px; }` rule whenever the browser rendered wider columns than 340px (which varies with window width, since `columns: 300px` is a target minimum, not a fixed size — matching "at some breakpoints").
+**Fix:** Added the missing `max-width: 100%` to `#board.tetris-mode .priority-card`, matching `.list-card`'s existing tetris override.
+**Files:** `index.html`
+**Resolved:** 2026-08-18
+
+### BUG-010 · fixed · 2026-08-18
+**Title:** New user (Lola) never appeared in the Admin Users list despite using the app
+**Reported by:** Tesh
+**Root cause:** `registerUser()` (called on every login) and the admin `toggle_admin` action both did a plain read-modify-write on `data/users.json` — `loadUsers()` → mutate the in-memory array → `saveUsers()` — with no file locking. If two requests hit this close together (very plausible with several family members trying the app around the same time), the second writer could read the file before the first writer's save landed, then overwrite it with a version missing the first writer's new user entirely. Confirmed via the live `data/users.json`: only 4 of the expected 5 users were present, with no trace of the missing one — consistent with a lost write, not a display/filtering bug (ENH-027 had already confirmed the Users view itself is unfiltered).
+**Fix:** New `updateUsers(callable $mutator): array` in `config.php` opens the file with `fopen(..., 'c+')`, takes an exclusive `flock()`, reads, lets the caller mutate the array, then truncates and rewrites before releasing the lock — serializing concurrent writers instead of racing them. `registerUser()` and `toggle_admin` both now go through it.
+**Files:** `config.php`, `api/admin.php`
+**Resolved:** 2026-08-18
+
 ### BUG-009 · fixed · 2026-08-17
 **Title:** Due date displays one day earlier than what was set (ENH-004 resolved)
 **Reported by:** Tesh (screenshot: date input showed 08/18/2026, badge showed "Aug 17")
@@ -100,6 +124,14 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 ---
 
 ## ✨ Enhancement Requests
+
+### ENH-041 · complete · 2026-08-18
+**Title:** Group feedback by type; delete feedback items with an archive + downloadable export
+**Requested by:** Tesh
+**Description:** The Feedback tab was one flat list — wanted it organized into Bugs/Features/Suggestions sections. Also wanted a way to delete items from the view, but kept in an archived form that can be downloaded as a Markdown file if needed later, rather than being permanently erased.
+**Fix:** New `deleted_at DATETIME NULL` column on the `feedback` table (soft-delete; try/catch'd `ALTER TABLE` for portability across MySQL/MariaDB versions, matching this table's existing auto-migrate pattern). `feedbackList()` now excludes soft-deleted rows; new `feedbackSoftDelete()` and `feedbackArchiveList()`. New admin.php action `delete_feedback` and resource `feedback_archive_md` (streams a generated Markdown document via `Content-Disposition: attachment`). Frontend: `renderAdminFeedback()` groups items by type into labeled sections (respecting the existing hide-resolved filter), each row gets a 🗑 delete button (confirms first), and a "Download archive (.md)" link sits next to "Hide resolved."
+**Files:** `feedback_db.php`, `api/admin.php`, `index.html`
+**Resolved:** 2026-08-18
 
 ### ENH-040 · complete · 2026-08-17
 **Title:** Redesign Admin modal — tabs + wider/responsive layout + hide-resolved filter

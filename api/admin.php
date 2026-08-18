@@ -4,8 +4,10 @@
  *
  * GET  ?resource=users                                 — list all users who have ever logged in
  * POST { action:'toggle_admin', email }                — flip a user's admin flag
- * GET  ?resource=feedback                               — list submitted feedback
+ * GET  ?resource=feedback                               — list active (non-deleted) feedback
+ * GET  ?resource=feedback_archive_md                    — download deleted feedback as a .md file
  * POST { action:'update_feedback_status', id, status }  — change a feedback item's status
+ * POST { action:'delete_feedback', id }                 — soft-delete (archive) a feedback item
  */
 require_once '../config.php';
 require_once '../feedback_db.php';
@@ -30,6 +32,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
     }
 
+    if ($resource === 'feedback_archive_md') {
+        try {
+            $items = feedbackArchiveList();
+        } catch (Throwable $e) {
+            jsonResponse(['error' => $e->getMessage()], 503);
+        }
+
+        // A feedback description is free text from any authenticated user —
+        // fence it so it can't forge fake "## Type — Name" entries or a
+        // stray "---" that would visually corrupt the exported document's
+        // structure. The fence uses more backticks than the longest run
+        // already in the text, so the text can't itself break out of it.
+        $fenceFor = function (string $text): string {
+            preg_match_all('/`+/', $text, $m);
+            $maxRun = 0;
+            foreach ($m[0] as $run) { $maxRun = max($maxRun, strlen($run)); }
+            $fence = str_repeat('`', max(3, $maxRun + 1));
+            return $fence . "\n" . $text . "\n" . $fence;
+        };
+
+        $typeLabels = ['bug' => 'Bug', 'feature' => 'Feature', 'suggestion' => 'Suggestion'];
+        $lines = ['# TaskStick Feedback Archive', '', 'Exported ' . gmdate('Y-m-d H:i') . ' UTC', ''];
+        if (!$items) {
+            $lines[] = '_No archived feedback yet._';
+        }
+        foreach ($items as $f) {
+            $label = $typeLabels[$f['type']] ?? $f['type'];
+            $lines[] = "## {$label} — {$f['submitter_name']} ({$f['submitter_email']})";
+            $lines[] = "- Submitted: {$f['created_at']}";
+            $lines[] = "- Deleted: {$f['deleted_at']}";
+            $lines[] = "- Status when deleted: {$f['status']}";
+            $lines[] = '';
+            $lines[] = $fenceFor($f['description']);
+            $lines[] = '';
+            $lines[] = '---';
+            $lines[] = '';
+        }
+
+        header('Content-Type: text/markdown; charset=utf-8');
+        header('Content-Disposition: attachment; filename="taskstick-feedback-archive-' . date('Y-m-d') . '.md"');
+        echo implode("\n", $lines);
+        exit;
+    }
+
     jsonResponse(['error' => 'Unknown resource'], 400);
 }
 
@@ -43,11 +89,20 @@ if ($action === 'toggle_admin') {
     if ($email === $selfEmail) {
         jsonResponse(['error' => 'You cannot remove your own admin access'], 400);
     }
-    $users = loadUsers();
-    if (!isset($users[$email])) { jsonResponse(['error' => 'Unknown user'], 404); }
-    $users[$email]['is_admin'] = empty($users[$email]['is_admin']);
-    saveUsers($users);
-    jsonResponse(['ok' => true, 'is_admin' => $users[$email]['is_admin']]);
+    // The mutator's own isset() check (run under the lock) is the real
+    // guard — this is just the source of truth for the response, since the
+    // mutator can't itself distinguish "found and toggled" from "already
+    // gone" other than by leaving $newValue unset.
+    $newValue = null;
+    updateUsers(function (array $users) use ($email, &$newValue) {
+        if (isset($users[$email])) {
+            $users[$email]['is_admin'] = empty($users[$email]['is_admin']);
+            $newValue = $users[$email]['is_admin'];
+        }
+        return $users;
+    });
+    if ($newValue === null) { jsonResponse(['error' => 'Unknown user'], 404); }
+    jsonResponse(['ok' => true, 'is_admin' => $newValue]);
 }
 
 if ($action === 'update_feedback_status') {
@@ -58,6 +113,17 @@ if ($action === 'update_feedback_status') {
     }
     try {
         feedbackUpdateStatus($id, $status);
+        jsonResponse(['ok' => true]);
+    } catch (Throwable $e) {
+        jsonResponse(['error' => $e->getMessage()], 503);
+    }
+}
+
+if ($action === 'delete_feedback') {
+    $id = (int)($body['id'] ?? 0);
+    if (!$id) { jsonResponse(['error' => 'Invalid id'], 400); }
+    try {
+        feedbackSoftDelete($id);
         jsonResponse(['ok' => true]);
     } catch (Throwable $e) {
         jsonResponse(['error' => $e->getMessage()], 503);

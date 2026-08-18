@@ -430,7 +430,9 @@ body {
 
 .admin-feedback-controls {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 10px;
 }
 .admin-hide-resolved-label {
@@ -441,7 +443,47 @@ body {
   font-size: 0.78rem;
   color: var(--text-muted);
   cursor: pointer;
+  flex-shrink: 0;
 }
+.admin-archive-link {
+  font-family: var(--ui-font);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+}
+.admin-archive-link:hover { color: var(--accent); }
+
+.admin-feedback-group + .admin-feedback-group { margin-top: 18px; }
+.admin-feedback-group-title {
+  font-family: var(--ui-font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+#admin-overlay .admin-feedback-group-title { border-bottom: var(--card-border); }
+.admin-feedback-group-count {
+  font-weight: 400;
+  opacity: 0.7;
+}
+.admin-feedback-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  transition: color 0.15s, background 0.15s;
+}
+.admin-feedback-delete-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
 #admin-overlay .admin-tabs { border-bottom: var(--card-border); }
 
 /* Admin + Feedback + scope-warning modals follow the user's selected theme
@@ -531,6 +573,19 @@ body {
 }
 #feedback-overlay #feedback-description::placeholder {
   color: var(--text-muted);
+}
+/* .toggle-track's default off-state (near-white, designed for the fixed
+   dark Settings modal) is nearly invisible on Admin's theme-aware light
+   card backgrounds (Notebook, Rose) — a neutral mid-gray reads on any
+   theme, light or dark, without needing per-theme tuning. Scoped to
+   :not(:checked) so this doesn't outrank (by ID specificity) the existing
+   checked-state purple rule and wash out the "on" state too. */
+#admin-overlay .toggle-switch input:not(:checked) + .toggle-track {
+  background: rgba(128,128,128,0.35);
+  border: 1px solid rgba(128,128,128,0.25);
+}
+#admin-overlay .toggle-track::after {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35);
 }
 .settings-modal-header {
   display: flex;
@@ -1926,6 +1981,7 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 #board.tetris-mode .priority-card {
   break-inside: avoid;
   width: 100%;
+  max-width: 100%;
   margin-bottom: 20px;
 }
 /* In tetris mode the task-actions-row must NOT animate height — any height
@@ -2711,6 +2767,11 @@ async function loadAdminFeedback() {
 }
 
 const FEEDBACK_TYPE_LABEL = { bug: '🐛 Bug', feature: '✨ Feature', suggestion: '💡 Suggestion' };
+const FEEDBACK_GROUPS = [
+  { type: 'bug',        label: '🐛 Bugs' },
+  { type: 'feature',    label: '✨ Features' },
+  { type: 'suggestion', label: '💡 Suggestions' },
+];
 
 function renderAdminFeedback() {
   const wrap  = document.getElementById('admin-feedback-wrap');
@@ -2724,10 +2785,23 @@ function renderAdminFeedback() {
     return;
   }
 
-  wrap.innerHTML = items.map(f => `
+  wrap.innerHTML = FEEDBACK_GROUPS.map(g => {
+    const groupItems = items.filter(f => f.type === g.type);
+    if (!groupItems.length) return '';
+    return `
+      <div class="admin-feedback-group">
+        <div class="admin-feedback-group-title">${g.label} <span class="admin-feedback-group-count">${groupItems.length}</span></div>
+        ${groupItems.map(renderFeedbackRow).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderFeedbackRow(f) {
+  return `
     <div class="admin-row admin-feedback-row">
       <div class="admin-row-body">
-        <div class="admin-row-name">${FEEDBACK_TYPE_LABEL[f.type] || f.type} — ${escHtml(f.submitter_name)} (${escHtml(f.submitter_email)})</div>
+        <div class="admin-row-name">${escHtml(f.submitter_name)} (${escHtml(f.submitter_email)})</div>
         <div class="admin-row-desc">${escHtml(f.description)}</div>
         <div class="admin-row-meta">${escHtml(formatRelative(f.created_at))}</div>
       </div>
@@ -2736,8 +2810,9 @@ function renderAdminFeedback() {
         <option value="reviewed" ${f.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
         <option value="resolved" ${f.status === 'resolved' ? 'selected' : ''}>Resolved</option>
       </select>
+      <button class="admin-feedback-delete-btn" onclick="deleteFeedback(${f.id})" title="Delete (archived, not erased)">🗑</button>
     </div>
-  `).join('');
+  `;
 }
 
 async function updateFeedbackStatus(id, status) {
@@ -2754,6 +2829,24 @@ async function updateFeedbackStatus(id, status) {
     renderAdminFeedback();
   } catch (e) {
     showToast(e.message || 'Could not update status', 'error');
+  }
+}
+
+async function deleteFeedback(id) {
+  if (!confirm('Delete this feedback item? It\'s archived, not permanently erased — download the archive anytime from this tab.')) return;
+  try {
+    const res  = await fetch('/api/admin.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'delete_feedback', id }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    adminFeedbackItems = adminFeedbackItems.filter(f => f.id !== id);
+    renderAdminFeedback();
+    showToast('Feedback deleted', 'success');
+  } catch (e) {
+    showToast(e.message || 'Could not delete feedback', 'error');
   }
 }
 
@@ -5139,6 +5232,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
 
     <div class="admin-tab-panel" id="admin-tab-feedback" style="display:none">
       <div class="admin-feedback-controls">
+        <a class="admin-archive-link" href="/api/admin.php?resource=feedback_archive_md" target="_blank" rel="noopener">⬇ Download archive (.md)</a>
         <label class="admin-hide-resolved-label">
           <input type="checkbox" id="admin-hide-resolved" onchange="renderAdminFeedback()" />
           Hide resolved

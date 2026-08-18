@@ -7,6 +7,13 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
 - Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
 
+## 2026-08-18
+
+- **Fixed:** A new user could log in, use the app, and never appear in the Admin Users list — `data/users.json` was updated with a plain read-modify-write and no file locking, so two near-simultaneous logins could race and silently drop one user's registration entirely. Now serialized behind an exclusive file lock (BUG-010).
+- **Fixed:** Admin toggle switch was nearly invisible in light themes (Notebook, Rose) — its off-state color was designed for the old fixed-dark Settings modal and never updated when Admin became theme-aware (BUG-012).
+- **Fixed:** Priority card rendered noticeably narrower than other cards in Tetris stacking mode at some window widths — a missing `max-width` override left it capped at 340px instead of filling its column like every other card (BUG-011).
+- **Added:** Feedback in the Admin panel is now grouped into Bugs/Features/Suggestions sections, with a delete button per item. Deleting archives rather than erases — a "Download archive (.md)" link exports everything ever deleted as a Markdown file (ENH-041).
+
 ## 2026-08-17
 
 - **Fixed:** Follow-up's ◑ "return to original list" button silently did nothing — a Google Tasks API error came back as HTTP 200 (masking the failure), and the move function swallowed its own errors without telling its callers, so a misleading "success" toast always followed the real, briefly-visible error (BUG-008).

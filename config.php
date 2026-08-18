@@ -167,28 +167,66 @@ function saveUsers(array $users): void {
 }
 
 /**
+ * Read-modify-write data/users.json under an exclusive file lock, so two
+ * requests hitting it at once (e.g. two people logging in within moments
+ * of each other) can't race — without this, the second writer could read
+ * the file before the first writer's save landed, then overwrite it with
+ * a version missing the first writer's new user entirely.
+ */
+function updateUsers(callable $mutator): array {
+    $dataDir = dirname(USERS_FILE);
+    if (!is_dir($dataDir)) {
+        mkdir($dataDir, 0755, true);
+        file_put_contents($dataDir . '/.htaccess', "Order deny,allow\nDeny from all\n");
+    }
+
+    $fp = fopen(USERS_FILE, 'c+');
+    if (!$fp) return loadUsers();
+    flock($fp, LOCK_EX);
+
+    try {
+        $contents = stream_get_contents($fp);
+        $users = json_decode($contents, true);
+        if (!is_array($users)) $users = [];
+
+        $users = $mutator($users) ?? $users;
+
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($users, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        fflush($fp);
+    } finally {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+
+    return $users;
+}
+
+/**
  * Upsert the current user's record on every login: creates it (seeding
  * is_admin for ADMIN_SEED_EMAILS) or refreshes name/picture/last_seen.
  */
 function registerUser(string $email, string $name, string $picture): void {
     if (!$email) return;
-    $users = loadUsers();
-    $now   = gmdate('c');
-    if (!isset($users[$email])) {
-        $users[$email] = [
-            'email'      => $email,
-            'name'       => $name,
-            'picture'    => $picture,
-            'first_seen' => $now,
-            'last_seen'  => $now,
-            'is_admin'   => in_array($email, ADMIN_SEED_EMAILS, true),
-        ];
-    } else {
-        $users[$email]['name']      = $name;
-        $users[$email]['picture']   = $picture;
-        $users[$email]['last_seen'] = $now;
-    }
-    saveUsers($users);
+    $now = gmdate('c');
+    updateUsers(function (array $users) use ($email, $name, $picture, $now) {
+        if (!isset($users[$email])) {
+            $users[$email] = [
+                'email'      => $email,
+                'name'       => $name,
+                'picture'    => $picture,
+                'first_seen' => $now,
+                'last_seen'  => $now,
+                'is_admin'   => in_array($email, ADMIN_SEED_EMAILS, true),
+            ];
+        } else {
+            $users[$email]['name']      = $name;
+            $users[$email]['picture']   = $picture;
+            $users[$email]['last_seen'] = $now;
+        }
+        return $users;
+    });
 }
 
 /**
