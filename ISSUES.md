@@ -101,6 +101,14 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 
 ## ✨ Enhancement Requests
 
+### ENH-040 · complete · 2026-08-17
+**Title:** Redesign Admin modal — tabs + wider/responsive layout + hide-resolved filter
+**Requested by:** Tesh (screenshot: Users and Feedback both crammed into one small fixed-width popup, no way to hide resolved feedback)
+**Description:** The Admin popup was too small to comfortably show both Users and Feedback stacked in one narrow column. Wanted a larger (but still responsive) dialog with separate tabs for each, plus a way to hide resolved feedback so it doesn't crowd the list.
+**Fix:** Widened the modal to `min(640px, 94vw)` on desktop with a full-viewport sheet on mobile (same responsive pattern as the Help modal from ENH-035). Split Users/Feedback into tabs (`switchAdminTab()`) instead of stacked sections, with a sticky header+tab bar and only the active panel scrolling. Added a "Hide resolved" checkbox on the Feedback tab; fetched feedback is now kept in a module-level `adminFeedbackItems` array so the filter re-renders instantly without a re-fetch, and `updateFeedbackStatus()` updates that local copy too so marking something resolved while the filter is on removes it from view immediately.
+**Files:** `index.html`
+**Resolved:** 2026-08-17
+
 ### ENH-039 · complete · 2026-08-17
 **Title:** Custom per-list background color
 **Requested by:** Tesh

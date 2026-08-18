@@ -14,6 +14,7 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - **Added:** Subtasks can now be indented/outdented via buttons or drag (right to indent, left to outdent), created by indenting an existing task, and collapsed/expanded per-task with the state remembered across devices. Starring or Follow-up'ing a subtask now surfaces its whole family (parent + siblings) in the Priority card and moves the whole family together to Follow-up — previously moving a parent with subtasks to Follow-up risked losing the subtasks entirely, since Google Tasks cascade-deletes subtasks when their parent is deleted and the old logic only moved the one clicked task (ENH-037).
 - **Improved:** Subtask chevron/count moved to the end of the row so a task's checkbox column stays aligned whether or not it has subtasks; tightened spacing so a parent and its subtasks read as one visual group (ENH-038).
 - **Added:** Custom per-list background color, independent of the active theme (switching themes never clears it), with a one-click reset-all in Settings (ENH-039).
+- **Improved:** Admin modal redesigned — wider and fully responsive (full-screen sheet on mobile), Users and Feedback split into tabs instead of one cramped stacked column, and a "Hide resolved" filter on Feedback (ENH-040).
 
 ## 2026-08-16
 

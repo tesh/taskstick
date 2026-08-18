@@ -379,9 +379,70 @@ body {
   overflow: hidden;
 }
 #admin-overlay .settings-modal {
-  max-height: 85vh;
-  overflow-y: auto;
+  width: min(640px, 94vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* header + tabs stay put; only the active tab panel scrolls */
 }
+#admin-overlay .settings-modal-header { flex-shrink: 0; }
+@media (max-width: 640px) {
+  #admin-overlay.settings-overlay { align-items: stretch; justify-content: stretch; padding-top: 0; }
+  #admin-overlay .settings-modal {
+    width: 100vw;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border-radius: 0;
+  }
+  #admin-overlay .settings-modal-header { border-radius: 0; }
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+.admin-tab {
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.admin-tab:hover  { color: var(--text-primary); }
+.admin-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.admin-tab-panel {
+  padding: 14px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.admin-feedback-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.admin-hide-resolved-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+#admin-overlay .admin-tabs { border-bottom: var(--card-border); }
 
 /* Admin + Feedback + scope-warning modals follow the user's selected theme
    instead of the fixed dark chrome the Settings modal uses — readable on
@@ -2545,6 +2606,7 @@ function openAdmin() {
   const dd = document.getElementById('user-dropdown');
   if (dd) dd.classList.remove('open');
   document.getElementById('admin-overlay').classList.add('open');
+  switchAdminTab('users');
   loadAdminUsers();
   loadAdminFeedback();
 }
@@ -2553,6 +2615,15 @@ function closeAdmin() {
 }
 function handleAdminOverlayClick(e) {
   if (e.target === document.getElementById('admin-overlay')) closeAdmin();
+}
+
+function switchAdminTab(tab) {
+  document.querySelectorAll('.admin-tab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  document.querySelectorAll('.admin-tab-panel').forEach(el => {
+    el.style.display = el.id === `admin-tab-${tab}` ? '' : 'none';
+  });
 }
 
 async function loadAdminUsers() {
@@ -2623,6 +2694,8 @@ async function toggleUserAdmin(email, checkbox) {
   }
 }
 
+let adminFeedbackItems = [];
+
 async function loadAdminFeedback() {
   const wrap = document.getElementById('admin-feedback-wrap');
   wrap.innerHTML = '<div class="admin-loading">Loading feedback…</div>';
@@ -2630,7 +2703,8 @@ async function loadAdminFeedback() {
     const res  = await fetch('/api/admin.php?resource=feedback');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load feedback');
-    renderAdminFeedback(data.feedback || []);
+    adminFeedbackItems = data.feedback || [];
+    renderAdminFeedback();
   } catch (e) {
     wrap.innerHTML = `<div class="admin-empty">${escHtml(e.message)}</div>`;
   }
@@ -2638,9 +2712,18 @@ async function loadAdminFeedback() {
 
 const FEEDBACK_TYPE_LABEL = { bug: '🐛 Bug', feature: '✨ Feature', suggestion: '💡 Suggestion' };
 
-function renderAdminFeedback(items) {
-  const wrap = document.getElementById('admin-feedback-wrap');
-  if (!items.length) { wrap.innerHTML = '<div class="admin-empty">No feedback submitted yet.</div>'; return; }
+function renderAdminFeedback() {
+  const wrap  = document.getElementById('admin-feedback-wrap');
+  const hideResolved = !!document.getElementById('admin-hide-resolved')?.checked;
+  const items = hideResolved ? adminFeedbackItems.filter(f => f.status !== 'resolved') : adminFeedbackItems;
+
+  if (!items.length) {
+    wrap.innerHTML = `<div class="admin-empty">${
+      adminFeedbackItems.length ? 'Nothing to show — all feedback is resolved.' : 'No feedback submitted yet.'
+    }</div>`;
+    return;
+  }
+
   wrap.innerHTML = items.map(f => `
     <div class="admin-row admin-feedback-row">
       <div class="admin-row-body">
@@ -2666,6 +2749,9 @@ async function updateFeedbackStatus(id, status) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
+    const item = adminFeedbackItems.find(f => f.id === id);
+    if (item) item.status = status;
+    renderAdminFeedback();
   } catch (e) {
     showToast(e.message || 'Could not update status', 'error');
   }
@@ -5036,17 +5122,28 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
 
 <!-- ── ADMIN MODAL ── -->
 <div class="settings-overlay" id="admin-overlay" onclick="handleAdminOverlayClick(event)">
-  <div class="settings-modal" role="dialog" aria-label="Admin">
+  <div class="settings-modal admin-modal" role="dialog" aria-label="Admin">
     <div class="settings-modal-header">
       <h3>🛡 Admin</h3>
       <button class="settings-close-btn" onclick="closeAdmin()" title="Close">✕</button>
     </div>
-    <div class="settings-section">
-      <div class="settings-section-title">Users</div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="users" onclick="switchAdminTab('users')">Users</button>
+      <button class="admin-tab" data-tab="feedback" onclick="switchAdminTab('feedback')">Feedback</button>
+    </div>
+
+    <div class="admin-tab-panel" id="admin-tab-users">
       <div id="admin-users-wrap"></div>
     </div>
-    <div class="settings-section">
-      <div class="settings-section-title">Feedback</div>
+
+    <div class="admin-tab-panel" id="admin-tab-feedback" style="display:none">
+      <div class="admin-feedback-controls">
+        <label class="admin-hide-resolved-label">
+          <input type="checkbox" id="admin-hide-resolved" onchange="renderAdminFeedback()" />
+          Hide resolved
+        </label>
+      </div>
       <div id="admin-feedback-wrap"></div>
     </div>
   </div>
