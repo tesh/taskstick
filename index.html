@@ -247,6 +247,71 @@ body {
 }
 .user-dropdown.open { display: block; }
 
+/* ============================================================
+   LIST COLOR PICKER POPOVER — single shared instance, repositioned
+   next to whichever list's 🎨 button was clicked.
+   ============================================================ */
+.color-popover {
+  position: absolute;
+  background: #1a1630;
+  border: 1px solid rgba(160, 80, 255, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  padding: 10px;
+  width: 168px;
+  z-index: 1200;
+}
+.color-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.color-swatch:hover   { border-color: rgba(255,255,255,0.4); }
+.color-swatch.selected { border-color: #fff; }
+.color-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  cursor: pointer;
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.85);
+}
+.color-custom-input {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: none;
+}
+.color-reset-link {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 4px 2px;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.6);
+  font-family: var(--ui-font);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+.color-reset-link:hover { color: #fff; }
+
 .user-dropdown-header {
   padding: 12px 14px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -494,6 +559,21 @@ body {
   border-radius: 50%;
   transition: transform 0.2s;
 }
+
+.settings-reset-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.75);
+  font-family: var(--ui-font);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.settings-reset-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .toggle-switch input:checked + .toggle-track {
   background: #7c3aed;
 }
@@ -861,22 +941,29 @@ body.theme-modern .list-title {
   width: 100%;
 }
 
-/* Subtask indentation — accent-tinted rail visually ties it to its parent */
+/* Subtask indentation — accent-tinted rail visually ties it to its parent.
+   Tight padding + no border between consecutive siblings keeps the whole
+   group visually clustered instead of reading as separate rows. */
 .task-item.subtask {
   margin-left: 22px;
-  padding-left: 8px;
+  padding: 2px 0 2px 8px;
   border-left: 2px solid var(--accent)55;
+  border-bottom: none;
   opacity: 0.92;
 }
 .task-item.subtask .task-text { font-size: 0.93em; }
-/* Tuck the first subtask a little closer to its parent than to its siblings */
-.task-item:not(.subtask) + .task-item.subtask { margin-top: -2px; }
+/* Tuck the first subtask right up against its parent */
+.task-item:not(.subtask) + .task-item.subtask { margin-top: -3px; }
+/* The last subtask in a group restores the row-separator border */
+.task-item.subtask:not(:has(+ .task-item.subtask)) { border-bottom: 1px solid var(--rule-color); padding-bottom: 5px; }
 
 /* A parent row with subtasks reads slightly bolder so the group scans as a unit */
 .task-item.has-subtasks > .task-row .task-text { font-weight: 600; }
 
-/* Subtask collapse/expand toggle — always visible (not hover-only), so a
-   task's subtask count is obvious at a glance even when collapsed */
+/* Subtask collapse/expand toggle — sits at the end of the row (not before
+   the checkbox) so a task's number/checkbox column stays left-aligned
+   whether or not it has subtasks. Always visible, not hover-only, so a
+   task's subtask count is obvious at a glance even when collapsed. */
 .subtask-toggle-btn {
   display: inline-flex;
   align-items: center;
@@ -889,7 +976,9 @@ body.theme-modern .list-title {
   border-radius: 4px;
   line-height: 1;
   flex-shrink: 0;
-  margin-top: 3px;
+  align-self: flex-start;
+  margin-top: 2px;
+  margin-left: 4px;
   transition: background 0.15s, color 0.15s;
 }
 .subtask-toggle-btn:hover { background: var(--accent-light); color: var(--accent); }
@@ -1396,6 +1485,23 @@ body.theme-notebook .add-task-input {
 }
 .list-delete-btn:hover { color: #ef4444; }
 
+/* ============================================================
+   LIST COLOR BUTTON (header)
+   ============================================================ */
+.list-color-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  padding: 2px 3px;
+  line-height: 1;
+  border-radius: 3px;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity 0.15s, background 0.15s;
+}
+.list-color-btn:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+
 /* Light themes (Notebook, Rose) — header buttons use dark tones so they're
    visible against the cream/white card backgrounds.                         */
 body.theme-notebook .collapse-btn,
@@ -1413,6 +1519,8 @@ body.theme-rose     .list-delete-btn {
 }
 body.theme-notebook .list-delete-btn:hover,
 body.theme-rose     .list-delete-btn:hover { color: #e74c3c; }
+body.theme-notebook .list-color-btn:hover,
+body.theme-rose     .list-color-btn:hover { background: rgba(0,0,0,0.05); }
 
 /* ============================================================
    ADD NEW LIST CARD
@@ -2222,6 +2330,7 @@ const state = {
   stars:        JSON.parse(localStorage.getItem('tasks-stars') || '{}'),
   collapsed:    JSON.parse(localStorage.getItem('tasks-collapsed') || '{}'),
   taskCollapsed: JSON.parse(localStorage.getItem('tasks-task-collapsed') || '{}'),
+  listColors:   JSON.parse(localStorage.getItem('tasks-list-colors') || '{}'),
   settings:     JSON.parse(localStorage.getItem('tasks-settings') || '{"hideCompleted":false,"tetrisMode":false,"alphabeticalSort":false,"allTasksMode":false,"ritualEnabled":false}'),
   refreshTimer: null,
   REFRESH_MS:   120_000,  // 2 min — avoids interrupting typing
@@ -2720,6 +2829,10 @@ async function loadAll(showSpinner = true) {
         state.taskCollapsed = prefs.taskCollapsed;
         localStorage.setItem('tasks-task-collapsed', JSON.stringify(state.taskCollapsed));
       }
+      if (prefs.listColors) {
+        state.listColors = prefs.listColors;
+        localStorage.setItem('tasks-list-colors', JSON.stringify(state.listColors));
+      }
       if (prefs.listOrder && prefs.listOrder.length) {
         localStorage.setItem('tasks-list-order', JSON.stringify(prefs.listOrder));
       }
@@ -2808,6 +2921,7 @@ async function savePrefs() {
         listOrder:     state.lists.map(l => l.id),
         collapsed:     state.collapsed,
         taskCollapsed: state.taskCollapsed,
+        listColors:    state.listColors,
         settings:      { ...state.settings, theme: state.theme },
       }),
     });
@@ -2913,7 +3027,7 @@ function renderBoard() {
     ghostClass:  'sortable-ghost',
     chosenClass: 'sortable-chosen',
     handle:      '.list-card-header',
-    filter:      '.priority-card, .add-list-card, .collapse-btn, .list-delete-btn, .task-count',
+    filter:      '.priority-card, .add-list-card, .collapse-btn, .list-delete-btn, .list-color-btn, .task-count',
     // Disable drag when alphabetical sort is active so order stays managed by the setting
     disabled:    !!state.settings.alphabeticalSort,
     // preventOnFilter: false — by default Sortable calls event.preventDefault() on filtered
@@ -3056,10 +3170,16 @@ function createListCard(list, listIdx) {
   if (isFollowUp) card.classList.add('followup-card');
   if (isRitual)   card.classList.add('ritual-card');
 
+  const customColor = state.listColors[list.id];
+  if (customColor) card.style.backgroundColor = customColor;
+
   card.innerHTML = `
     <div class="list-card-header">
       <div class="list-title" ${(isFollowUp || isRitual) ? '' : `ondblclick="editListTitle('${escHtml(list.id)}',this)" title="Double-click to rename"`}>${isFollowUp ? '◑ ' : ''}${isRitual ? '🔁 ' : ''}${escHtml(list.title)}</div>
       <span class="task-count">${activeTasks.length}</span>
+      <button class="list-color-btn"
+              onclick="openListColorPicker('${escHtml(list.id)}', this)"
+              title="Set list color">🎨</button>
       <button class="list-delete-btn"
               onclick="deleteList('${escHtml(list.id)}', this)"
               title="Delete list">🗑</button>
@@ -3246,7 +3366,6 @@ function renderTaskItem(task, index, listId, opts = {}) {
         data-index="${index}">
       <div class="task-row">
         <span class="drag-handle" title="${isChild ? 'Drag to reorder — drag left to outdent' : 'Drag to reorder — drag right onto a task to indent'}">⠿</span>
-        ${subtaskToggle}
         <label class="task-check-wrap" title="Complete task">
           <input type="checkbox" class="task-check" ${checked}
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
@@ -3255,6 +3374,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
         <span class="task-text"
               ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
               title="Double-click to edit">${escHtml(task.title)}</span>
+        ${subtaskToggle}
       </div>
       <div class="task-actions-row">
         ${duePart}
@@ -3289,15 +3409,25 @@ function renderTaskItem(task, index, listId, opts = {}) {
 /* ============================================================
    DUE DATE HELPERS
    ============================================================ */
+// Due dates are stored as UTC midnight of the calendar date the user picked
+// (e.g. "2026-08-18T00:00:00.000Z" for Aug 18). Parsing that string directly
+// with `new Date()` and formatting it in the local timezone shifts it back a
+// day in any negative-UTC-offset zone (US/Canada) — so read the Y/M/D parts
+// straight off the string and build a LOCAL date from them instead, which
+// sidesteps timezone conversion entirely rather than trying to "correct" for it.
+function parseDueLocal(dueStr) {
+  const [y, m, d] = dueStr.substring(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function formatDue(dueStr) {
   if (!dueStr) return '';
-  const d = new Date(dueStr);
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return parseDueLocal(dueStr).toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 function isOverdue(dueStr) {
   if (!dueStr) return false;
-  const due   = new Date(dueStr);
+  const due   = parseDueLocal(dueStr);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return due < today;
@@ -3854,6 +3984,95 @@ function toggleTaskCollapse(taskId, listId) {
   const list = state.lists.find(l => l.id === listId);
   if (list) rerenderCard(list);
 }
+
+/* ============================================================
+   LIST BACKGROUND COLOR — per-list, independent of the active theme so
+   switching themes never touches it. Only the card background changes;
+   text/border/accent colors stay exactly as the theme defines them.
+   ============================================================ */
+const LIST_COLOR_PRESETS = [
+  '#fde68a', '#fdba74', '#fca5a5', '#f9a8d4', '#d8b4fe', '#a5b4fc',
+  '#93c5fd', '#7dd3fc', '#5eead4', '#86efac', '#bef264', '#e5e7eb',
+];
+
+let colorPopoverListId = null;
+
+function openListColorPicker(listId, btn) {
+  // Deliberately doesn't stop propagation — letting the click bubble closes
+  // any other open dropdown (e.g. the account menu), and the click-outside
+  // listener below already ignores clicks on .list-color-btn itself, so
+  // this popover doesn't immediately re-close on its own opening click.
+  const popover = document.getElementById('list-color-popover');
+  if (!popover) return;
+
+  // Clicking the same list's swatch again closes it
+  if (colorPopoverListId === listId && popover.style.display !== 'none') {
+    closeListColorPicker();
+    return;
+  }
+  colorPopoverListId = listId;
+
+  const grid = document.getElementById('color-swatch-grid');
+  const current = state.listColors[listId] || '';
+  grid.innerHTML = LIST_COLOR_PRESETS.map(c => `
+    <button class="color-swatch${c === current ? ' selected' : ''}"
+            style="background:${c}"
+            onclick="setListColor('${listId}','${c}')"
+            title="${c}"></button>
+  `).join('');
+
+  const customInput = document.getElementById('color-custom-input');
+  customInput.value = current || '#ffffff';
+  customInput.oninput = () => setListColor(listId, customInput.value);
+
+  const rect = btn.getBoundingClientRect();
+  popover.style.display = 'block';
+  popover.style.top  = `${rect.bottom + window.scrollY + 6}px`;
+  popover.style.left = `${Math.min(rect.left + window.scrollX, window.innerWidth - 190)}px`;
+}
+
+function closeListColorPicker() {
+  const popover = document.getElementById('list-color-popover');
+  if (popover) popover.style.display = 'none';
+  colorPopoverListId = null;
+}
+
+function setListColor(listId, color) {
+  state.listColors[listId] = color;
+  localStorage.setItem('tasks-list-colors', JSON.stringify(state.listColors));
+  savePrefs();
+  const card = document.querySelector(`.list-card[data-list-id="${CSS.escape(listId)}"]`);
+  if (card) card.style.backgroundColor = color;
+}
+
+function resetListColor() {
+  if (!colorPopoverListId) return;
+  delete state.listColors[colorPopoverListId];
+  localStorage.setItem('tasks-list-colors', JSON.stringify(state.listColors));
+  savePrefs();
+  const card = document.querySelector(`.list-card[data-list-id="${CSS.escape(colorPopoverListId)}"]`);
+  if (card) card.style.backgroundColor = '';
+  closeListColorPicker();
+}
+
+function resetAllListColors() {
+  if (!Object.keys(state.listColors).length) { showToast('No custom list colors set', ''); return; }
+  if (!confirm('Reset every list back to the theme’s default color?')) return;
+  state.listColors = {};
+  localStorage.setItem('tasks-list-colors', JSON.stringify(state.listColors));
+  savePrefs();
+  document.querySelectorAll('.list-card').forEach(card => { card.style.backgroundColor = ''; });
+  showToast('List colors reset', 'success');
+}
+
+// Close the color popover when clicking anywhere outside it
+document.addEventListener('click', function(e) {
+  const popover = document.getElementById('list-color-popover');
+  if (popover && popover.style.display !== 'none'
+      && !popover.contains(e.target) && !e.target.closest('.list-color-btn')) {
+    closeListColorPicker();
+  }
+});
 
 /* ============================================================
    ADD NEW LIST
@@ -4671,6 +4890,14 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
 
       <div class="settings-row">
         <div>
+          <div class="settings-row-label">List colors</div>
+          <div class="settings-row-desc">Custom colors set per list (🎨 on each list) stick around when you switch themes</div>
+        </div>
+        <button class="settings-reset-btn" onclick="resetAllListColors()" title="Reset every list back to the theme's default color">Reset all</button>
+      </div>
+
+      <div class="settings-row">
+        <div>
           <div class="settings-row-label">Tetris stacking</div>
           <div class="settings-row-desc">Pack cards into columns to cut whitespace</div>
         </div>
@@ -4749,6 +4976,16 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
     </div>
 
   </div>
+</div>
+
+<!-- ── LIST COLOR PICKER POPOVER ── -->
+<div class="color-popover" id="list-color-popover" style="display:none">
+  <div class="color-swatch-grid" id="color-swatch-grid"></div>
+  <label class="color-custom-row">
+    <input type="color" id="color-custom-input" class="color-custom-input" />
+    <span>Custom…</span>
+  </label>
+  <button class="color-reset-link" onclick="resetListColor()">Reset to default</button>
 </div>
 
 <!-- ── FEEDBACK MODAL ── -->

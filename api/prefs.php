@@ -5,8 +5,8 @@
  * display settings/theme) server-side so they persist across browsers,
  * sessions, and devices instead of living only in localStorage.
  *
- * GET  /api/prefs.php          → returns { stars, listOrder, collapsed, taskCollapsed, settings }
- * POST /api/prefs.php          → saves body { stars, listOrder, collapsed, taskCollapsed, settings }
+ * GET  /api/prefs.php          → returns { stars, listOrder, collapsed, taskCollapsed, listColors, settings }
+ * POST /api/prefs.php          → saves body { stars, listOrder, collapsed, taskCollapsed, listColors, settings }
  */
 
 require_once '../config.php';
@@ -29,6 +29,19 @@ $prefsFile = $dataDir . '/prefs_' . $safeId . '.json';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+// PHP can't tell an empty JSON object ({}) apart from an empty JSON array
+// ([]) — json_decode(..., true) turns both into [], and json_encode() then
+// always serializes an empty PHP array back out as []. Without this, an
+// empty map field round-trips as [] once, the client then treats it as a
+// JS Array, and every future write to it (obj[key] = val) silently fails
+// to serialize (JSON.stringify on an array drops non-numeric keys) — the
+// preference looks saved but is lost on the next load. Force these
+// map-shaped fields to stay objects even when empty.
+function asMapObj($v) {
+    return (is_array($v) && empty($v)) ? new stdClass() : $v;
+}
+const PREFS_MAP_FIELDS = ['stars', 'collapsed', 'taskCollapsed', 'listColors', 'settings'];
+
 switch ($method) {
     case 'GET':
         if (!file_exists($prefsFile)) {
@@ -36,7 +49,13 @@ switch ($method) {
             jsonResponse(['stars' => new stdClass(), 'listOrder' => [], 'settings' => new stdClass()]);
         }
         $data = json_decode(file_get_contents($prefsFile), true);
-        jsonResponse($data ?? ['stars' => new stdClass(), 'listOrder' => [], 'settings' => new stdClass()]);
+        if (!$data) {
+            jsonResponse(['stars' => new stdClass(), 'listOrder' => [], 'settings' => new stdClass()]);
+        }
+        foreach (PREFS_MAP_FIELDS as $key) {
+            if (isset($data[$key])) $data[$key] = asMapObj($data[$key]);
+        }
+        jsonResponse($data);
 
     case 'POST':
         $body = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -50,11 +69,12 @@ switch ($method) {
 
         // Validate shape before saving
         $prefs = [
-            'stars'         => $body['stars']         ?? new stdClass(),
+            'stars'         => asMapObj($body['stars']         ?? new stdClass()),
             'listOrder'     => $body['listOrder']      ?? [],
-            'collapsed'     => $body['collapsed']      ?? new stdClass(),
-            'taskCollapsed' => $body['taskCollapsed']  ?? new stdClass(),
-            'settings'      => $body['settings']       ?? new stdClass(),
+            'collapsed'     => asMapObj($body['collapsed']      ?? new stdClass()),
+            'taskCollapsed' => asMapObj($body['taskCollapsed']  ?? new stdClass()),
+            'listColors'    => asMapObj($body['listColors']     ?? new stdClass()),
+            'settings'      => asMapObj($body['settings']       ?? new stdClass()),
             'savedAt'       => date('c'),
         ];
 

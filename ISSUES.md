@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-009 · fixed · 2026-08-17
+**Title:** Due date displays one day earlier than what was set (ENH-004 resolved)
+**Reported by:** Tesh (screenshot: date input showed 08/18/2026, badge showed "Aug 17")
+**Root cause:** Due dates are stored as UTC midnight of the picked calendar date (`2026-08-18T00:00:00.000Z`). `formatDue()`/`isOverdue()` parsed that string with plain `new Date(dueStr)` and formatted/compared it in the browser's local timezone — in any negative-UTC-offset zone (US/Canada), UTC midnight on the 18th is still the 17th locally, shifting the displayed date back a day. The write path (the native `<input type="date">` → `input.value + 'T00:00:00.000Z'`) was already correct; this was purely a display-side bug.
+**Fix:** New `parseDueLocal()` reads the Y/M/D digits straight off the stored string and constructs a *local* `Date` from those parts, sidestepping timezone conversion entirely instead of trying to correct for it. `formatDue()` and `isOverdue()` both use it now.
+**Files:** `index.html`
+**Resolved:** 2026-08-17
+
 ### BUG-008 · fixed · 2026-08-17
 **Title:** Follow-up ◑ "Return to original list" silently did nothing
 **Reported by:** Tesh (screenshot of a stuck Follow-up task, "Halifax Bereavement BER-631760")
@@ -92,6 +100,23 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 ---
 
 ## ✨ Enhancement Requests
+
+### ENH-039 · complete · 2026-08-17
+**Title:** Custom per-list background color
+**Requested by:** Tesh
+**Description:** A color picker on each list, independent of the active theme, so a list keeps its custom color no matter which of the 5 themes is selected — plus a one-click "reset all" instead of clearing colors list by list.
+**Design decisions (clarified with Tesh first):** Only the card background changes — text/border/accent stay exactly as the active theme defines them. No separate named "theme" for customized colors (considered, then dropped in favor of the simpler independent-of-theme model, which already solves the "don't lose my colors when I switch themes" concern directly). Color button sits in the list header's icon row, next to delete/collapse.
+**Fix:** New `state.listColors` (`{listId: '#hex'}`), synced via `api/prefs.php` (new `listColors` field, same pattern as the existing `taskCollapsed`/`collapsed`/`stars` fields). New 🎨 button opens a single shared popover (`#list-color-popover`, repositioned per click) with 12 preset swatches, a native `<input type="color">` for any color, and a per-list reset link. `createListCard()` applies the stored color as an inline `background-color` on every render, so it survives re-renders and persists across devices. Settings → Display gets a "Reset all" action clearing every list back to the theme default in one click.
+**Files:** `api/prefs.php`, `index.html`
+**Resolved:** 2026-08-17
+
+### ENH-038 · complete · 2026-08-17
+**Title:** Subtask chevron misaligned tasks with subtasks; too much whitespace between parent and subtasks
+**Requested by:** Tesh (screenshot: tasks with subtasks had their numbered circle pushed right of tasks without subtasks)
+**Description:** The collapse chevron + subtask count sat before the checkbox, so any task with subtasks had its number circle shifted right relative to tasks without — misaligned columns down the list. Also wanted tighter spacing between a parent and its subtasks so the group reads as visually connected rather than separate rows.
+**Fix:** Moved the chevron/count to the end of `.task-row` (after the task text) so the checkbox/number column stays left-aligned regardless of whether a task has subtasks. Tightened subtask spacing: reduced vertical padding on subtask rows, removed the row-separator border between consecutive subtasks in the same group (restored only after the last one via a `:has()` sibling check), and pulled the first subtask closer to its parent.
+**Files:** `index.html`
+**Resolved:** 2026-08-17
 
 ### ENH-037 · complete · 2026-08-17
 **Title:** Subtasks — indent/outdent, Priority + Follow-up family grouping, collapse, visual clarity

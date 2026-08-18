@@ -5,13 +5,15 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 ## Known open issues
 
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
-- Due dates can display one day early in negative-UTC-offset timezones (ENH-004).
 - Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
 
 ## 2026-08-17
 
 - **Fixed:** Follow-up's ◑ "return to original list" button silently did nothing — a Google Tasks API error came back as HTTP 200 (masking the failure), and the move function swallowed its own errors without telling its callers, so a misleading "success" toast always followed the real, briefly-visible error (BUG-008).
+- **Fixed:** Due dates displayed one day earlier than what was actually set, in negative-UTC-offset timezones (US/Canada) — a display-only bug re-interpreting stored UTC midnight through the local timezone (BUG-009).
 - **Added:** Subtasks can now be indented/outdented via buttons or drag (right to indent, left to outdent), created by indenting an existing task, and collapsed/expanded per-task with the state remembered across devices. Starring or Follow-up'ing a subtask now surfaces its whole family (parent + siblings) in the Priority card and moves the whole family together to Follow-up — previously moving a parent with subtasks to Follow-up risked losing the subtasks entirely, since Google Tasks cascade-deletes subtasks when their parent is deleted and the old logic only moved the one clicked task (ENH-037).
+- **Improved:** Subtask chevron/count moved to the end of the row so a task's checkbox column stays aligned whether or not it has subtasks; tightened spacing so a parent and its subtasks read as one visual group (ENH-038).
+- **Added:** Custom per-list background color, independent of the active theme (switching themes never clears it), with a one-click reset-all in Settings (ENH-039).
 
 ## 2026-08-16
 
