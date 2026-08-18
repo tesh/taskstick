@@ -690,6 +690,87 @@ body {
   transition: background 0.15s, color 0.15s;
 }
 .settings-reset-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* Apple Reminders sync (beta) */
+.beta-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: rgba(124, 58, 237, 0.25);
+  color: #c4b5fd;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+.apple-sync-label {
+  display: block;
+  font-family: var(--ui-font);
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 4px;
+}
+.apple-sync-input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.9);
+  font-family: var(--ui-font);
+  font-size: 0.82rem;
+}
+.apple-sync-input::placeholder { color: rgba(255,255,255,0.3); }
+.apple-sync-hint {
+  font-family: var(--ui-font);
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.4);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.apple-sync-hint a { color: #c4b5fd; }
+.apple-sync-status { margin-bottom: 4px; }
+.apple-sync-connected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(52, 211, 153, 0.12);
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 10px;
+}
+.apple-sync-connected-actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.apple-sync-disconnect-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-family: var(--ui-font);
+  font-size: 0.72rem;
+  text-decoration: underline;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.apple-sync-disconnect-btn:hover { color: #ef4444; }
+.apple-sync-result { margin-top: 10px; }
+.apple-sync-success, .apple-sync-error {
+  font-family: var(--ui-font);
+  font-size: 0.78rem;
+  padding: 8px 10px;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+.apple-sync-success { background: rgba(52, 211, 153, 0.12); color: rgba(255,255,255,0.85); }
+.apple-sync-error   { background: rgba(239, 68, 68, 0.12);  color: #fca5a5; }
 .toggle-switch input:checked + .toggle-track {
   background: #7c3aed;
 }
@@ -2574,11 +2655,109 @@ function openSettings() {
   if (ritualCb) ritualCb.checked = !!state.settings.ritualEnabled;
   // Render theme picker chips
   renderThemePicker();
+  loadAppleSyncStatus();
   document.getElementById('settings-overlay').classList.add('open');
 }
 
 function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('open');
+}
+
+/* ============================================================
+   APPLE REMINDERS SYNC (beta) — Stage 1: connect + discover only.
+   Push/pull sync lands in a later stage; this just verifies the
+   iCloud connection works and shows which Reminders lists were found.
+   ============================================================ */
+async function loadAppleSyncStatus() {
+  const statusEl = document.getElementById('apple-sync-status');
+  const formEl   = document.getElementById('apple-sync-form');
+  const resultEl = document.getElementById('apple-sync-result');
+  if (!statusEl) return;
+  resultEl.innerHTML = '';
+  try {
+    const res  = await fetch('/api/apple-settings.php');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load status');
+
+    if (data.configured) {
+      statusEl.innerHTML = `
+        <div class="apple-sync-connected">
+          <span>✅ Connected as <strong>${escHtml(data.appleEmail)}</strong></span>
+          <span class="apple-sync-connected-actions">
+            <button class="apple-sync-disconnect-btn" onclick="toggleAppleSyncForm()">Change</button>
+            <button class="apple-sync-disconnect-btn" onclick="disconnectAppleSync()">Disconnect</button>
+          </span>
+        </div>`;
+      formEl.style.display = 'none';
+    } else {
+      statusEl.innerHTML = '';
+      formEl.style.display = '';
+    }
+  } catch (e) {
+    statusEl.innerHTML = `<div class="apple-sync-error">${escHtml(e.message)}</div>`;
+  }
+}
+
+function toggleAppleSyncForm() {
+  const formEl = document.getElementById('apple-sync-form');
+  formEl.style.display = formEl.style.display === 'none' ? '' : 'none';
+}
+
+async function connectAppleSync() {
+  const emailInput = document.getElementById('apple-email-input');
+  const passInput  = document.getElementById('apple-password-input');
+  const btn        = document.getElementById('apple-connect-btn');
+  const resultEl   = document.getElementById('apple-sync-result');
+
+  const appleEmail          = emailInput.value.trim();
+  const appSpecificPassword = passInput.value.trim();
+
+  if (!appleEmail || !appSpecificPassword) {
+    resultEl.innerHTML = `<div class="apple-sync-error">Enter both your Apple ID email and an app-specific password.</div>`;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Connecting…';
+  resultEl.innerHTML = '';
+
+  try {
+    const res  = await fetch('/api/apple-settings.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ appleEmail, appSpecificPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Connection failed');
+
+    const lists = data.reminderLists || [];
+    resultEl.innerHTML = lists.length
+      ? `<div class="apple-sync-success">✅ Connected! Found ${lists.length} Reminders list${lists.length === 1 ? '' : 's'}: ${lists.map(escHtml).join(', ')}</div>`
+      : `<div class="apple-sync-success">✅ Connected! No Reminders lists found yet — create one in the Reminders app on your iPhone/Mac first.</div>`;
+    loadAppleSyncStatus();
+  } catch (e) {
+    resultEl.innerHTML = `<div class="apple-sync-error">${escHtml(e.message)}</div>`;
+  } finally {
+    passInput.value = ''; // never leave the password sitting in the DOM longer than needed, success or not
+    btn.disabled = false;
+    btn.textContent = 'Connect & Test';
+  }
+}
+
+async function disconnectAppleSync() {
+  if (!confirm('Disconnect Apple Reminders sync? Your stored Apple ID and app-specific password will be deleted.')) return;
+  try {
+    const res  = await fetch('/api/apple-settings.php', { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to disconnect');
+    document.getElementById('apple-email-input').value = '';
+    document.getElementById('apple-password-input').value = '';
+    document.getElementById('apple-sync-result').innerHTML = '';
+    loadAppleSyncStatus();
+    showToast('Apple Reminders disconnected', 'success');
+  } catch (e) {
+    showToast(e.message || 'Could not disconnect', 'error');
+  }
 }
 
 function openHelp() {
@@ -5152,6 +5331,32 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
          style="display:block;text-align:center;padding:9px;text-decoration:none">
         Set Up AI Assistant Connection →
       </a>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Apple Reminders <span class="beta-badge">Beta</span></div>
+      <div class="settings-row-desc" style="margin-bottom:10px">
+        Connect your iCloud account to sync tasks to Apple Reminders. Google Tasks stays the source of truth — checking off a reminder on your phone marks the matching task complete too, but edits to title/notes/due date only ever flow from Google Tasks outward.
+      </div>
+
+      <div id="apple-sync-status" class="apple-sync-status"></div>
+
+      <div id="apple-sync-form">
+        <label class="apple-sync-label">Apple ID email</label>
+        <input type="email" id="apple-email-input" class="apple-sync-input" placeholder="you@icloud.com" autocomplete="off" />
+
+        <label class="apple-sync-label" style="margin-top:8px">App-specific password</label>
+        <input type="password" id="apple-password-input" class="apple-sync-input" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off" />
+        <div class="apple-sync-hint">
+          Generate one at <a href="https://appleid.apple.com" target="_blank" rel="noopener">appleid.apple.com</a> → Sign-In and Security → App-Specific Passwords. Not your regular Apple ID password — that's never accepted here.
+        </div>
+
+        <button class="invite-send-btn" style="margin-top:10px;width:100%" onclick="connectAppleSync()" id="apple-connect-btn">
+          Connect &amp; Test
+        </button>
+      </div>
+
+      <div id="apple-sync-result"></div>
     </div>
 
   </div>

@@ -8,6 +8,8 @@
  *   - GOOGLE_CLIENT_ID / SECRET: Google Cloud Console → APIs & Services →
  *     Credentials, for the OAuth 2.0 Client used by this app.
  *   - DB_*: IONOS control panel → Hosting → Databases → your database.
+ *   - ENCRYPTION_KEY: any long random string, e.g. `openssl rand -base64 48`.
+ *     Used to encrypt secrets stored at rest (Apple app-specific passwords).
  */
 
 define('GOOGLE_CLIENT_ID',     'YOUR_ID.apps.googleusercontent.com');
@@ -17,3 +19,5 @@ define('DB_HOST', 'YOUR_DB_HOST');
 define('DB_NAME', 'YOUR_DB_NAME');
 define('DB_USER', 'YOUR_DB_USER');
 define('DB_PASS', 'YOUR_DB_PASSWORD');
+
+define('ENCRYPTION_KEY', 'YOUR_RANDOM_ENCRYPTION_KEY');
