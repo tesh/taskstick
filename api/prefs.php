@@ -5,8 +5,8 @@
  * display settings/theme) server-side so they persist across browsers,
  * sessions, and devices instead of living only in localStorage.
  *
- * GET  /api/prefs.php          → returns { stars, listOrder, collapsed, settings }
- * POST /api/prefs.php          → saves body { stars, listOrder, collapsed, settings }
+ * GET  /api/prefs.php          → returns { stars, listOrder, collapsed, taskCollapsed, settings }
+ * POST /api/prefs.php          → saves body { stars, listOrder, collapsed, taskCollapsed, settings }
  */
 
 require_once '../config.php';
@@ -50,11 +50,12 @@ switch ($method) {
 
         // Validate shape before saving
         $prefs = [
-            'stars'     => $body['stars']     ?? new stdClass(),
-            'listOrder' => $body['listOrder']  ?? [],
-            'collapsed' => $body['collapsed']  ?? new stdClass(),
-            'settings'  => $body['settings']   ?? new stdClass(),
-            'savedAt'   => date('c'),
+            'stars'         => $body['stars']         ?? new stdClass(),
+            'listOrder'     => $body['listOrder']      ?? [],
+            'collapsed'     => $body['collapsed']      ?? new stdClass(),
+            'taskCollapsed' => $body['taskCollapsed']  ?? new stdClass(),
+            'settings'      => $body['settings']       ?? new stdClass(),
+            'savedAt'       => date('c'),
         ];
 
         if (file_put_contents($prefsFile, json_encode($prefs)) === false) {

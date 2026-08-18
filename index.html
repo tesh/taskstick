@@ -861,11 +861,50 @@ body.theme-modern .list-title {
   width: 100%;
 }
 
-/* Subtask indentation */
+/* Subtask indentation — accent-tinted rail visually ties it to its parent */
 .task-item.subtask {
-  margin-left: 18px;
-  padding-left: 6px;
-  border-left: 2px solid var(--rule-color);
+  margin-left: 22px;
+  padding-left: 8px;
+  border-left: 2px solid var(--accent)55;
+  opacity: 0.92;
+}
+.task-item.subtask .task-text { font-size: 0.93em; }
+/* Tuck the first subtask a little closer to its parent than to its siblings */
+.task-item:not(.subtask) + .task-item.subtask { margin-top: -2px; }
+
+/* A parent row with subtasks reads slightly bolder so the group scans as a unit */
+.task-item.has-subtasks > .task-row .task-text { font-weight: 600; }
+
+/* Subtask collapse/expand toggle — always visible (not hover-only), so a
+   task's subtask count is obvious at a glance even when collapsed */
+.subtask-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 3px;
+  transition: background 0.15s, color 0.15s;
+}
+.subtask-toggle-btn:hover { background: var(--accent-light); color: var(--accent); }
+.subtask-chevron { font-size: 0.68rem; }
+.subtask-count {
+  font-family: var(--ui-font);
+  font-weight: 700;
+  font-size: 0.62rem;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  border-radius: 8px;
+  padding: 0 5px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 1.5;
 }
 
 /* Drag handle */
@@ -883,7 +922,6 @@ body.theme-modern .list-title {
 }
 .task-item:hover .drag-handle { opacity: 0.45; }
 .drag-handle:active { cursor: grabbing; opacity: 1 !important; }
-.task-item.subtask .drag-handle { display: none; }
 
 /* ── Checkbox: number-in-circle ── */
 /* Label wraps the hidden input + visible circle */
@@ -1543,11 +1581,10 @@ body.theme-modern .task-source-label {
   border-color: #f59e0b28;
 }
 
-/* ── Priority items always show star button ── */
-.priority-card .star-btn {
-  opacity: 1;
-  color: #f59e0b;
-}
+/* ── Priority items always show the star button, but only actually-starred
+   rows get the amber fill — a family can include unstarred context rows ── */
+.priority-card .star-btn { opacity: 1; }
+.priority-card .task-item.starred .star-btn { color: #f59e0b; }
 
 /* ── Subtle left-edge accent on notebook priority items ── */
 body.theme-notebook .priority-card .task-item {
@@ -1620,6 +1657,19 @@ body.theme-modern .priority-card .task-item {
 .task-item:hover .partial-btn { opacity: 0.6; }
 .partial-btn:hover             { opacity: 1 !important; color: #f59e0b; }
 
+/* ============================================================
+   INDENT / OUTDENT BUTTONS
+   ============================================================ */
+.indent-btn, .outdent-btn {
+  opacity: 0; background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 0.85rem; padding: 0 1px;
+  line-height: 1; flex-shrink: 0; margin-top: 3px;
+  transition: opacity 0.15s, color 0.15s;
+}
+.task-item:hover .indent-btn,
+.task-item:hover .outdent-btn { opacity: 0.5; }
+.indent-btn:hover, .outdent-btn:hover { opacity: 1 !important; color: var(--accent); }
+
 /* ── Follow-up list card ── */
 .list-card.followup-card { border-top: 3px solid #f59e0b; }
 .list-card.followup-card .list-title { color: #d97706; }
@@ -1660,7 +1710,9 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 .task-actions-row .task-delete-btn,
 .task-actions-row .notes-btn,
 .task-actions-row .partial-btn,
-.task-actions-row .due-add-btn {
+.task-actions-row .due-add-btn,
+.task-actions-row .indent-btn,
+.task-actions-row .outdent-btn {
   opacity: 0.5;
   margin-top: 0;
   font-size: 1rem;
@@ -1670,7 +1722,9 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 .task-actions-row .task-delete-btn:hover,
 .task-actions-row .notes-btn:hover,
 .task-actions-row .partial-btn:hover,
-.task-actions-row .due-add-btn:hover { opacity: 1 !important; }
+.task-actions-row .due-add-btn:hover,
+.task-actions-row .indent-btn:hover,
+.task-actions-row .outdent-btn:hover { opacity: 1 !important; }
 .task-actions-row .task-due { margin-top: 0; font-size: 0.65rem; }
 .task-item.starred .task-actions-row .star-btn   { opacity: 1; color: #f59e0b; }
 .task-item.has-notes .task-actions-row .notes-btn { opacity: 1; color: var(--accent); }
@@ -2167,6 +2221,7 @@ const state = {
   theme:        localStorage.getItem('tasks-theme') || 'notebook',
   stars:        JSON.parse(localStorage.getItem('tasks-stars') || '{}'),
   collapsed:    JSON.parse(localStorage.getItem('tasks-collapsed') || '{}'),
+  taskCollapsed: JSON.parse(localStorage.getItem('tasks-task-collapsed') || '{}'),
   settings:     JSON.parse(localStorage.getItem('tasks-settings') || '{"hideCompleted":false,"tetrisMode":false,"alphabeticalSort":false,"allTasksMode":false,"ritualEnabled":false}'),
   refreshTimer: null,
   REFRESH_MS:   120_000,  // 2 min — avoids interrupting typing
@@ -2661,6 +2716,10 @@ async function loadAll(showSpinner = true) {
         state.collapsed = prefs.collapsed;
         localStorage.setItem('tasks-collapsed', JSON.stringify(state.collapsed));
       }
+      if (prefs.taskCollapsed) {
+        state.taskCollapsed = prefs.taskCollapsed;
+        localStorage.setItem('tasks-task-collapsed', JSON.stringify(state.taskCollapsed));
+      }
       if (prefs.listOrder && prefs.listOrder.length) {
         localStorage.setItem('tasks-list-order', JSON.stringify(prefs.listOrder));
       }
@@ -2745,10 +2804,11 @@ async function savePrefs() {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        stars:     state.stars,
-        listOrder: state.lists.map(l => l.id),
-        collapsed: state.collapsed,
-        settings:  { ...state.settings, theme: state.theme },
+        stars:         state.stars,
+        listOrder:     state.lists.map(l => l.id),
+        collapsed:     state.collapsed,
+        taskCollapsed: state.taskCollapsed,
+        settings:      { ...state.settings, theme: state.theme },
       }),
     });
   } catch (_) { /* silent — local state already saved */ }
@@ -2948,15 +3008,46 @@ function createListCard(list, listIdx) {
   const visibleSubs    = list.tasks.filter(t => t.parent && !(hideCompleted && completedIds.has(t.parent)));
   const orderedRoots   = visibleRoots;
 
-  // Insert subtasks after their parents
-  const display = buildDisplayOrder([...orderedRoots, ...visibleSubs]);
+  // Insert subtasks after their parents — this is the true order, independent
+  // of any task's collapse state, so indent targets stay predictable even
+  // when some subtask groups are currently hidden.
+  const fullDisplay = buildDisplayOrder([...orderedRoots, ...visibleSubs]);
+
+  const childrenByParent = {};
+  for (const sub of visibleSubs) {
+    (childrenByParent[sub.parent] = childrenByParent[sub.parent] || []).push(sub);
+  }
+
+  // What actually renders: skip subtasks whose parent is collapsed
+  const display = fullDisplay.filter(t => !(t.parent && state.taskCollapsed[t.parent]));
 
   // Only active (non-completed) root tasks get a sequential number in the circle
   let displayIndex = 0;
   const taskItemsHtml = display.map(task => {
     const isActiveRoot = !task.parent && task.status !== 'completed';
     if (isActiveRoot) displayIndex++;
-    return renderTaskItem(task, isActiveRoot ? displayIndex : 0, list.id);
+
+    const children = childrenByParent[task.id] || [];
+
+    // Indent target for root tasks: the nearest preceding task in true
+    // display order. If that task is itself a subtask, indent alongside
+    // it (same parent) rather than nesting two levels deep. A task that
+    // already has its own subtasks can't be indented further — Google
+    // Tasks only supports one level of nesting.
+    let indentTarget = null;
+    if (!task.parent && !children.length) {
+      const fullIdx = fullDisplay.indexOf(task);
+      if (fullIdx > 0) {
+        const prev = fullDisplay[fullIdx - 1];
+        const targetId = prev.parent || prev.id;
+        indentTarget = list.tasks.find(t => t.id === targetId) || null;
+      }
+    }
+    return renderTaskItem(task, isActiveRoot ? displayIndex : 0, list.id, {
+      indentTarget,
+      childCount:  children.length,
+      isCollapsed: !!state.taskCollapsed[task.id],
+    });
   }).join('');
 
   const isCollapsed  = !!state.collapsed[list.id];
@@ -2994,45 +3085,88 @@ function createListCard(list, listIdx) {
 
   if (isCollapsed) card.classList.add('collapsed');
 
-  // Drag-and-drop for tasks within and across lists
+  // Drag-and-drop for tasks within and across lists. Subtasks are draggable
+  // too (for reordering among siblings, or a left/right drag to outdent /
+  // re-indent — see the horizontal-delta check below).
   const taskListEl = card.querySelector('.task-list');
   Sortable.create(taskListEl, {
     group:       'tasks',
     animation:   150,
     handle:      '.drag-handle',
-    filter:      '.subtask',
     ghostClass:  'sortable-ghost',
     chosenClass: 'sortable-chosen',
+    onStart(evt) {
+      evt.item.dataset.dragStartX = getEventX(evt.originalEvent);
+    },
     async onEnd(evt) {
       const taskId   = evt.item.dataset.taskId;
       const fromEl   = evt.from;
       const toEl     = evt.to;
       const fromList = fromEl.dataset.listId;
       const toList   = toEl.dataset.listId;
+      const dragDx   = getEventX(evt.originalEvent) - Number(evt.item.dataset.dragStartX || 0);
+      delete evt.item.dataset.dragStartX;
 
       if (fromList === toList) {
-        // Within-list reorder — sync state then call move API
         const listState = state.lists.find(l => l.id === toList);
+        const items      = Array.from(toEl.querySelectorAll('.task-item[data-task-id]'));
+        const newIdx     = items.findIndex(li => li.dataset.taskId === taskId);
+        const task       = listState ? listState.tasks.find(t => t.id === taskId) : null;
+
+        // A pronounced horizontal drag re-nests the task instead of just
+        // reordering it — right to indent, left to outdent. Same rules as
+        // the indent/outdent buttons (one level of nesting only).
+        const INDENT_THRESHOLD = 40;
+        const hasOwnChildren = task && listState.tasks.some(t => t.parent === task.id);
+
+        if (task && !task.parent && !hasOwnChildren && dragDx > INDENT_THRESHOLD && newIdx > 0) {
+          const prevTask = listState.tasks.find(t => t.id === items[newIdx - 1].dataset.taskId);
+          const targetParentId = prevTask ? (prevTask.parent || prevTask.id) : null;
+          if (targetParentId) {
+            await indentTask(toList, taskId, targetParentId);
+            return;
+          }
+        }
+        if (task && task.parent && dragDx < -INDENT_THRESHOLD) {
+          await outdentTask(toList, taskId);
+          return;
+        }
+
+        // Plain reorder — sync state then call move API. Explicitly restate
+        // the task's current parent (if any) so reordering a subtask among
+        // its siblings doesn't accidentally outdent it.
         if (listState) {
-          const items   = Array.from(toEl.querySelectorAll('.task-item[data-task-id]'));
           const taskMap = Object.fromEntries(listState.tasks.map(t => [t.id, t]));
           listState.tasks = items.map(li => taskMap[li.dataset.taskId]).filter(Boolean);
         }
-        const items  = Array.from(toEl.querySelectorAll('.task-item[data-task-id]'));
-        const newIdx = items.findIndex(li => li.dataset.taskId === taskId);
         const prevId = newIdx > 0 ? items[newIdx - 1].dataset.taskId : undefined;
-        await moveTaskWithinList(toList, taskId, prevId);
+        await moveTaskWithinList(toList, taskId, prevId, task ? task.parent : undefined);
 
       } else {
-        // Cross-list move — get task data, update state, call API
+        // Cross-list move — get task data (+ any subtasks, moved together),
+        // update state, call API
         const fromListState = state.lists.find(l => l.id === fromList);
         const toListState   = state.lists.find(l => l.id === toList);
         if (fromListState && toListState) {
           const task = fromListState.tasks.find(t => t.id === taskId);
           if (task) {
-            fromListState.tasks = fromListState.tasks.filter(t => t.id !== taskId);
+            const children = fromListState.tasks.filter(t => t.parent === task.id);
+            fromListState.tasks = fromListState.tasks.filter(t => t.id !== taskId && t.parent !== task.id);
             toListState.tasks.unshift(task);
-            await crossListMoveAPI(fromList, toList, task);
+            const result = await crossListMoveFamilyAPI(fromList, toList, task, children);
+            if (result.ok) {
+              const idx = toListState.tasks.findIndex(t => t.id === task.id);
+              if (idx >= 0) {
+                // The family root is always created without a parent — object
+                // spread only overrides keys the source actually owns, so a
+                // dragged subtask's stale (source-list) .parent must be
+                // cleared explicitly or it'd never render in the destination.
+                const merged = { ...task, ...result.newParent };
+                delete merged.parent;
+                toListState.tasks[idx] = merged;
+              }
+              toListState.tasks.push(...result.newChildren);
+            }
             // Re-render both cards to get correct IDs after API create
             rerenderCard(fromListState);
             rerenderCard(toListState);
@@ -3045,10 +3179,12 @@ function createListCard(list, listIdx) {
   return card;
 }
 
-function renderTaskItem(task, index, listId) {
+function renderTaskItem(task, index, listId, opts = {}) {
+  const { indentTarget = null, childCount = 0, isCollapsed = false } = opts;
   const done         = task.status === 'completed';
   const starred      = !!state.stars[task.id];
   const isChild      = !!task.parent;
+  const hasChildren  = childCount > 0;
   const displayNotes = stripOriginMarker(task.notes || '');
   const hasNotes     = !!(displayNotes && displayNotes.trim());
   const dueStr       = task.due || '';
@@ -3058,7 +3194,13 @@ function renderTaskItem(task, index, listId) {
   const starIcon     = starred ? '★' : '☆';
   const currentList  = state.lists.find(l => l.id === listId);
   const isFollowUp   = !!(currentList && currentList.title === 'Follow-up');
-  const originListId = getOriginListId(task.notes);
+  // A subtask moved to Follow-up doesn't carry its own origin marker — only
+  // the family's parent does — so fall back to the parent's when this is a child.
+  let originListId = getOriginListId(task.notes);
+  if (isChild && !originListId && currentList) {
+    const parentTask = currentList.tasks.find(t => t.id === task.parent);
+    if (parentTask) originListId = getOriginListId(parentTask.notes);
+  }
   // Number shown inside the circle: subtasks → dot, completed → empty (CSS shows ✓), active root → number
   const dataNum  = isChild ? '·' : (done ? '' : (index || ''));
 
@@ -3075,13 +3217,36 @@ function renderTaskItem(task, index, listId) {
     ? `<div class="task-notes-view">${renderNoteText(displayNotes)}</div>`
     : '';
 
+  // Always-visible chevron on any root task that has subtasks — collapsing
+  // hides the group but the chevron + count stay put so it's still obvious
+  // this task has children.
+  const subtaskToggle = hasChildren
+    ? `<button class="subtask-toggle-btn"
+               onclick="toggleTaskCollapse('${escHtml(task.id)}','${escHtml(listId)}')"
+               title="${isCollapsed ? 'Show' : 'Hide'} ${childCount} subtask${childCount > 1 ? 's' : ''}">
+         <span class="subtask-chevron">${isCollapsed ? '▸' : '▾'}</span><span class="subtask-count">${childCount}</span>
+       </button>`
+    : '';
+
+  const indentBtn = indentTarget
+    ? `<button class="indent-btn"
+               onclick="indentTask('${escHtml(listId)}','${escHtml(task.id)}','${escHtml(indentTarget.id)}',this)"
+               title="Make subtask of “${escHtml(indentTarget.title)}”">⇥</button>`
+    : '';
+  const outdentBtn = isChild
+    ? `<button class="outdent-btn"
+               onclick="outdentTask('${escHtml(listId)}','${escHtml(task.id)}',this)"
+               title="Remove from subtask">⇤</button>`
+    : '';
+
   return `
-    <li class="task-item${done ? ' completed' : ''}${starred ? ' starred' : ''}${isChild ? ' subtask' : ''}${hasNotes ? ' has-notes' : ''}"
+    <li class="task-item${done ? ' completed' : ''}${starred ? ' starred' : ''}${isChild ? ' subtask' : ''}${hasNotes ? ' has-notes' : ''}${hasChildren ? ' has-subtasks' : ''}"
         data-task-id="${escHtml(task.id)}"
         data-list-id="${escHtml(listId)}"
         data-index="${index}">
       <div class="task-row">
-        ${isChild ? '' : '<span class="drag-handle" title="Drag to reorder">⠿</span>'}
+        <span class="drag-handle" title="${isChild ? 'Drag to reorder — drag left to outdent' : 'Drag to reorder — drag right onto a task to indent'}">⠿</span>
+        ${subtaskToggle}
         <label class="task-check-wrap" title="Complete task">
           <input type="checkbox" class="task-check" ${checked}
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
@@ -3093,6 +3258,8 @@ function renderTaskItem(task, index, listId) {
       </div>
       <div class="task-actions-row">
         ${duePart}
+        ${indentBtn}
+        ${outdentBtn}
         <button class="notes-btn"
                 onclick="toggleNotes(this)"
                 title="${hasNotes ? 'View/edit notes' : 'Add notes'}">📝</button>
@@ -3404,12 +3571,22 @@ async function deleteTask(listId, taskId, btn) {
 
     const list = state.lists.find(l => l.id === listId);
     if (list) {
-      list.tasks = list.tasks.filter(t => t.id !== taskId);
+      // Google cascade-deletes a task's subtasks server-side — mirror that
+      // locally too, or they'd be left behind pointing at a parent that no
+      // longer exists.
+      const hadChildren = list.tasks.some(t => t.parent === taskId);
+      list.tasks = list.tasks.filter(t => t.id !== taskId && t.parent !== taskId);
       updateCardCount(listId, list);
+      if (hadChildren) {
+        rerenderCard(list); // multiple rows disappeared — a full re-render is simplest
+      } else {
+        li.remove();
+        renumberCard(listId); // reflow active-task numbers after deletion
+      }
+    } else {
+      li.remove();
     }
-    li.remove();
-    renumberCard(listId); // reflow active-task numbers after deletion
-    renderPriorityCard(); // remove from priority card if it was starred
+    renderPriorityCard(); // remove from priority card if it or a subtask was starred
     setSyncStatus('ok');
     showToast('Task deleted', 'success');
   } catch (e) {
@@ -3422,10 +3599,14 @@ async function deleteTask(listId, taskId, btn) {
 /* ============================================================
    TASK MOVE — within same list (reorder)
    ============================================================ */
-async function moveTaskWithinList(listId, taskId, previousId) {
+async function moveTaskWithinList(listId, taskId, previousId, parentId) {
   try {
     const body = { action: 'move' };
     if (previousId) body.previous = previousId;
+    // Explicit even when unchanged — omitting `parent` on a move call resets
+    // the task to top-level, so a subtask being reordered among its own
+    // siblings must keep restating its current parent.
+    if (parentId)   body.parent   = parentId;
     const res = await fetch(
       `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -3439,55 +3620,186 @@ async function moveTaskWithinList(listId, taskId, previousId) {
 }
 
 /* ============================================================
-   TASK MOVE — across lists (delete + create)
+   INDENT / OUTDENT — reparent a task within its own list.
+   Google Tasks only supports one level of nesting, so a task that
+   already has its own subtasks can't be indented further (the render
+   layer hides the button in that case).
    ============================================================ */
-async function crossListMoveAPI(fromListId, toListId, task) {
+async function indentTask(listId, taskId, newParentId, btn) {
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+  const task = list.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  // Land after the new parent's last existing child, if it has any
+  const previousId = list.tasks
+    .filter(t => t.parent === newParentId)
+    .map(t => t.id)
+    .pop();
+
+  task.parent = newParentId;
+  rerenderCard(list);
+  renderPriorityCard();
+
+  try {
+    const body = { action: 'move', parent: newParentId };
+    if (previousId) body.previous = previousId;
+    const res = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    );
+    if (!res.ok) throw new Error('Indent failed');
+    setSyncStatus('ok');
+  } catch (e) {
+    showToast('Could not make this a subtask', 'error');
+    loadAll(false);
+  }
+}
+
+async function outdentTask(listId, taskId, btn) {
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+  const task = list.tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  const previousId = task.parent; // place it right after its former parent
+  delete task.parent;
+  rerenderCard(list);
+  renderPriorityCard();
+
+  try {
+    const res = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(listId)}&taskId=${encodeURIComponent(taskId)}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'move', previous: previousId }) }
+    );
+    if (!res.ok) throw new Error('Outdent failed');
+    setSyncStatus('ok');
+  } catch (e) {
+    showToast('Could not remove from subtask', 'error');
+    loadAll(false);
+  }
+}
+
+/* ============================================================
+   TASK MOVE — across lists (delete + create)
+   A "family" is a task and its subtasks, moved together so a parent
+   task's subtasks are never orphaned or cascade-deleted by Google Tasks
+   when the parent is removed from its old list.
+   ============================================================ */
+async function crossListMoveFamilyAPI(fromListId, toListId, parentTask, childTasks) {
+  let newParent   = null;
+  let newChildren = [];
+  let deletedAnyOriginal = false;
+
   try {
     setSyncStatus('syncing');
 
-    // Create in destination list
-    const createRes = await fetch(`/api/tasks.php?listId=${encodeURIComponent(toListId)}`, {
+    // Create parent in destination list
+    const parentRes = await fetch(`/api/tasks.php?listId=${encodeURIComponent(toListId)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title:  task.title,
-        notes:  task.notes  || undefined,
-        due:    task.due    || undefined,
-        status: task.status || 'needsAction',
+        title:  parentTask.title,
+        notes:  parentTask.notes  || undefined,
+        due:    parentTask.due    || undefined,
+        status: parentTask.status || 'needsAction',
       }),
     });
-    if (!createRes.ok) throw new Error('Create failed');
-    const newTask = await createRes.json();
+    if (!parentRes.ok) throw new Error('Create failed');
+    newParent = await parentRes.json();
 
-    // Delete from source list
-    const deleteRes = await fetch(
-      `/api/tasks.php?listId=${encodeURIComponent(fromListId)}&taskId=${encodeURIComponent(task.id)}`,
+    // Create each subtask under the new parent, preserving relative order
+    let previousChildId;
+    for (const child of childTasks) {
+      const childRes = await fetch(`/api/tasks.php?listId=${encodeURIComponent(toListId)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title:    child.title,
+          notes:    child.notes  || undefined,
+          due:      child.due    || undefined,
+          status:   child.status || 'needsAction',
+          parent:   newParent.id,
+          previous: previousChildId,
+        }),
+      });
+      if (!childRes.ok) throw new Error('Create failed');
+      const newChild = await childRes.json();
+      newChildren.push(newChild);
+      previousChildId = newChild.id;
+    }
+
+    // Delete originals from source (children first, then parent). Only mark
+    // deletedAnyOriginal on a CONFIRMED success — an early failed (not
+    // thrown) delete must still be eligible for the rollback below.
+    for (const child of childTasks) {
+      const r = await fetch(
+        `/api/tasks.php?listId=${encodeURIComponent(fromListId)}&taskId=${encodeURIComponent(child.id)}`,
+        { method: 'DELETE' }
+      );
+      if (!r.ok) throw new Error('Moved, but could not remove the original — refreshing to reconcile');
+      deletedAnyOriginal = true;
+    }
+    const parentDelRes = await fetch(
+      `/api/tasks.php?listId=${encodeURIComponent(fromListId)}&taskId=${encodeURIComponent(parentTask.id)}`,
       { method: 'DELETE' }
     );
-    if (!deleteRes.ok) throw new Error('Moved, but could not remove the original — refreshing to reconcile');
+    if (!parentDelRes.ok) throw new Error('Moved, but could not remove the original — refreshing to reconcile');
+    deletedAnyOriginal = true;
 
-    // Update task ID in destination state
-    const toList = state.lists.find(l => l.id === toListId);
-    if (toList) {
-      const idx = toList.tasks.findIndex(t => t.id === task.id);
-      if (idx >= 0) toList.tasks[idx] = { ...task, ...newTask };
+    // Transfer stars to the new IDs
+    const idPairs = [[parentTask.id, newParent.id], ...childTasks.map((c, i) => [c.id, newChildren[i].id])];
+    for (const [oldId, newId] of idPairs) {
+      if (state.stars[oldId]) {
+        state.stars[newId] = true;
+        delete state.stars[oldId];
+      }
     }
-
-    // Transfer star to new ID
-    if (state.stars[task.id]) {
-      state.stars[newTask.id] = true;
-      delete state.stars[task.id];
-      localStorage.setItem('tasks-stars', JSON.stringify(state.stars));
-    }
+    localStorage.setItem('tasks-stars', JSON.stringify(state.stars));
 
     setSyncStatus('ok');
-    return true;
+    return { ok: true, newParent, newChildren };
   } catch (e) {
     setSyncStatus('error');
-    showToast('Failed to move task: ' + e.message, 'error');
+    // Best-effort rollback: if we'd already created the family in the
+    // destination but failed before removing the originals, delete the new
+    // copies rather than leaving the whole family duplicated in both lists.
+    if (newParent && !deletedAnyOriginal) {
+      for (const nc of newChildren) {
+        try {
+          await fetch(`/api/tasks.php?listId=${encodeURIComponent(toListId)}&taskId=${encodeURIComponent(nc.id)}`, { method: 'DELETE' });
+        } catch (_) {}
+      }
+      try {
+        await fetch(`/api/tasks.php?listId=${encodeURIComponent(toListId)}&taskId=${encodeURIComponent(newParent.id)}`, { method: 'DELETE' });
+      } catch (_) {}
+      showToast('Could not move task — nothing changed', 'error');
+    } else {
+      showToast('Failed to move task: ' + e.message, 'error');
+    }
     loadAll(false);
-    return false;
+    return { ok: false };
   }
+}
+
+// Single-task convenience wrapper (no subtasks involved)
+async function crossListMoveAPI(fromListId, toListId, task) {
+  const result = await crossListMoveFamilyAPI(fromListId, toListId, task, []);
+  if (!result.ok) return false;
+  const toList = state.lists.find(l => l.id === toListId);
+  if (toList) {
+    const idx = toList.tasks.findIndex(t => t.id === task.id);
+    if (idx >= 0) {
+      // The family root is always created without a parent — a task moved
+      // solo here could itself have been a subtask, so its stale (source-
+      // list) .parent must be cleared explicitly, not just left un-overwritten.
+      const merged = { ...task, ...result.newParent };
+      delete merged.parent;
+      toList.tasks[idx] = merged;
+    }
+  }
+  return true;
 }
 
 /* ============================================================
@@ -3526,6 +3838,21 @@ function toggleCollapse(listId) {
   card.classList.toggle('collapsed', nowCollapsed);
   const btn = card.querySelector('.collapse-btn');
   if (btn) btn.title = nowCollapsed ? 'Expand list' : 'Collapse list';
+}
+
+// Collapse/expand a single task's subtasks (distinct from collapsing a whole list)
+function toggleTaskCollapse(taskId, listId) {
+  const nowCollapsed = !state.taskCollapsed[taskId];
+  if (nowCollapsed) {
+    state.taskCollapsed[taskId] = true;
+  } else {
+    delete state.taskCollapsed[taskId];
+  }
+  localStorage.setItem('tasks-task-collapsed', JSON.stringify(state.taskCollapsed));
+  savePrefs(); // keep collapse state in sync across browsers
+
+  const list = state.lists.find(l => l.id === listId);
+  if (list) rerenderCard(list);
 }
 
 /* ============================================================
@@ -3679,28 +4006,37 @@ function renderPriorityCard() {
   const existing = document.getElementById('priority-card');
   if (existing) existing.remove();
 
-  // Collect starred, active (not completed), top-level tasks across all lists.
-  // Follow-up tasks are intentionally excluded: they have their own card and
-  // should not also appear in Priority (fixes double-listing bug).
-  const starredItems = [];
+  // Collect every family (a top-level task + its subtasks) where at least
+  // one member — the task itself OR any of its subtasks — is starred.
+  // The whole family displays together for context, but each row still
+  // shows its own real star state (starring a subtask does not silently
+  // star its parent too). Follow-up tasks are excluded: they have their
+  // own card and shouldn't also appear in Priority.
+  const familyGroups = [];
   for (const list of state.lists) {
     if (list.title === 'Follow-up') continue;
     for (const task of list.tasks) {
-      if (state.stars[task.id] && task.status !== 'completed' && !task.parent) {
-        starredItems.push({ task, list });
-      }
+      if (task.parent) continue; // only consider roots as the anchor
+      const children = list.tasks.filter(t => t.parent === task.id && t.status !== 'completed');
+      // The root only counts on its own if it's active and starred (a
+      // completed standalone task never shows in Priority). But a completed
+      // root with an active starred subtask still needs to show — as
+      // context for that subtask, which is still open work.
+      const rootQualifies  = task.status !== 'completed' && state.stars[task.id];
+      const childQualifies = children.some(c => state.stars[c.id]);
+      if (rootQualifies || childQualifies) familyGroups.push({ root: task, list, children });
     }
   }
 
   // Nothing starred — don't show the card at all
-  if (!starredItems.length) return;
+  if (!familyGroups.length) return;
 
-  // Apply saved drag order (localStorage)
+  // Apply saved drag order (localStorage) — keyed by root task ID
   const savedOrder = JSON.parse(localStorage.getItem('tasks-priority-order') || '[]');
   if (savedOrder.length) {
-    starredItems.sort((a, b) => {
-      const ai = savedOrder.indexOf(a.task.id);
-      const bi = savedOrder.indexOf(b.task.id);
+    familyGroups.sort((a, b) => {
+      const ai = savedOrder.indexOf(a.root.id);
+      const bi = savedOrder.indexOf(b.root.id);
       return (ai === -1 ? 9999 : ai) - (bi === -1 ? 9999 : bi);
     });
   }
@@ -3709,14 +4045,18 @@ function renderPriorityCard() {
   card.className = 'priority-card';
   card.id        = 'priority-card';
 
-  const taskItemsHtml = starredItems.map(({ task, list }) =>
-    renderPriorityTaskItem(task, list)
-  ).join('');
+  const totalCount = familyGroups.reduce((n, g) => n + 1 + g.children.length, 0);
+
+  const taskItemsHtml = familyGroups.map(({ root, list, children }) => {
+    const rootHtml     = renderPriorityTaskItem(root, list, { hasChildren: children.length > 0 });
+    const childrenHtml = children.map(child => renderPriorityTaskItem(child, list, { isSubtaskRow: true })).join('');
+    return rootHtml + childrenHtml;
+  }).join('');
 
   card.innerHTML = `
     <div class="priority-card-header">
       <div class="priority-card-title">★ Priority</div>
-      <span class="task-count">${starredItems.length}</span>
+      <span class="task-count">${totalCount}</span>
     </div>
     <ul class="task-list" id="priority-task-list">
       ${taskItemsHtml}
@@ -3726,16 +4066,19 @@ function renderPriorityCard() {
   // Always first — insert before the first regular list card
   board.insertBefore(card, board.firstChild);
 
-  // Drag-and-drop within Priority card — order saved to localStorage only
+  // Drag-and-drop within Priority card — reorders families by their root;
+  // subtasks always stay directly under their own root, so they (and any
+  // root with subtasks, to avoid tearing a family apart) aren't drag sources.
   const priorityList = card.querySelector('#priority-task-list');
   if (priorityList) {
     Sortable.create(priorityList, {
       animation:   150,
       handle:      '.drag-handle',
+      filter:      '.subtask, .has-subtasks',
       ghostClass:  'sortable-ghost',
       chosenClass: 'sortable-chosen',
       onEnd() {
-        const items    = Array.from(priorityList.querySelectorAll('.task-item[data-task-id]'));
+        const items    = Array.from(priorityList.querySelectorAll('.task-item[data-task-id]:not(.subtask)'));
         const newOrder = items.map(li => li.dataset.taskId);
         localStorage.setItem('tasks-priority-order', JSON.stringify(newOrder));
       }
@@ -3743,8 +4086,10 @@ function renderPriorityCard() {
   }
 }
 
-function renderPriorityTaskItem(task, list) {
+function renderPriorityTaskItem(task, list, opts = {}) {
+  const { isSubtaskRow = false, hasChildren = false } = opts;
   const done         = task.status === 'completed';
+  const starred      = !!state.stars[task.id];
   const displayNotes = stripOriginMarker(task.notes || '');
   const hasNotes     = !!(displayNotes && displayNotes.trim());
   const dueStr       = task.due || '';
@@ -3753,7 +4098,11 @@ function renderPriorityTaskItem(task, list) {
   const checked      = done ? 'checked' : '';
   const listId       = list.id;
   const isFollowUp   = list.title === 'Follow-up';
-  const originListId = getOriginListId(task.notes);
+  let originListId   = getOriginListId(task.notes);
+  if (isSubtaskRow && !originListId) {
+    const parentTask = list.tasks.find(t => t.id === task.parent);
+    if (parentTask) originListId = getOriginListId(parentTask.notes);
+  }
 
   const duePart = dueFmt
     ? `<span class="task-due${overdue ? ' overdue' : ''}"
@@ -3777,22 +4126,22 @@ function renderPriorityTaskItem(task, list) {
   ) : '';
 
   return `
-    <li class="task-item starred${done ? ' completed' : ''}${hasNotes ? ' has-notes' : ''}"
+    <li class="task-item${starred ? ' starred' : ''}${done ? ' completed' : ''}${hasNotes ? ' has-notes' : ''}${isSubtaskRow ? ' subtask' : ''}${hasChildren ? ' has-subtasks' : ''}"
         data-task-id="${escHtml(task.id)}"
         data-list-id="${escHtml(listId)}"
         data-index="0">
       <div class="task-row">
-        <span class="drag-handle" title="Drag to reorder priority">⠿</span>
+        ${isSubtaskRow ? '' : '<span class="drag-handle" title="Drag to reorder priority">⠿</span>'}
         <label class="task-check-wrap" title="Complete task">
           <input type="checkbox" class="task-check" ${checked}
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
-          <span class="task-check-circle" data-num="★"></span>
+          <span class="task-check-circle" data-num="${isSubtaskRow ? '·' : '★'}"></span>
         </label>
         <div class="priority-task-body">
           <span class="task-text"
                 ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
                 title="Double-click to edit">${escHtml(task.title)}</span>
-          <span class="task-source-label">${escHtml(list.title)}</span>
+          ${isSubtaskRow ? '' : `<span class="task-source-label">${escHtml(list.title)}</span>`}
         </div>
       </div>
       <div class="task-actions-row">
@@ -3803,7 +4152,7 @@ function renderPriorityTaskItem(task, list) {
         ${partialBtn}
         <button class="star-btn"
                 onclick="toggleStar('${escHtml(task.id)}',this)"
-                title="Unstar">★</button>
+                title="${starred ? 'Unstar' : 'Star'}">${starred ? '★' : '☆'}</button>
         <button class="task-delete-btn"
                 onclick="deleteTask('${escHtml(listId)}','${escHtml(task.id)}',this)"
                 title="Delete task">✕</button>
@@ -3888,6 +4237,15 @@ function showToast(msg, type = '') {
    ============================================================ */
 function escHtml(str) {
   return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Horizontal pointer X from either a MouseEvent or a TouchEvent — used to
+// detect a left/right drag gesture for indenting/outdenting subtasks.
+function getEventX(nativeEvt) {
+  if (!nativeEvt) return 0;
+  if (nativeEvt.touches && nativeEvt.touches.length) return nativeEvt.touches[0].clientX;
+  if (nativeEvt.changedTouches && nativeEvt.changedTouches.length) return nativeEvt.changedTouches[0].clientX;
+  return nativeEvt.clientX || 0;
 }
 
 /* ============================================================
@@ -4191,11 +4549,23 @@ function getOriginListId(notes) {
   return m ? m[1] : null;
 }
 
+// Resolve the task clicked (root or subtask) to its family: the top-level
+// parent (itself, if it has none) and every subtask under that parent —
+// the whole group always moves together so subtasks are never orphaned.
+function getTaskFamily(list, task) {
+  const familyRoot = task.parent
+    ? (list.tasks.find(t => t.id === task.parent) || task)
+    : task;
+  const familyChildren = list.tasks.filter(t => t.parent === familyRoot.id);
+  return { familyRoot, familyChildren };
+}
+
 async function markPartialComplete(listId, taskId, btn) {
   const list = state.lists.find(l => l.id === listId);
   if (!list) return;
   const task = list.tasks.find(t => t.id === taskId);
   if (!task) return;
+  const { familyRoot, familyChildren } = getTaskFamily(list, task);
 
   // Find or create "Follow-up" list
   let followUp = state.lists.find(l => l.title === 'Follow-up');
@@ -4218,21 +4588,31 @@ async function markPartialComplete(listId, taskId, btn) {
     }
   }
 
-  // Embed origin list ID in notes so ◑ can move it back later
-  task.notes = (stripOriginMarker(task.notes) + `\n[taskstick-origin:${listId}]`).trim();
+  // Embed origin list ID in the parent's notes so ◑ can move the family back later
+  familyRoot.notes = (stripOriginMarker(familyRoot.notes) + `\n[taskstick-origin:${listId}]`).trim();
 
-  // Optimistically move in state
-  list.tasks     = list.tasks.filter(t => t.id !== taskId);
-  followUp.tasks = [task, ...followUp.tasks];
+  // Optimistically move the whole family in state
+  const familyIds = new Set([familyRoot.id, ...familyChildren.map(t => t.id)]);
+  list.tasks     = list.tasks.filter(t => !familyIds.has(t.id));
+  followUp.tasks = [familyRoot, ...familyChildren, ...followUp.tasks];
   rerenderCard(list);
   rerenderCard(followUp);
   renderPriorityCard();
 
   // Move via API (cross-list: create in Follow-up, delete from source)
-  const ok = await crossListMoveAPI(listId, followUp.id, task);
-  if (ok) {
-    rerenderCard(followUp); // task's real ID changed on the server — refresh so its buttons use it
-    showToast('Moved to Follow-up ◑', 'success');
+  const result = await crossListMoveFamilyAPI(listId, followUp.id, familyRoot, familyChildren);
+  if (result.ok) {
+    const idx = followUp.tasks.findIndex(t => t.id === familyRoot.id);
+    if (idx >= 0) followUp.tasks[idx] = { ...familyRoot, ...result.newParent };
+    familyChildren.forEach((child, i) => {
+      const cIdx = followUp.tasks.findIndex(t => t.id === child.id);
+      if (cIdx >= 0) followUp.tasks[cIdx] = { ...child, ...result.newChildren[i] };
+    });
+    rerenderCard(followUp); // real IDs changed on the server — refresh so buttons use them
+    showToast(
+      familyChildren.length ? `Moved to Follow-up ◑ (with ${familyChildren.length} subtask${familyChildren.length > 1 ? 's' : ''})` : 'Moved to Follow-up ◑',
+      'success'
+    );
   }
 }
 
@@ -4241,26 +4621,34 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
   if (!followUp) return;
   const task = followUp.tasks.find(t => t.id === taskId);
   if (!task) return;
+  const { familyRoot, familyChildren } = getTaskFamily(followUp, task);
 
-  const originListId = getOriginListId(task.notes);
+  const originListId = getOriginListId(familyRoot.notes);
   if (!originListId) { showToast('Original list not found', 'error'); return; }
   const originList = state.lists.find(l => l.id === originListId);
   if (!originList) { showToast('Original list no longer exists', 'error'); return; }
 
-  // Strip the origin marker from notes before moving back
-  task.notes = stripOriginMarker(task.notes) || undefined;
+  // Strip the origin marker from the parent's notes before moving back
+  familyRoot.notes = stripOriginMarker(familyRoot.notes) || undefined;
 
-  // Optimistically move in state
-  followUp.tasks  = followUp.tasks.filter(t => t.id !== taskId);
-  originList.tasks.unshift(task);
+  // Optimistically move the whole family in state
+  const familyIds = new Set([familyRoot.id, ...familyChildren.map(t => t.id)]);
+  followUp.tasks = followUp.tasks.filter(t => !familyIds.has(t.id));
+  originList.tasks.unshift(...familyChildren, familyRoot);
   rerenderCard(followUp);
   rerenderCard(originList);
   renderPriorityCard();
 
   // Move via API
-  const ok = await crossListMoveAPI(followUpListId, originListId, task);
-  if (ok) {
-    rerenderCard(originList); // task's real ID changed on the server — refresh so its buttons use it
+  const result = await crossListMoveFamilyAPI(followUpListId, originListId, familyRoot, familyChildren);
+  if (result.ok) {
+    const idx = originList.tasks.findIndex(t => t.id === familyRoot.id);
+    if (idx >= 0) originList.tasks[idx] = { ...familyRoot, ...result.newParent };
+    familyChildren.forEach((child, i) => {
+      const cIdx = originList.tasks.findIndex(t => t.id === child.id);
+      if (cIdx >= 0) originList.tasks[cIdx] = { ...child, ...result.newChildren[i] };
+    });
+    rerenderCard(originList); // real IDs changed on the server — refresh so buttons use them
     showToast(`Returned to ${originList.title} ✓`, 'success');
   }
 }
@@ -4554,7 +4942,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
 
 <!-- ── FOOTER ── -->
 <footer id="app-footer">
-  <span>© 2025 Purple Pill Solutions</span>
+  <span>© 2026 Purple Pill Solutions</span>
   <span>·</span>
   <a href="https://tasks.tesh.ai/terms.html">Terms of Service</a>
   <span>·</span>

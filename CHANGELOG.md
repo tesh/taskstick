@@ -5,10 +5,13 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 ## Known open issues
 
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
-- Subtask creation isn't exposed in the UI yet, though subtasks display correctly (ENH-005).
 - Due dates can display one day early in negative-UTC-offset timezones (ENH-004).
-- Stars are localStorage-only, don't sync across devices (ENH-003).
-- No drag-onto-parent gesture to create subtasks (ENH-002).
+- Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
+
+## 2026-08-17
+
+- **Fixed:** Follow-up's ◑ "return to original list" button silently did nothing — a Google Tasks API error came back as HTTP 200 (masking the failure), and the move function swallowed its own errors without telling its callers, so a misleading "success" toast always followed the real, briefly-visible error (BUG-008).
+- **Added:** Subtasks can now be indented/outdented via buttons or drag (right to indent, left to outdent), created by indenting an existing task, and collapsed/expanded per-task with the state remembered across devices. Starring or Follow-up'ing a subtask now surfaces its whole family (parent + siblings) in the Priority card and moves the whole family together to Follow-up — previously moving a parent with subtasks to Follow-up risked losing the subtasks entirely, since Google Tasks cascade-deletes subtasks when their parent is deleted and the old logic only moved the one clicked task (ENH-037).
 
 ## 2026-08-16
 

@@ -59,7 +59,12 @@ switch ($method) {
         if (!empty($body['notes'])) $task['notes'] = $body['notes'];
         if (!empty($body['due']))   $task['due']   = $body['due'];
         if (!empty($body['status'])) $task['status'] = $body['status'];
-        $result = googleApiRequest('/lists/' . urlencode($listId) . '/tasks', 'POST', $task);
+        // Google Tasks requires parent/previous as URL query params on create, not body fields.
+        $createParams = [];
+        if (!empty($body['parent']))   $createParams['parent']   = $body['parent'];
+        if (!empty($body['previous'])) $createParams['previous'] = $body['previous'];
+        $createQs = $createParams ? '?' . http_build_query($createParams) : '';
+        $result = googleApiRequest('/lists/' . urlencode($listId) . '/tasks' . $createQs, 'POST', $task);
         if (!empty($result['error'])) {
             jsonResponse($result, 500);
         }
