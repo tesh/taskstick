@@ -155,7 +155,8 @@ try {
             'showHidden'    => 'true',
         ]));
         $tasks = $result['items'] ?? [];
-        $currentTaskIds = [];
+        $currentTaskIds  = [];
+        $pushedUidsHere  = []; // for the post-push server round-trip check below
 
         foreach ($tasks as $task) {
             if (empty($task['title'])) continue;
@@ -180,13 +181,34 @@ try {
                 if ($link) {
                     $dav->updateTodo($appleList['url'], $link['apple_uid'], $taskData, $link['apple_etag']);
                     appleLinkUpsert($userEmail, $googleTaskId, $googleListId, $appleList['url'], $link['apple_uid'], null, $googleUpdated);
+                    $pushedUidsHere[] = $link['apple_uid'];
                 } else {
                     $uid = $dav->createTodo($appleList['url'], $taskData);
                     appleLinkUpsert($userEmail, $googleTaskId, $googleListId, $appleList['url'], $uid, null, $googleUpdated);
+                    $pushedUidsHere[] = $uid;
                 }
                 $pushed++;
             } catch (Throwable $e) {
                 $errors[] = "\"{$task['title']}\": " . $e->getMessage();
+            }
+        }
+
+        // Diagnostic: a PUT returning 2xx doesn't guarantee iCloud actually
+        // kept the item — ask the server directly (a REPORT against the
+        // list, independent of any client's own cache/display logic)
+        // whether the UIDs we just believe we pushed are really there.
+        // Temporary instrumentation while this feature's live behavior
+        // against real iCloud is still being diagnosed.
+        if ($pushedUidsHere) {
+            try {
+                $serverUids = array_column($dav->listTodos($appleList['url']), 'uid');
+                $verified   = count(array_intersect($pushedUidsHere, $serverUids));
+                if ($verified < count($pushedUidsHere)) {
+                    $errors[] = "\"$listTitle\": pushed " . count($pushedUidsHere)
+                        . " item(s) this run, but the server only confirms $verified of them exist when read back — writes are not persisting.";
+                }
+            } catch (Throwable $e) {
+                $errors[] = "\"$listTitle\": could not verify pushed items — " . $e->getMessage();
             }
         }
 
