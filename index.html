@@ -2712,7 +2712,19 @@ async function loadAppleSyncStatus() {
       listsSection.style.display = '';
       state.appleSyncEnabledLists = data.enabledLists || [];
       renderAppleSyncListPicker();
-      renderAppleSyncLastLine(data.lastSyncedAt);
+      // lastSyncedAt alone can't distinguish a real success from a total
+      // failure (it's stamped optimistically before the CalDAV work even
+      // starts, so a throttle claim survives a subsequent connection
+      // error) — fetch the actual outcome from apple-sync.php's GET so a
+      // silently-failing background sync doesn't look identical to a
+      // working one.
+      let lastSyncResult = null;
+      try {
+        const syncRes  = await fetch('/api/apple-sync.php');
+        const syncData = await syncRes.json();
+        if (syncRes.ok) lastSyncResult = syncData.lastSyncResult;
+      } catch (_) { /* status fetch is best-effort, not fatal */ }
+      renderAppleSyncLastLine(data.lastSyncedAt, lastSyncResult);
     } else {
       statusEl.innerHTML = '';
       formEl.style.display = '';
@@ -2792,12 +2804,27 @@ async function saveAppleSyncLists() {
   }
 }
 
-function renderAppleSyncLastLine(lastSyncedAt) {
+function renderAppleSyncLastLine(lastSyncedAt, lastSyncResult) {
   const el = document.getElementById('apple-sync-last');
   if (!el) return;
-  el.textContent = lastSyncedAt
-    ? `Last synced ${formatRelative(lastSyncedAt)}`
-    : 'Not synced yet — runs automatically in the background, or click Sync Now.';
+  if (!lastSyncedAt) {
+    el.textContent = 'Not synced yet — runs automatically in the background, or click Sync Now.';
+    return;
+  }
+  let html = `Last synced ${formatRelative(lastSyncedAt)}`;
+  if (lastSyncResult) {
+    if (lastSyncResult.error) {
+      // A hard failure (e.g. couldn't even connect to iCloud) — thrown
+      // before any per-list pushing happened.
+      html += `<br>⚠️ ${escHtml(lastSyncResult.error)}`;
+    } else if (typeof lastSyncResult.pushed === 'number') {
+      html += ` · ${lastSyncResult.pushed} task${lastSyncResult.pushed === 1 ? '' : 's'} pushed`;
+      if (lastSyncResult.errors && lastSyncResult.errors.length) {
+        html += '<br>' + lastSyncResult.errors.map(e => `⚠️ ${escHtml(e)}`).join('<br>');
+      }
+    }
+  }
+  el.innerHTML = html;
 }
 
 async function runAppleSyncNow() {
@@ -2815,15 +2842,13 @@ async function runAppleSyncNow() {
 
     if (data.errors && data.errors.length) {
       showToast(`Synced ${data.pushed} task${data.pushed === 1 ? '' : 's'}, ${data.errors.length} error${data.errors.length === 1 ? '' : 's'} — see below`, 'error');
-      document.getElementById('apple-sync-last').innerHTML =
-        `Last synced just now · ${escHtml(data.pushed)} pushed<br>` +
-        data.errors.map(e => `⚠️ ${escHtml(e)}`).join('<br>');
     } else {
       showToast(`Synced ${data.pushed} task${data.pushed === 1 ? '' : 's'} to Apple Reminders`, 'success');
-      renderAppleSyncLastLine(new Date().toISOString());
     }
+    renderAppleSyncLastLine(new Date().toISOString(), data);
   } catch (e) {
     showToast(e.message || 'Sync failed', 'error');
+    renderAppleSyncLastLine(new Date().toISOString(), { error: e.message });
   } finally {
     btn.disabled = false;
     btn.textContent = 'Sync Now';
