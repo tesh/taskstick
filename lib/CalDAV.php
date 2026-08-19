@@ -261,7 +261,8 @@ XML;
         }
     }
 
-    public function deleteTodo(string $calendarUrl, string $href): void {
+    /** Returns true on success (including 404 — already gone counts as deleted). */
+    public function deleteTodo(string $calendarUrl, string $href): bool {
         $url = $this->absoluteUrl($calendarUrl, $href);
         $ch  = curl_init($url);
         curl_setopt_array($ch, [
@@ -273,7 +274,9 @@ XML;
             CURLOPT_TIMEOUT        => self::TIMEOUT,
         ]);
         curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        return ($code >= 200 && $code < 300) || $code === 404;
     }
 
     // ---- VTODO conversion ------------------------------------

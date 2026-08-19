@@ -7,6 +7,9 @@
  * POST   { appleEmail, appSpecificPassword } → tests the CalDAV connection,
  *          and only saves (encrypted) if the test succeeds. Returns the
  *          discovered Reminders list names.
+ * POST   { action: 'save_lists', enabledLists: [{id, title}, ...] } →
+ *          updates which Google lists are enabled for sync, without
+ *          touching stored credentials (no re-test needed).
  * DELETE → disconnect (clears stored credentials for this user)
  *
  * Credentials live in their own per-user file (not the general prefs.php
@@ -35,14 +38,6 @@ function loadAppleSync(string $file): array {
     return is_array($d) ? $d : [];
 }
 
-function saveAppleSync(string $file, string $dataDir, array $data): void {
-    if (!is_dir($dataDir)) {
-        mkdir($dataDir, 0755, true);
-        file_put_contents($dataDir . '/.htaccess', "Order deny,allow\nDeny from all\n");
-    }
-    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-}
-
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
@@ -56,7 +51,36 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
-    $body     = json_decode(file_get_contents('php://input'), true) ?? [];
+    $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+    if (($body['action'] ?? '') === 'save_lists') {
+        $enabledLists = $body['enabledLists'] ?? [];
+        if (!is_array($enabledLists)) {
+            jsonResponse(['error' => 'enabledLists must be an array'], 400);
+        }
+        // Keep only well-formed {id, title} entries — both fields are
+        // needed downstream (id to fetch tasks, title to match/find the
+        // Reminders list by name).
+        $clean = [];
+        foreach ($enabledLists as $l) {
+            $id    = trim($l['id']    ?? '');
+            $title = trim($l['title'] ?? '');
+            if ($id && $title) $clean[] = ['id' => $id, 'title' => $title];
+        }
+
+        $notConfigured = false;
+        $data = updateJsonFile($file, function (array $data) use ($clean, &$notConfigured) {
+            if (empty($data['appleEmail']) || empty($data['passwordEnc'])) {
+                $notConfigured = true;
+                return $data;
+            }
+            $data['enabledLists'] = $clean;
+            return $data;
+        });
+        if ($notConfigured) { jsonResponse(['error' => 'Connect an Apple ID first'], 400); }
+        jsonResponse(['success' => true, 'enabledLists' => $data['enabledLists']]);
+    }
+
     $email    = trim($body['appleEmail'] ?? '');
     $password = trim($body['appSpecificPassword'] ?? '');
 
@@ -79,12 +103,14 @@ if ($method === 'POST') {
     }
 
     $reminderLists = $dav->listReminderLists();
+    $encrypted     = Encryption::encrypt($password);
 
-    $data = loadAppleSync($file);
-    $data['appleEmail']   = $email;
-    $data['passwordEnc']  = Encryption::encrypt($password);
-    $data['enabledLists'] = $data['enabledLists'] ?? [];
-    saveAppleSync($file, $dataDir, $data);
+    updateJsonFile($file, function (array $data) use ($email, $encrypted) {
+        $data['appleEmail']   = $email;
+        $data['passwordEnc']  = $encrypted;
+        $data['enabledLists'] = $data['enabledLists'] ?? [];
+        return $data;
+    });
 
     jsonResponse([
         'success'       => true,

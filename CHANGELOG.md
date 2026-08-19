@@ -14,6 +14,7 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - **Fixed:** Priority card rendered noticeably narrower than other cards in Tetris stacking mode at some window widths — a missing `max-width` override left it capped at 340px instead of filling its column like every other card (BUG-011).
 - **Added:** Feedback in the Admin panel is now grouped into Bugs/Features/Suggestions sections, with a delete button per item. Deleting archives rather than erases — a "Download archive (.md)" link exports everything ever deleted as a Markdown file (ENH-041).
 - **Added (beta, stage 1 of 3):** Apple Reminders sync — connect your iCloud account in Settings and TaskStick discovers your Reminders lists via CalDAV. This stage is connect-and-verify only; pushing tasks to Reminders and pulling completions back are separate stages, not yet built (ENH-042).
+- **Added (beta, stage 2 of 3):** Choose which lists sync to Apple Reminders, and tasks now actually push there — creating/updating reminders, and removing them when a task is deleted or moved to a different list. Runs automatically in the background (self-throttled to once per 10 minutes) or on demand via "Sync Now." Pulling completion status back from Reminders is stage 3, not yet built (ENH-043).
 
 ## 2026-08-17
 

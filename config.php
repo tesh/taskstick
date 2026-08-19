@@ -210,6 +210,43 @@ function updateUsers(callable $mutator): array {
 }
 
 /**
+ * Same locked read-modify-write pattern as updateUsers(), generalized for
+ * any per-user JSON state file (currently: Apple Reminders sync config).
+ * Kept deliberately generic rather than duplicating the lock/mkdir/write
+ * boilerplate per feature.
+ */
+function updateJsonFile(string $file, callable $mutator): array {
+    $dir = dirname($file);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+        $htaccess = $dir . '/.htaccess';
+        if (!file_exists($htaccess)) file_put_contents($htaccess, "Order deny,allow\nDeny from all\n");
+    }
+
+    $fp = fopen($file, 'c+');
+    if (!$fp) return [];
+    flock($fp, LOCK_EX);
+
+    try {
+        $contents = stream_get_contents($fp);
+        $data = json_decode($contents, true);
+        if (!is_array($data)) $data = [];
+
+        $data = $mutator($data) ?? $data;
+
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        fflush($fp);
+    } finally {
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+
+    return $data;
+}
+
+/**
  * Upsert the current user's record on every login: creates it (seeding
  * is_admin for ADMIN_SEED_EMAILS) or refreshes name/picture/last_seen.
  */

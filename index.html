@@ -771,6 +771,17 @@ body {
 }
 .apple-sync-success { background: rgba(52, 211, 153, 0.12); color: rgba(255,255,255,0.85); }
 .apple-sync-error   { background: rgba(239, 68, 68, 0.12);  color: #fca5a5; }
+.apple-sync-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-family: var(--ui-font);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.85);
+  cursor: pointer;
+}
+.apple-sync-list-row input { flex-shrink: 0; }
 .toggle-switch input:checked + .toggle-track {
   background: #7c3aed;
 }
@@ -2570,6 +2581,7 @@ async function checkAuth() {
         setSyncStatus('idle');
       } else {
         await loadAll();
+        loadAppleSyncStatus(); // populates state.appleSyncConfigured for the background sync trigger, even if Settings is never opened
         startPolling();
       }
     } else {
@@ -2669,15 +2681,18 @@ function closeSettings() {
    iCloud connection works and shows which Reminders lists were found.
    ============================================================ */
 async function loadAppleSyncStatus() {
-  const statusEl = document.getElementById('apple-sync-status');
-  const formEl   = document.getElementById('apple-sync-form');
-  const resultEl = document.getElementById('apple-sync-result');
+  const statusEl      = document.getElementById('apple-sync-status');
+  const formEl        = document.getElementById('apple-sync-form');
+  const resultEl      = document.getElementById('apple-sync-result');
+  const listsSection  = document.getElementById('apple-sync-lists-section');
   if (!statusEl) return;
   resultEl.innerHTML = '';
   try {
     const res  = await fetch('/api/apple-settings.php');
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load status');
+
+    state.appleSyncConfigured = !!data.configured;
 
     if (data.configured) {
       statusEl.innerHTML = `
@@ -2689,9 +2704,14 @@ async function loadAppleSyncStatus() {
           </span>
         </div>`;
       formEl.style.display = 'none';
+      listsSection.style.display = '';
+      state.appleSyncEnabledLists = data.enabledLists || [];
+      renderAppleSyncListPicker();
+      renderAppleSyncLastLine(data.lastSyncedAt);
     } else {
       statusEl.innerHTML = '';
       formEl.style.display = '';
+      listsSection.style.display = 'none';
     }
   } catch (e) {
     statusEl.innerHTML = `<div class="apple-sync-error">${escHtml(e.message)}</div>`;
@@ -2701,6 +2721,120 @@ async function loadAppleSyncStatus() {
 function toggleAppleSyncForm() {
   const formEl = document.getElementById('apple-sync-form');
   formEl.style.display = formEl.style.display === 'none' ? '' : 'none';
+}
+
+function renderAppleSyncListPicker() {
+  const wrap = document.getElementById('apple-sync-lists');
+  if (!wrap) return;
+  const enabledIds = new Set((state.appleSyncEnabledLists || []).map(l => l.id));
+  // Google's own lists only — Daily Ritual resets itself every day and
+  // Follow-up is a working scratch list, neither is a natural fit for a
+  // synced Reminders list, so they're left off by default (still just
+  // regular entries in state.lists, nothing stops picking them).
+  const lists = state.lists.filter(l => l.title !== 'Daily Ritual');
+  wrap.innerHTML = lists.length
+    ? lists.map(l => `
+        <label class="apple-sync-list-row">
+          <input type="checkbox" ${enabledIds.has(l.id) ? 'checked' : ''}
+                 onchange="onAppleSyncListToggle('${escHtml(l.id)}', ${escHtml(JSON.stringify(l.title))}, this.checked)" />
+          <span>${escHtml(l.title)}</span>
+        </label>
+      `).join('')
+    : '<div class="apple-sync-hint">No lists found.</div>';
+}
+
+let appleSyncListsSaveTimer = null;
+
+// Mutates a single shared client-side array rather than re-fetching the
+// server's copy on every toggle — rapid clicks then just apply in order
+// (JS is single-threaded) instead of racing separate GET-then-POST round
+// trips, where a slow-to-land POST from an earlier click could overwrite
+// a later one. The actual save is debounced so a burst of toggles becomes
+// one write, not one in-flight request per click.
+function onAppleSyncListToggle(listId, listTitle, checked) {
+  const current = state.appleSyncEnabledLists || [];
+  state.appleSyncEnabledLists = checked
+    ? (current.some(l => l.id === listId) ? current : [...current, { id: listId, title: listTitle }])
+    : current.filter(l => l.id !== listId);
+
+  clearTimeout(appleSyncListsSaveTimer);
+  appleSyncListsSaveTimer = setTimeout(saveAppleSyncLists, 400);
+}
+
+async function saveAppleSyncLists() {
+  // Refresh titles from the live Google lists before saving, in case one
+  // was renamed since it was enabled — the stored title is what's matched
+  // against Apple Reminders list names, so a stale one would silently
+  // break that list's sync.
+  const enabledLists = (state.appleSyncEnabledLists || []).map(l => {
+    const live = state.lists.find(gl => gl.id === l.id);
+    return live ? { id: l.id, title: live.title } : l;
+  });
+  state.appleSyncEnabledLists = enabledLists;
+
+  try {
+    const saveRes = await fetch('/api/apple-settings.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'save_lists', enabledLists }),
+    });
+    const saveData = await saveRes.json();
+    if (!saveRes.ok) throw new Error(saveData.error || 'Failed to save');
+    showToast('Reminders sync list updated', 'success');
+  } catch (e) {
+    showToast(e.message || 'Could not update sync list', 'error');
+    loadAppleSyncStatus(); // re-sync from server truth and re-render, so a failed save is never silently invisible
+  }
+}
+
+function renderAppleSyncLastLine(lastSyncedAt) {
+  const el = document.getElementById('apple-sync-last');
+  if (!el) return;
+  el.textContent = lastSyncedAt
+    ? `Last synced ${formatRelative(lastSyncedAt)}`
+    : 'Not synced yet — runs automatically in the background, or click Sync Now.';
+}
+
+async function runAppleSyncNow() {
+  const btn = document.getElementById('apple-sync-now-btn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing…';
+  try {
+    const res  = await fetch('/api/apple-sync.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ force: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sync failed');
+
+    if (data.errors && data.errors.length) {
+      showToast(`Synced ${data.pushed} task${data.pushed === 1 ? '' : 's'}, ${data.errors.length} error${data.errors.length === 1 ? '' : 's'} — see below`, 'error');
+      document.getElementById('apple-sync-last').innerHTML =
+        `Last synced just now · ${escHtml(data.pushed)} pushed<br>` +
+        data.errors.map(e => `⚠️ ${escHtml(e)}`).join('<br>');
+    } else {
+      showToast(`Synced ${data.pushed} task${data.pushed === 1 ? '' : 's'} to Apple Reminders`, 'success');
+      renderAppleSyncLastLine(new Date().toISOString());
+    }
+  } catch (e) {
+    showToast(e.message || 'Sync failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sync Now';
+  }
+}
+
+/** Fire-and-forget automatic sync, piggybacked on the existing poll cycle.
+ * The server self-throttles (force:false), so this is cheap to call every
+ * poll regardless of how many devices/tabs are open. */
+function triggerAutoAppleSync() {
+  if (!state.appleSyncConfigured) return;
+  fetch('/api/apple-sync.php', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ force: false }),
+  }).catch(() => {}); // silent — this is a background nicety, not user-initiated
 }
 
 async function connectAppleSync() {
@@ -3296,6 +3430,7 @@ function startPolling() {
     const active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
     loadAll(false);
+    triggerAutoAppleSync();
   }, state.REFRESH_MS);
 }
 function stopPolling() {
@@ -5357,6 +5492,19 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       </div>
 
       <div id="apple-sync-result"></div>
+
+      <div id="apple-sync-lists-section" style="display:none">
+        <div class="apple-sync-label" style="margin-top:14px">Lists to sync</div>
+        <div class="apple-sync-hint" style="margin-top:0;margin-bottom:8px">
+          Each list needs a Reminders list with the exact same name already created on your iPhone/Mac — sync won't create one for you.
+        </div>
+        <div id="apple-sync-lists"></div>
+
+        <button class="invite-send-btn" style="margin-top:10px;width:100%" onclick="runAppleSyncNow()" id="apple-sync-now-btn">
+          Sync Now
+        </button>
+        <div id="apple-sync-last" class="apple-sync-hint" style="margin-top:6px"></div>
+      </div>
     </div>
 
   </div>
