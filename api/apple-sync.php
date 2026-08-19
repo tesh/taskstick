@@ -63,9 +63,15 @@ if ($method !== 'POST') { jsonResponse(['error' => 'Method not allowed'], 405); 
 $body  = json_decode(file_get_contents('php://input'), true) ?? [];
 $force = !empty($body['force']);
 
-// Claim the sync slot atomically: check config/throttle AND stamp
-// lastSyncedAt in the same locked read-modify-write, so a concurrent
-// request can't slip through the same throttle window.
+// Claim the sync slot atomically: check config/throttle/in-progress AND
+// stamp lastSyncedAt in the same locked read-modify-write, so a concurrent
+// request can't slip through. The lock itself is only held for this brief
+// check-and-stamp, not for the whole (potentially 100s of seconds) push
+// that follows — so a separate syncInProgress flag is what actually
+// prevents two pushes running at once; force:true only bypasses the time
+// throttle, never this. syncInProgress is a timestamp (not a bare
+// boolean) so a crashed/timed-out run's flag is treated as stale and
+// self-clears after a few minutes, instead of permanently wedging sync.
 $claimed    = false;
 $skipReason = null;
 $data = updateJsonFile($file, function (array $data) use ($force, &$claimed, &$skipReason) {
@@ -77,6 +83,15 @@ $data = updateJsonFile($file, function (array $data) use ($force, &$claimed, &$s
         $skipReason = 'no_lists_selected';
         return $data;
     }
+    if (!empty($data['syncInProgress'])) {
+        $startedAt = strtotime($data['syncInProgress']);
+        if ($startedAt && (time() - $startedAt) < 180) {
+            $skipReason = 'already_running';
+            return $data;
+        }
+        // Stale — the process that set this never got to clear it
+        // (crash, or hit set_time_limit). Treat the slot as free.
+    }
     if (!$force && !empty($data['lastSyncedAt'])) {
         $elapsed = time() - strtotime($data['lastSyncedAt']);
         if ($elapsed < APPLE_SYNC_THROTTLE_SECONDS) {
@@ -85,7 +100,8 @@ $data = updateJsonFile($file, function (array $data) use ($force, &$claimed, &$s
         }
     }
     $claimed = true;
-    $data['lastSyncedAt'] = gmdate('c');
+    $data['lastSyncedAt']   = gmdate('c');
+    $data['syncInProgress'] = gmdate('c');
     return $data;
 });
 
@@ -117,8 +133,20 @@ try {
 
         $appleList = $listsByName[$listTitle] ?? null;
         if (!$appleList) {
-            $errors[] = "No Reminders list named \"$listTitle\" found — create one on your iPhone/Mac first.";
-            continue;
+            // No matching Reminders list exists yet — create one rather
+            // than failing, so enabling a list "just works" without a
+            // separate manual step on the device.
+            try {
+                $appleList = $dav->createReminderList($listTitle);
+            } catch (Throwable $e) {
+                $appleList = null;
+            }
+            if ($appleList) {
+                $listsByName[$listTitle] = $appleList;
+            } else {
+                $errors[] = "Could not create a Reminders list named \"$listTitle\": " . $dav->getLastError();
+                continue;
+            }
         }
 
         $result = googleApiRequest('/lists/' . urlencode($googleListId) . '/tasks?' . http_build_query([
@@ -184,14 +212,16 @@ try {
     }
 
     updateJsonFile($file, function (array $data) use ($pushed, $errors) {
-        $data['lastSyncResult'] = ['pushed' => $pushed, 'errors' => $errors];
+        $data['lastSyncResult']  = ['pushed' => $pushed, 'errors' => $errors];
+        $data['syncInProgress']  = null;
         return $data;
     });
 
     jsonResponse(['success' => true, 'pushed' => $pushed, 'errors' => $errors]);
 } catch (Throwable $e) {
     updateJsonFile($file, function (array $data) use ($e) {
-        $data['lastSyncResult'] = ['error' => $e->getMessage()];
+        $data['lastSyncResult']  = ['error' => $e->getMessage()];
+        $data['syncInProgress']  = null;
         return $data;
     });
     jsonResponse(['error' => $e->getMessage()], 500);

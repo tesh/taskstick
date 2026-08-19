@@ -158,6 +158,59 @@ XML;
         return null;
     }
 
+    /**
+     * Create a new Reminders list (a calendar collection restricted to
+     * VTODO) via MKCALENDAR (RFC 4791 §5.3.1). Returns ['url','displayName']
+     * on success, or null on failure — never throws, since this is called
+     * from a per-list loop where one failure shouldn't be fatal.
+     */
+    public function createReminderList(string $displayName): ?array {
+        if (!$this->calendarHomeUrl) {
+            throw new RuntimeException('Not discovered — call discover() first.');
+        }
+        $collectionId = 'list-' . uniqid('', true);
+        $url = rtrim($this->calendarHomeUrl, '/') . '/' . $collectionId . '/';
+
+        // ENT_XML1 alone, matching this file's other escape-for-XML-body
+        // call (the href list in multigetTodos) — ENT_QUOTES is for
+        // escaping into an XML *attribute*, not needed for element text.
+        $escapedName = htmlspecialchars($displayName, ENT_XML1, 'UTF-8');
+        $xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<C:mkcalendar xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+  <D:set>
+    <D:prop>
+      <D:displayname>{$escapedName}</D:displayname>
+      <C:supported-calendar-component-set>
+        <C:comp name="VTODO"/>
+      </C:supported-calendar-component-set>
+    </D:prop>
+  </D:set>
+</C:mkcalendar>
+XML;
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'MKCALENDAR',
+            CURLOPT_POSTFIELDS     => $xml,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_USERPWD        => "{$this->username}:{$this->password}",
+            CURLOPT_HTTPAUTH       => CURLAUTH_BASIC,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => ['Content-Type: application/xml; charset=utf-8'],
+            CURLOPT_TIMEOUT        => self::TIMEOUT,
+        ]);
+        curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code < 200 || $code >= 300) {
+            $this->lastError = "MKCALENDAR failed with HTTP $code";
+            return null;
+        }
+        return ['url' => $url, 'displayName' => $displayName];
+    }
+
     // ---- List todos (two-step, mirrors CardDAV's contact listing) ----
 
     /** Returns array of ['uid' => ..., 'etag' => ..., 'ical' => ..., 'href' => ...] */

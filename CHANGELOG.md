@@ -16,6 +16,11 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - **Added (beta, stage 1 of 3):** Apple Reminders sync — connect your iCloud account in Settings and TaskStick discovers your Reminders lists via CalDAV. This stage is connect-and-verify only; pushing tasks to Reminders and pulling completions back are separate stages, not yet built (ENH-042).
 - **Added (beta, stage 2 of 3):** Choose which lists sync to Apple Reminders, and tasks now actually push there — creating/updating reminders, and removing them when a task is deleted or moved to a different list. Runs automatically in the background (self-throttled to once per 10 minutes) or on demand via "Sync Now." Pulling completion status back from Reminders is stage 3, not yet built (ENH-043).
 
+## 2026-08-19
+
+- **Fixed:** Settings dialog hung off the page with no way to scroll to the rest of it (the board behind it scrolled instead), and didn't match whichever theme was active — it had been left out of a theme-awareness fix applied to Admin/Feedback earlier. Fixed at the root: theme-awareness, sizing, and scroll behavior now live in the shared base styling every one of these dialogs uses, instead of being patched per-dialog — so a future theme or dialog stays consistent automatically. An audit while doing this turned up several more elements (the "Reset all" button, Apple Reminders' inputs, the Admin/Beta badges) that were still low-contrast or invisible on light themes and fixed those too (BUG-013).
+- **Changed:** Apple Reminders sync now creates the matching Reminders list automatically if one doesn't already exist, instead of requiring it to be created by hand first (ENH-044).
+
 ## 2026-08-17
 
 - **Fixed:** Follow-up's ◑ "return to original list" button silently did nothing — a Google Tasks API error came back as HTTP 200 (masking the failure), and the move function swallowed its own errors without telling its callers, so a misleading "success" toast always followed the real, briefly-visible error (BUG-008).

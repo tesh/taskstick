@@ -369,26 +369,31 @@ body {
 }
 .settings-overlay.open { display: flex; }
 
+/* Every settings-overlay modal (Settings, Feedback, scope-warning, Admin)
+   shares one base look and sizing — theme-aware and scrollable by
+   default, so a new theme or a new modal never needs its own override
+   block to stay consistent. Header stays fixed; .settings-modal-body (or
+   Admin's own .admin-tab-panel) is the one thing that scrolls. */
 .settings-modal {
-  background: #1a1630;
-  border: 1px solid rgba(160, 80, 255, 0.3);
+  background: var(--card-bg);
+  border: var(--card-border);
+  color: var(--text-primary);
   border-radius: 14px;
   box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-  width: 340px;
-  max-width: calc(100vw - 32px);
-  overflow: hidden;
-}
-#admin-overlay .settings-modal {
   width: min(640px, 94vw);
   max-height: 82vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* header + tabs stay put; only the active tab panel scrolls */
+  overflow: hidden;
 }
-#admin-overlay .settings-modal-header { flex-shrink: 0; }
+.settings-modal-header { flex-shrink: 0; }
+.settings-modal-body {
+  flex: 1;
+  overflow-y: auto;
+}
 @media (max-width: 640px) {
-  #admin-overlay.settings-overlay { align-items: stretch; justify-content: stretch; padding-top: 0; }
-  #admin-overlay .settings-modal {
+  .settings-overlay { align-items: stretch; justify-content: stretch; padding-top: 0; }
+  .settings-modal {
     width: 100vw;
     max-width: none;
     height: 100vh;
@@ -396,14 +401,14 @@ body {
     max-height: none;
     border-radius: 0;
   }
-  #admin-overlay .settings-modal-header { border-radius: 0; }
+  .settings-modal-header { border-radius: 0; }
 }
 
 .admin-tabs {
   display: flex;
   gap: 4px;
   padding: 0 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: var(--card-border);
   flex-shrink: 0;
 }
 .admin-tab {
@@ -464,9 +469,8 @@ body {
   color: var(--text-muted);
   padding-bottom: 6px;
   margin-bottom: 4px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: var(--card-border);
 }
-#admin-overlay .admin-feedback-group-title { border-bottom: var(--card-border); }
 .admin-feedback-group-count {
   font-weight: 400;
   opacity: 0.7;
@@ -484,45 +488,7 @@ body {
   transition: color 0.15s, background 0.15s;
 }
 .admin-feedback-delete-btn:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
-#admin-overlay .admin-tabs { border-bottom: var(--card-border); }
 
-/* Admin + Feedback + scope-warning modals follow the user's selected theme
-   instead of the fixed dark chrome the Settings modal uses — readable on
-   every theme. */
-#admin-overlay .settings-modal,
-#feedback-overlay .settings-modal,
-#scope-warning-overlay .settings-modal {
-  background: var(--card-bg);
-  border: var(--card-border);
-  color: var(--text-primary);
-}
-#admin-overlay .settings-modal-header,
-#feedback-overlay .settings-modal-header,
-#scope-warning-overlay .settings-modal-header {
-  border-bottom: var(--card-border);
-}
-#admin-overlay .settings-modal-header h3,
-#feedback-overlay .settings-modal-header h3,
-#scope-warning-overlay .settings-modal-header h3 {
-  color: var(--text-primary);
-}
-#admin-overlay .settings-close-btn,
-#feedback-overlay .settings-close-btn {
-  color: var(--text-muted);
-}
-#admin-overlay .settings-close-btn:hover,
-#feedback-overlay .settings-close-btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-}
-#admin-overlay .settings-row-label,
-#feedback-overlay .settings-row-label {
-  color: var(--text-primary);
-}
-#admin-overlay .settings-row-desc,
-#feedback-overlay .settings-row-desc {
-  color: var(--text-muted);
-}
 .modal-dismiss-btn {
   display: block;
   width: 100%;
@@ -542,49 +508,25 @@ body {
   color: var(--text-primary);
   background: var(--bg-secondary);
 }
-#admin-overlay .admin-row {
-  border-bottom: var(--card-border);
-}
-#admin-overlay .admin-row-name,
-#feedback-overlay .admin-row-name {
-  color: var(--text-primary);
-}
-#admin-overlay .admin-row-meta,
-#admin-overlay .admin-summary,
-#admin-overlay .admin-loading,
-#admin-overlay .admin-empty,
-#feedback-overlay .admin-empty {
-  color: var(--text-muted);
-}
-#admin-overlay .admin-row-desc {
-  color: var(--text-secondary);
-}
-#admin-overlay .admin-status-select,
-#feedback-overlay .admin-status-select,
-#feedback-overlay #feedback-description {
+#feedback-description {
   color: var(--text-primary);
   background: var(--input-bg, var(--card-bg));
   border: 1px solid var(--input-border, var(--card-border));
 }
-#admin-overlay .admin-status-select option,
-#feedback-overlay .admin-status-select option {
-  color: var(--text-primary);
-  background: var(--card-bg);
-}
-#feedback-overlay #feedback-description::placeholder {
+#feedback-description::placeholder {
   color: var(--text-muted);
 }
-/* .toggle-track's default off-state (near-white, designed for the fixed
-   dark Settings modal) is nearly invisible on Admin's theme-aware light
+/* .toggle-track's default off-state (near-white, designed for the old
+   fixed-dark Settings modal) is nearly invisible on theme-aware light
    card backgrounds (Notebook, Rose) — a neutral mid-gray reads on any
    theme, light or dark, without needing per-theme tuning. Scoped to
    :not(:checked) so this doesn't outrank (by ID specificity) the existing
    checked-state purple rule and wash out the "on" state too. */
-#admin-overlay .toggle-switch input:not(:checked) + .toggle-track {
+.toggle-switch input:not(:checked) + .toggle-track {
   background: rgba(128,128,128,0.35);
   border: 1px solid rgba(128,128,128,0.25);
 }
-#admin-overlay .toggle-track::after {
+.toggle-track::after {
   box-shadow: 0 1px 3px rgba(0,0,0,0.35);
 }
 .settings-modal-header {
@@ -592,32 +534,32 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 16px 18px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: var(--card-border);
 }
 .settings-modal-header h3 {
   font-family: var(--ui-font);
   font-size: 0.95rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.9);
+  color: var(--text-primary);
   margin: 0;
 }
 .settings-close-btn {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   cursor: pointer;
   font-size: 1.1rem;
   padding: 2px 6px;
   border-radius: 6px;
   transition: color 0.15s, background 0.15s;
 }
-.settings-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.settings-close-btn:hover { color: var(--text-primary); background: var(--bg-secondary); }
 
 .settings-section {
   padding: 14px 18px;
 }
 .settings-section + .settings-section {
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: var(--card-border);
 }
 .settings-section-title {
   font-family: var(--ui-font);
@@ -625,7 +567,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(160, 80, 255, 0.7);
+  color: var(--accent);
   margin-bottom: 10px;
 }
 
@@ -640,13 +582,13 @@ body {
 .settings-row-label {
   font-family: var(--ui-font);
   font-size: 0.82rem;
-  color: rgba(255,255,255,0.8);
+  color: var(--text-primary);
   flex: 1;
 }
 .settings-row-desc {
   font-family: var(--ui-font);
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -661,7 +603,9 @@ body {
 .toggle-track {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.15);
+  /* Off-state background comes from the .toggle-switch input:not(:checked)
+     rule below (higher specificity, always wins) — not set here, since a
+     value here would just be permanently-dead code. */
   border-radius: 11px;
   cursor: pointer;
   transition: background 0.2s;
@@ -679,17 +623,17 @@ body {
 .settings-reset-btn {
   flex-shrink: 0;
   padding: 6px 12px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: var(--input-bg, var(--card-bg));
+  border: 1px solid var(--input-border, var(--card-border));
   border-radius: 6px;
-  color: rgba(255,255,255,0.75);
+  color: var(--text-primary);
   font-family: var(--ui-font);
   font-size: 0.75rem;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
-.settings-reset-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.settings-reset-btn:hover { background: var(--bg-secondary); }
 
 /* Apple Reminders sync (beta) */
 .beta-badge {
@@ -700,8 +644,12 @@ body {
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 20px;
-  background: rgba(124, 58, 237, 0.25);
-  color: #c4b5fd;
+  /* Solid, not translucent — a translucent purple composited over a
+     variable theme background produced ~1.3:1 contrast against its own
+     equally-translucent text on light themes, essentially invisible. A
+     solid pill has consistent contrast regardless of what's underneath. */
+  background: #7c3aed;
+  color: #fff;
   vertical-align: middle;
   margin-left: 4px;
 }
@@ -709,28 +657,28 @@ body {
   display: block;
   font-family: var(--ui-font);
   font-size: 0.75rem;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
   margin-bottom: 4px;
 }
 .apple-sync-input {
   width: 100%;
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.9);
+  border: 1px solid var(--input-border, var(--card-border));
+  background: var(--input-bg, var(--card-bg));
+  color: var(--text-primary);
   font-family: var(--ui-font);
   font-size: 0.82rem;
 }
-.apple-sync-input::placeholder { color: rgba(255,255,255,0.3); }
+.apple-sync-input::placeholder { color: var(--text-muted); opacity: 0.6; }
 .apple-sync-hint {
   font-family: var(--ui-font);
   font-size: 0.68rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   margin-top: 4px;
   line-height: 1.4;
 }
-.apple-sync-hint a { color: #c4b5fd; }
+.apple-sync-hint a { color: var(--accent); }
 .apple-sync-status { margin-bottom: 4px; }
 .apple-sync-connected {
   display: flex;
@@ -742,7 +690,7 @@ body {
   background: rgba(52, 211, 153, 0.12);
   font-family: var(--ui-font);
   font-size: 0.78rem;
-  color: rgba(255,255,255,0.85);
+  color: var(--text-primary);
   margin-bottom: 10px;
 }
 .apple-sync-connected-actions {
@@ -753,7 +701,7 @@ body {
 .apple-sync-disconnect-btn {
   background: none;
   border: none;
-  color: rgba(255,255,255,0.5);
+  color: var(--text-muted);
   font-family: var(--ui-font);
   font-size: 0.72rem;
   text-decoration: underline;
@@ -769,8 +717,8 @@ body {
   border-radius: 6px;
   line-height: 1.4;
 }
-.apple-sync-success { background: rgba(52, 211, 153, 0.12); color: rgba(255,255,255,0.85); }
-.apple-sync-error   { background: rgba(239, 68, 68, 0.12);  color: #fca5a5; }
+.apple-sync-success { background: rgba(52, 211, 153, 0.12); color: var(--text-primary); }
+.apple-sync-error   { background: rgba(239, 68, 68, 0.12);  color: var(--text-primary); }
 .apple-sync-list-row {
   display: flex;
   align-items: center;
@@ -778,7 +726,7 @@ body {
   padding: 5px 0;
   font-family: var(--ui-font);
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.85);
+  color: var(--text-primary);
   cursor: pointer;
 }
 .apple-sync-list-row input { flex-shrink: 0; }
@@ -793,7 +741,7 @@ body {
 .admin-loading, .admin-empty {
   font-family: var(--ui-font);
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   padding: 12px 0;
 }
 .admin-row {
@@ -801,7 +749,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: var(--card-border);
 }
 .admin-row:last-child { border-bottom: none; }
 .admin-row-avatar {
@@ -809,25 +757,25 @@ body {
   border-radius: 50%;
   flex-shrink: 0;
   object-fit: cover;
-  background: rgba(255,255,255,0.1);
+  background: var(--bg-secondary);
 }
 .admin-row-body { flex: 1; min-width: 0; }
 .admin-row-name {
   font-family: var(--ui-font);
   font-size: 0.85rem;
   font-weight: 600;
-  color: inherit;
+  color: var(--text-primary);
 }
 .admin-row-meta {
   font-family: var(--ui-font);
   font-size: 0.7rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 .admin-row-desc {
   font-family: var(--ui-font);
   font-size: 0.8rem;
-  color: rgba(255,255,255,0.75);
+  color: var(--text-secondary);
   margin-top: 3px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -838,15 +786,19 @@ body {
   font-size: 0.75rem;
   padding: 5px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05);
-  color: inherit;
+  border: 1px solid var(--input-border, var(--card-border));
+  background: var(--input-bg, var(--card-bg));
+  color: var(--text-primary);
   flex-shrink: 0;
+}
+.admin-status-select option {
+  color: var(--text-primary);
+  background: var(--card-bg);
 }
 .admin-summary {
   font-family: var(--ui-font);
   font-size: 0.72rem;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 .admin-badge {
@@ -858,14 +810,15 @@ body {
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 20px;
-  background: rgba(124, 58, 237, 0.25);
-  color: #c4b5fd;
+  /* Solid, not translucent — see .beta-badge for why. */
+  background: #7c3aed;
+  color: #fff;
   vertical-align: middle;
   margin-left: 4px;
 }
 .admin-badge-you {
-  background: rgba(20, 184, 166, 0.2);
-  color: #5eead4;
+  background: #0d9488;
+  color: #fff;
 }
 
 /* Refresh button */
@@ -2650,6 +2603,14 @@ document.addEventListener('click', function() {
   if (dd) dd.classList.remove('open');
 });
 
+// Shared by every overlay modal (Settings, Admin, Feedback, scope-warning,
+// Help) so the page behind it can't scroll — without this, a wheel/touch
+// scroll over the modal (or its dimmed backdrop) falls through to the
+// board underneath, which is especially bad on mobile where iOS Safari
+// scrolls the body through a fixed overlay by default.
+function lockBodyScroll()   { document.body.style.overflow = 'hidden'; }
+function unlockBodyScroll() { document.body.style.overflow = ''; }
+
 function openSettings() {
   // Close the user dropdown first
   const dd = document.getElementById('user-dropdown');
@@ -2669,10 +2630,12 @@ function openSettings() {
   renderThemePicker();
   loadAppleSyncStatus();
   document.getElementById('settings-overlay').classList.add('open');
+  lockBodyScroll();
 }
 
 function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 
 /* ============================================================
@@ -2898,9 +2861,11 @@ function openHelp() {
   const vLabel = document.getElementById('help-version-label');
   if (vLabel) vLabel.textContent = APP_VERSION;
   document.getElementById('help-overlay').classList.add('open');
+  lockBodyScroll();
 }
 function closeHelp() {
   document.getElementById('help-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 function handleHelpOverlayClick(e) {
   if (e.target === document.getElementById('help-overlay')) closeHelp();
@@ -2921,9 +2886,11 @@ function openFeedback() {
   document.getElementById('feedback-description').value = '';
   document.getElementById('feedback-status-msg').textContent = '';
   document.getElementById('feedback-overlay').classList.add('open');
+  lockBodyScroll();
 }
 function closeFeedback() {
   document.getElementById('feedback-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 function handleFeedbackOverlayClick(e) {
   if (e.target === document.getElementById('feedback-overlay')) closeFeedback();
@@ -2935,9 +2902,11 @@ function handleFeedbackOverlayClick(e) {
    ============================================================ */
 function openScopeWarning() {
   document.getElementById('scope-warning-overlay').classList.add('open');
+  lockBodyScroll();
 }
 function closeScopeWarning() {
   document.getElementById('scope-warning-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 async function submitFeedback() {
   const type        = document.getElementById('feedback-type').value;
@@ -2975,12 +2944,14 @@ function openAdmin() {
   const dd = document.getElementById('user-dropdown');
   if (dd) dd.classList.remove('open');
   document.getElementById('admin-overlay').classList.add('open');
+  lockBodyScroll();
   switchAdminTab('users');
   loadAdminUsers();
   loadAdminFeedback();
 }
 function closeAdmin() {
   document.getElementById('admin-overlay').classList.remove('open');
+  unlockBodyScroll();
 }
 function handleAdminOverlayClick(e) {
   if (e.target === document.getElementById('admin-overlay')) closeAdmin();
@@ -5375,6 +5346,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <button class="settings-close-btn" onclick="closeSettings()" title="Close">✕</button>
     </div>
 
+    <div class="settings-modal-body">
     <div class="settings-section">
       <div class="settings-section-title">Display</div>
 
@@ -5471,7 +5443,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
     <div class="settings-section">
       <div class="settings-section-title">Apple Reminders <span class="beta-badge">Beta</span></div>
       <div class="settings-row-desc" style="margin-bottom:10px">
-        Connect your iCloud account to sync tasks to Apple Reminders. Google Tasks stays the source of truth — checking off a reminder on your phone marks the matching task complete too, but edits to title/notes/due date only ever flow from Google Tasks outward.
+        Connect your iCloud account to sync tasks to Apple Reminders. Google Tasks stays the source of truth — checking off a reminder on your phone marks the matching task complete too, but edits to title/notes/due date only ever flow from Google Tasks outward. If a list you enable below doesn't already exist in Reminders under the same name, TaskStick creates it there automatically.
       </div>
 
       <div id="apple-sync-status" class="apple-sync-status"></div>
@@ -5496,7 +5468,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div id="apple-sync-lists-section" style="display:none">
         <div class="apple-sync-label" style="margin-top:14px">Lists to sync</div>
         <div class="apple-sync-hint" style="margin-top:0;margin-bottom:8px">
-          Each list needs a Reminders list with the exact same name already created on your iPhone/Mac — sync won't create one for you.
+          A Reminders list with the same name is created automatically the first time a list syncs, if one doesn't already exist.
         </div>
         <div id="apple-sync-lists"></div>
 
@@ -5505,6 +5477,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
         </button>
         <div id="apple-sync-last" class="apple-sync-hint" style="margin-top:6px"></div>
       </div>
+    </div>
     </div>
 
   </div>
@@ -5527,6 +5500,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <h3>💬 Send Feedback</h3>
       <button class="settings-close-btn" onclick="closeFeedback()" title="Close">✕</button>
     </div>
+    <div class="settings-modal-body">
     <div class="settings-section">
       <div class="settings-row-label" style="margin-bottom:8px;font-size:0.78rem">Type</div>
       <select id="feedback-type" class="admin-status-select" style="width:100%;margin-bottom:14px">
@@ -5542,6 +5516,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <button id="feedback-submit-btn" class="invite-send-btn" style="margin-top:10px;width:100%"
               onclick="submitFeedback()">Submit</button>
     </div>
+    </div>
   </div>
 </div>
 
@@ -5551,6 +5526,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
     <div class="settings-modal-header">
       <h3>⚠️ Task Access Not Granted</h3>
     </div>
+    <div class="settings-modal-body">
     <div class="settings-section">
       <div class="settings-row-desc" style="font-size:0.85rem;line-height:1.5;color:var(--text-primary)">
         You signed in, but didn't grant TaskStick access to your Google Tasks.
@@ -5562,6 +5538,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
         Grant Task Access
       </a>
       <button class="modal-dismiss-btn" onclick="closeScopeWarning()">Continue with limited features</button>
+    </div>
     </div>
   </div>
 </div>

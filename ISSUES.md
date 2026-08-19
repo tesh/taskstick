@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-013 · fixed · 2026-08-19
+**Title:** Settings dialog hangs off the page, isn't scrollable, and doesn't match the active theme; Admin/Feedback have the same inconsistency
+**Reported by:** Tesh (screenshots: Settings rendered in a fixed dark-violet palette while Notebook theme was active; content cut off at the bottom with no way to scroll to it, the board behind the dialog scrolling instead)
+**Root cause:** `.settings-modal` (shared by Settings, Admin, Feedback, and the scope-warning dialog) was hardcoded to a fixed dark palette designed before the app had multiple themes. When Admin/Feedback/scope-warning were later made theme-aware (ENH-028), the fix was a separate block of `#admin-overlay .settings-modal`-style ID-scoped overrides layered on top — Settings itself was never added to that list, so it silently kept the old hardcoded look. The base modal also had `overflow:hidden` with no internal scroll region at all, and no modal anywhere in the app locked background scroll, so long content just got clipped and the page behind a dialog could still scroll.
+**Fix:** Moved theme-awareness and consistent sizing directly into the BASE `.settings-modal` family of rules (`width: min(640px, 94vw); max-height: 82vh;` plus a shared mobile full-viewport-sheet breakpoint), then deleted the now-redundant per-overlay-ID override blocks — a new theme or a new modal now needs zero extra CSS to stay consistent, instead of relying on someone remembering to add another override block. Added a `.settings-modal-body` scrollable wrapper (Settings/Feedback/scope-warning now use it; Admin already had its own per-tab scroll region from ENH-040 and didn't need it) and a shared `lockBodyScroll()`/`unlockBodyScroll()` pair wired into every modal's open/close function. Along the way, an audit turned up several more elements hardcoded for the old dark-only look that would have been low-contrast or invisible on light themes (Notebook, Rose) — "Reset all", the Apple Reminders section's inputs/hints/status banners, and the Admin/Beta badges (whose translucent-tint-over-variable-background approach measured as low as ~1.3:1 contrast on light themes) — all converted to theme-aware or solid theme-independent colors.
+**Files:** `index.html`
+**Resolved:** 2026-08-19
+
 ### BUG-012 · fixed · 2026-08-18
 **Title:** Admin toggle switch nearly invisible in light themes
 **Reported by:** Tesh (screenshot: Users tab, admin toggle unreadable)
@@ -135,6 +143,15 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 **Verification:** Two rounds of independent review caught and fixed 3 real correctness bugs before deploy — a discovery regex that could mis-extract the wrong URL from a shared PROPFIND response, a sequential-string-replace decode bug that could silently corrupt notes/titles containing a literal backslash followed by a bare "n" (e.g. a Windows file path), and PUT requests that ignored their HTTP response status (a rejected write would have looked like success). Verified independently of live Apple servers: `Encryption` round-trips correctly, and VTODO generation/parsing round-trips correctly including the specific backslash-escaping edge case, via direct PHP execution. The actual wire-level connection to iCloud's CalDAV servers is unverified — this is Tesh's job to test live once deployed.
 **Files:** `lib/Encryption.php` (new), `lib/CalDAV.php` (new), `api/apple-settings.php` (new), `config.php`, `config.local.php.example`, `index.html`
 **Status:** Stage 1 verified live by Tesh — connects and correctly discovers real Reminders lists. Continued in ENH-043 (Stage 2: push).
+
+### ENH-044 · complete · 2026-08-19
+**Title:** Auto-create the matching Apple Reminders list instead of requiring it to exist first
+**Requested by:** Tesh (created a "Personal Tasks" list in Reminders and found tasks weren't syncing there)
+**Description:** Sync previously required a Reminders list with the exact matching name to already exist on the device, or it failed with an error. Design change: create it automatically instead, with a clear note about this in the setup UI so it's not a surprise.
+**Fix:** New `CalDAV::createReminderList(string $displayName)` in `lib/CalDAV.php` — issues an MKCALENDAR request (RFC 4791 §5.3.1) restricted to VTODO support, so the new collection shows up as a Reminders list rather than a calendar. Wired into `api/apple-sync.php`'s per-list loop: a list with no name match now gets created (and immediately used for that same sync run's task pushes) instead of erroring. Updated both the Apple Reminders section's description and the "Lists to sync" hint text to say so explicitly.
+**Caveat:** Like the rest of this feature's CalDAV wire calls, MKCALENDAR has not been tested against a real iCloud server in this environment (no real Apple credentials available here) — reviewed for RFC/structural correctness and consistency with this file's other CalDAV methods, but genuinely unverified until tried live.
+**Files:** `lib/CalDAV.php`, `api/apple-sync.php`, `index.html`
+**Resolved:** 2026-08-19, pending live verification.
 
 ### ENH-043 · complete (Stage 2 of 3) · 2026-08-18
 **Title:** Apple Reminders sync (beta) — Stage 2: list selection + push
