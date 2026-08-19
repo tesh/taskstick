@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-014 · fixed · 2026-08-19
+**Title:** Theme picker chip labels unreadable in Notebook and Rose themes
+**Reported by:** Tesh (screenshot: "Modern"/"Compact"/"Ocean"/"Rose" chip text barely visible against Notebook's cream background)
+**Root cause:** Same class of bug as BUG-013, one CSS rule that BUG-013's audit didn't catch — `.theme-chip`'s unselected state was `color: rgba(255,255,255,0.65)` on `background: rgba(255,255,255,0.07)`, designed for the old fixed-dark Settings modal, essentially invisible once the modal could have a light background.
+**Fix:** `color: var(--text-primary)`. Background went through two iterations before landing correctly: `var(--input-bg, var(--card-bg))` first (broke again specifically on Notebook, whose `--input-bg` is literally `transparent`, not merely unset, so the fallback never applied), then `var(--bg-secondary)` (broke again specifically on Compact, where `--bg-secondary` and `--card-bg` happen to be identical). Landed on `color-mix(in srgb, var(--text-primary) 6%, transparent)` — mixing in a bit of the theme's own text color instead of picking a second surface token, since text color is guaranteed by definition to contrast against its own background in every theme, closing off this whole category of "which two tokens happen to collide in theme N" bug rather than fixing it theme-by-theme as reported.
+**Files:** `index.html`
+**Resolved:** 2026-08-19
+
 ### BUG-013 · fixed · 2026-08-19
 **Title:** Settings dialog hangs off the page, isn't scrollable, and doesn't match the active theme; Admin/Feedback have the same inconsistency
 **Reported by:** Tesh (screenshots: Settings rendered in a fixed dark-violet palette while Notebook theme was active; content cut off at the bottom with no way to scroll to it, the board behind the dialog scrolling instead)
@@ -143,6 +151,21 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 **Verification:** Two rounds of independent review caught and fixed 3 real correctness bugs before deploy — a discovery regex that could mis-extract the wrong URL from a shared PROPFIND response, a sequential-string-replace decode bug that could silently corrupt notes/titles containing a literal backslash followed by a bare "n" (e.g. a Windows file path), and PUT requests that ignored their HTTP response status (a rejected write would have looked like success). Verified independently of live Apple servers: `Encryption` round-trips correctly, and VTODO generation/parsing round-trips correctly including the specific backslash-escaping edge case, via direct PHP execution. The actual wire-level connection to iCloud's CalDAV servers is unverified — this is Tesh's job to test live once deployed.
 **Files:** `lib/Encryption.php` (new), `lib/CalDAV.php` (new), `api/apple-settings.php` (new), `config.php`, `config.local.php.example`, `index.html`
 **Status:** Stage 1 verified live by Tesh — connects and correctly discovers real Reminders lists. Continued in ENH-043 (Stage 2: push).
+
+### ENH-046 · complete · 2026-08-19
+**Title:** Per-user usage metrics in Admin Users view
+**Requested by:** Tesh ("number of lists, number of tasks, and any other useful facts")
+**Design decision:** TaskStick has no server-side way to read a user's Google Tasks except through that user's own OAuth session — an admin's session can't fetch another user's list/task data, and building a way to would mean a real backdoor into anyone's Google Tasks, not something to add for an admin convenience feature. Instead, each user's own client self-reports its own counts once per successful session load, the same way `data/users.json` already gets populated by each user's own login rather than by an admin enumerating accounts.
+**Fix:** New `api/user-stats.php` (POST, always keyed by the authenticated session's own email, never client-supplied) writes `list_count`/`active_task_count`/`completed_task_count`/`stats_updated_at` onto that user's own `data/users.json` record via the existing locked `updateUsers()` helper. New client-side `reportUserStats()` computes these from `state.lists` (excluding subtasks, matching how counts are done everywhere else in the app) and fires once after a genuinely successful initial load — gated on `loadAll()`'s new return value so a failed or partial load can't overwrite a user's real stats with misleading zeros. Admin Users view shows the counts plus "as of" the last time that user had the app open; a user who hasn't loaded the app since this shipped shows no stats line rather than a broken one.
+**Files:** `api/user-stats.php` (new), `index.html`
+**Resolved:** 2026-08-19
+
+### ENH-045 · complete · 2026-08-19
+**Title:** Move "Download archive (.md)" to the bottom of the Admin Feedback panel
+**Requested by:** Tesh
+**Fix:** Moved below the feedback list itself instead of sitting at the top next to "Hide resolved" — a less-frequently-used export action reads better after the content it exports, not before it.
+**Files:** `index.html`
+**Resolved:** 2026-08-19
 
 ### ENH-044 · complete · 2026-08-19
 **Title:** Auto-create the matching Apple Reminders list instead of requiring it to exist first

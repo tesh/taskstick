@@ -435,10 +435,17 @@ body {
 
 .admin-feedback-controls {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   margin-bottom: 10px;
+}
+.admin-archive-link-bottom {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: var(--card-border);
 }
 .admin-hide-resolved-label {
   display: flex;
@@ -2232,14 +2239,22 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
   font-size: 0.74rem;
   padding: 5px 11px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.65);
+  border: 1px solid var(--input-border, var(--card-border));
+  /* A tint mixed FROM the theme's own text color, not a second surface
+     token — picking a fixed token (--input-bg, then --bg-secondary) kept
+     turning out identical to --card-bg in some theme (Notebook, then
+     Compact) with nothing visually distinguishing the chip from the
+     modal behind it. --text-primary is always sufficiently different
+     from its own background to be legible, so mixing a little of it in
+     is guaranteed to read as a distinct fill in every theme, not just
+     the ones already checked by hand. */
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
 }
-.theme-chip:hover { background: rgba(255,255,255,0.13); color: #fff; }
+.theme-chip:hover { border-color: var(--accent); }
 .theme-chip.active {
   background: #7c3aed;
   border-color: #7c3aed;
@@ -2533,8 +2548,13 @@ async function checkAuth() {
         renderNoTasksAccessBoard();
         setSyncStatus('idle');
       } else {
-        await loadAll();
+        const loadedOk = await loadAll();
         loadAppleSyncStatus(); // populates state.appleSyncConfigured for the background sync trigger, even if Settings is never opened
+        // Only report on a genuinely successful load — loadAll() catches its
+        // own errors internally, so without this check a failed load (which
+        // leaves state.lists at its empty initial value) would overwrite a
+        // user's real stats with misleading zeros.
+        if (loadedOk) reportUserStats();
         startPolling();
       }
     } else {
@@ -2543,6 +2563,28 @@ async function checkAuth() {
   } catch (e) {
     showLogin();
   }
+}
+
+// Self-reported usage stats for the Admin Users view. There's no way for
+// an admin's session to read another user's Google Tasks — each account's
+// data only exists behind that account's own OAuth token — so every
+// user's own client reports its own counts once per session, from
+// exactly what it already loaded for itself.
+function reportUserStats() {
+  let listCount = 0, activeTaskCount = 0, completedTaskCount = 0;
+  for (const list of state.lists) {
+    listCount++;
+    for (const task of list.tasks) {
+      if (task.parent) continue; // subtasks aren't separate tasks, matching how counts are done everywhere else in the app
+      if (task.status === 'completed') completedTaskCount++;
+      else activeTaskCount++;
+    }
+  }
+  fetch('/api/user-stats.php', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ listCount, activeTaskCount, completedTaskCount }),
+  }).catch(() => {}); // silent — this is a background nicety for Admin, not user-facing
 }
 
 function showLogin() {
@@ -3000,6 +3042,14 @@ function renderAdminUsers(users) {
                   onchange="toggleUserAdmin('${escHtml(u.email)}', this)" />
            <span class="toggle-track"></span>
          </label>`;
+    // Stats are self-reported by each user's own client on load (see
+    // reportUserStats()) — an admin's session has no way to read another
+    // user's Google Tasks directly. A user who hasn't loaded the app
+    // since this feature shipped just won't have a stats line yet.
+    const statsLine = u.stats_updated_at
+      ? `<div class="admin-row-meta">${escHtml(String(u.list_count ?? 0))} list${u.list_count === 1 ? '' : 's'} · ${escHtml(String(u.active_task_count ?? 0))} active task${u.active_task_count === 1 ? '' : 's'} · ${escHtml(String(u.completed_task_count ?? 0))} completed <span title="As reported the last time this user had the app open">(as of ${escHtml(formatRelative(u.stats_updated_at))})</span></div>`
+      : '';
+
     return `
     <div class="admin-row">
       <img class="admin-row-avatar" src="${escHtml(u.picture || '')}" onerror="this.style.visibility='hidden'" />
@@ -3007,6 +3057,7 @@ function renderAdminUsers(users) {
         <div class="admin-row-name">${escHtml(u.name || u.email)}${u.is_admin ? ' <span class="admin-badge">Admin</span>' : ''}${isSelf ? ' <span class="admin-badge admin-badge-you">You</span>' : ''}</div>
         <div class="admin-row-meta">${escHtml(u.email)}</div>
         <div class="admin-row-meta">Last active ${escHtml(formatRelative(u.last_seen))} · Joined ${escHtml(formatRelative(u.first_seen))}</div>
+        ${statsLine}
       </div>
       ${toggle}
     </div>`;
@@ -3273,7 +3324,7 @@ async function loadAll(showSpinner = true) {
     const listsData = await listsRes.json();
 
     if (!listsRes.ok || listsData.error) {
-      if (listsRes.status === 401) { showLogin(); return; }
+      if (listsRes.status === 401) { showLogin(); return false; }
       throw new Error(listsData.error || 'Failed to load lists');
     }
 
@@ -3319,10 +3370,12 @@ async function loadAll(showSpinner = true) {
     renderBoard();
     setSyncStatus('ok');
     resetRitualIfNewDay();
+    return true;
 
   } catch (e) {
     setSyncStatus('error');
     showToast('Failed to load tasks: ' + e.message, 'error');
+    return false;
   }
 }
 
@@ -5562,13 +5615,13 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
 
     <div class="admin-tab-panel" id="admin-tab-feedback" style="display:none">
       <div class="admin-feedback-controls">
-        <a class="admin-archive-link" href="/api/admin.php?resource=feedback_archive_md" target="_blank" rel="noopener">⬇ Download archive (.md)</a>
         <label class="admin-hide-resolved-label">
           <input type="checkbox" id="admin-hide-resolved" onchange="renderAdminFeedback()" />
           Hide resolved
         </label>
       </div>
       <div id="admin-feedback-wrap"></div>
+      <a class="admin-archive-link admin-archive-link-bottom" href="/api/admin.php?resource=feedback_archive_md" target="_blank" rel="noopener">⬇ Download archive (.md)</a>
     </div>
   </div>
 </div>

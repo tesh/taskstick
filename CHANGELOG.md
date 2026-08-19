@@ -20,6 +20,9 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 
 - **Fixed:** Settings dialog hung off the page with no way to scroll to the rest of it (the board behind it scrolled instead), and didn't match whichever theme was active — it had been left out of a theme-awareness fix applied to Admin/Feedback earlier. Fixed at the root: theme-awareness, sizing, and scroll behavior now live in the shared base styling every one of these dialogs uses, instead of being patched per-dialog — so a future theme or dialog stays consistent automatically. An audit while doing this turned up several more elements (the "Reset all" button, Apple Reminders' inputs, the Admin/Beta badges) that were still low-contrast or invisible on light themes and fixed those too (BUG-013).
 - **Changed:** Apple Reminders sync now creates the matching Reminders list automatically if one doesn't already exist, instead of requiring it to be created by hand first (ENH-044).
+- **Fixed:** Theme picker chip labels ("Modern", "Compact", "Ocean", "Rose") were nearly invisible in Notebook and Rose themes — the same class of bug as the Settings dialog fix above, missed by that audit. Fixed with an approach that self-adjusts to any theme instead of picking colors by hand per theme (BUG-014).
+- **Added:** Admin's Users view now shows each user's list count and active/completed task counts, self-reported by their own client the last time they had the app open — there's no way for an admin's session to read another user's Google Tasks directly (ENH-046).
+- **Changed:** Moved "Download archive (.md)" to the bottom of the Admin Feedback panel, below the list itself (ENH-045).
 
 ## 2026-08-17
 
