@@ -81,7 +81,7 @@
 
 <div class="container">
   <div class="card">
-    <span class="effective-date">Effective Date: April 20, 2026</span>
+    <span class="effective-date">Effective Date: August 20, 2026</span>
 
     <h2>Overview</h2>
     <p>Purple Pill Solutions ("we," "our," or "us"), based in Raleigh, NC, USA, operates TaskStick, available at <a href="https://tasks.tesh.ai">tasks.tesh.ai</a>. This Privacy Policy explains what information we collect, how we use it, and your rights with respect to that information.</p>
@@ -92,11 +92,6 @@
       <li>Your name and email address</li>
       <li>Your Google profile picture</li>
       <li>Access to your Google Tasks data (task lists and individual tasks, including notes and due dates)</li>
-    </ul>
-    <p>If you use the <strong>Connections</strong> feature to share task lists with other TaskStick users, we also store:</p>
-    <ul>
-      <li>The email addresses of users you invite or connect with</li>
-      <li>Pending invitation tokens (temporary, discarded once an invitation is accepted or declined)</li>
     </ul>
     <p>We do not collect any additional personal information beyond what is described above.</p>
 
@@ -116,26 +111,27 @@
       <li>To authenticate you and maintain your session</li>
       <li>To display, create, update, complete, and delete your Google Tasks on your behalf</li>
       <li>To personalise the interface with your display name and profile picture</li>
-      <li>To enable the Connections feature — letting you send and receive invitations to share task visibility with other TaskStick users</li>
+      <li>If you opt in to the Apple Reminders sync (beta) feature, to keep your Google Tasks and Apple Reminders in sync in the background — see below</li>
     </ul>
     <p>We do not use your information for advertising, marketing, analytics, or any purpose beyond operating the app.</p>
 
     <h2>Data Storage</h2>
     <p>The following data is stored on our servers:</p>
     <ul>
-      <li><strong>OAuth tokens</strong> — your Google access token and refresh token are stored server-side in your session to keep you signed in between visits. They are never exposed to the browser.</li>
-      <li><strong>Connection data</strong> — if you use the Connections feature, the email addresses of your connected users and any pending invitation records are stored in a server-side file. This data is deleted when you remove a connection or decline an invitation.</li>
+      <li><strong>OAuth session tokens</strong> — your Google access token and refresh token are stored server-side in your session to keep you signed in between visits. They are never exposed to the browser.</li>
+      <li><strong>Apple Reminders sync (optional, beta)</strong> — if you opt in, a Google refresh token is stored server-side, encrypted at rest, separately from your session, so a small companion app running on your own Mac can keep syncing in the background. This token is only used to read and write the specific Google Tasks lists you've enabled for sync. Disconnecting the feature deletes this token immediately.</li>
+      <li><strong>AI Assistant connection (optional)</strong> — if you connect an AI assistant (e.g. Claude, ChatGPT) via TaskStick's MCP integration, a Google refresh token is similarly stored server-side to authenticate that connection. Disconnecting it deletes this token.</li>
     </ul>
     <p>Your <strong>tasks data</strong> (task titles, notes, due dates, etc.) is <strong>not</strong> stored on our servers — it is retrieved directly from Google's servers each time you use the app and written back to Google when you make changes.</p>
 
     <h2>Data Sharing</h2>
-    <p>We do not sell, rent, trade, or share your personal information or Google Tasks data with any third parties. When you use the Connections feature, only the information necessary to establish a connection (your name and email) is visible to the user you choose to connect with — and only after you initiate the invitation.</p>
+    <p>We do not sell, rent, trade, or share your personal information or Google Tasks data with any third parties.</p>
 
     <h2>Google API Services User Data Policy</h2>
     <p>TaskStick's use and transfer of information received from Google APIs complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
 
     <h2>Data Retention</h2>
-    <p>OAuth session tokens are retained for as long as your session is active (up to 24 hours) or until you sign out. You can permanently revoke access at any time by visiting your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a> and removing TaskStick. Connection data is retained until you remove the connection or delete your account data — contact us to request deletion.</p>
+    <p>OAuth session tokens are retained for as long as your session is active (up to 24 hours) or until you sign out. The optional Apple Reminders sync and AI Assistant refresh tokens described above are retained until you disconnect that feature. You can permanently revoke TaskStick's access to your Google account at any time by visiting your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a>.</p>
 
     <h2>Security</h2>
     <p>We take reasonable precautions to protect your information. OAuth tokens are stored server-side and are not exposed to the browser. All communication between your browser and our server uses HTTPS. However, no method of transmission or storage is 100% secure, and we cannot guarantee absolute security.</p>
