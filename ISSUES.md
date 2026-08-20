@@ -141,7 +141,16 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 
 ## ✨ Enhancement Requests
 
-### ENH-042 · complete (Stage 1 of 3) · 2026-08-18
+### ENH-047 · complete · 2026-08-19
+**Title:** Replace CalDAV-based Apple Reminders sync with a native macOS helper app (EventKit)
+**Requested by:** Tesh (after live testing ENH-042/043/044 showed pushed tasks never appearing anywhere — see those entries below)
+**Root cause found:** Apple removed Reminders from iCloud's CalDAV protocol in iOS 13 / macOS Catalina (2019). `caldav.icloud.com` still answers PROPFIND/MKCALENDAR/PUT for backward compatibility (which is why Stage 1's discovery and the CalDAV connection test both appeared to work), but the modern Reminders app never reads from or writes to that store. Confirmed by a server-side round-trip check (a REPORT immediately after each PUT, added as a diagnostic) showing the server itself didn't have the "successfully pushed" items when read back — and independently corroborated by BusyCal, DAVx5, and Apple's own developer forums, all of which document the identical limitation for every third-party CalDAV reminders client, not just this app. This is exactly why the sibling Contacts app's CardDAV sync keeps working (Apple never deprecated CardDAV) while this did not, despite both looking like the same kind of integration.
+**Fix:** New `mac-helper/` — a menu-bar macOS app (Swift, EventKit, hand-built `.app` bundle via `swiftc`, no Xcode project needed) that polls a new `api/apple-export.php` endpoint every 10 minutes and writes directly to Reminders using EventKit, the only API that still has real Reminders access. `api/apple-settings.php` rewritten: no more Apple ID + app-specific password — Settings now issues a random export token (`data/apple_export_tokens.json` registry) the helper authenticates with, and captures the session's Google `refresh_token` (encrypted at rest, same trick `mcp/setup.php` already uses for its own headless-client problem) so the helper can independently mint Google Tasks access tokens with no browser session involved. List selection UI unchanged. Completion status still pulls back Reminders → Google Tasks, now reported by the helper via `POST apple-export.php {action:'complete_tasks'}`.
+**Also archived:** `lib/CalDAV.php`, the old `api/apple-sync.php` push endpoint, and `apple_sync_db.php` moved to `archive/apple-caldav-attempt-2026-08-19/` (with a README explaining why) rather than deleted — same precedent as the archived sharing feature. The `apple_reminder_links` MySQL table is left in place, unused.
+**Files:** `mac-helper/` (new), `api/apple-export.php` (new), `api/apple-settings.php` (rewritten), `index.html`, `config.php`, `archive/apple-caldav-attempt-2026-08-19/` (moved files + README)
+**Status:** Built and locally verified (server endpoints tested end-to-end via php-cgi simulation; helper app compiles, code-signs, and launches without crashing). Not yet live-tested by Tesh with a real token + real Reminders account — that's the next step.
+
+### ENH-042 · superseded by ENH-047 · 2026-08-18
 **Title:** Apple Reminders sync (beta) — Stage 1: connect + discover
 **Requested by:** Tesh
 **Description:** Sync tasks to Apple Reminders via iCloud, with Google Tasks treated as the trusted source. Modeled on the sibling Contacts app's proven Google/iCloud sync design (`contacts-app/backend/lib/CardDAV.php`, `Encryption.php`), adapted for CalDAV/VTODO (Reminders) instead of CardDAV/vCard (Contacts) — a "Reminders list" is a CalDAV calendar collection that supports the VTODO component, discovered the same way the Contacts app discovers address books.
@@ -167,7 +176,7 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 **Files:** `index.html`
 **Resolved:** 2026-08-19
 
-### ENH-044 · complete · 2026-08-19
+### ENH-044 · superseded by ENH-047 · 2026-08-19
 **Title:** Auto-create the matching Apple Reminders list instead of requiring it to exist first
 **Requested by:** Tesh (created a "Personal Tasks" list in Reminders and found tasks weren't syncing there)
 **Description:** Sync previously required a Reminders list with the exact matching name to already exist on the device, or it failed with an error. Design change: create it automatically instead, with a clear note about this in the setup UI so it's not a surprise.
@@ -176,7 +185,7 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 **Files:** `lib/CalDAV.php`, `api/apple-sync.php`, `index.html`
 **Resolved:** 2026-08-19, pending live verification.
 
-### ENH-043 · complete (Stage 2 of 3) · 2026-08-18
+### ENH-043 · superseded by ENH-047 · 2026-08-18
 **Title:** Apple Reminders sync (beta) — Stage 2: list selection + push
 **Requested by:** Tesh (after confirming Stage 1 connects successfully: "I don't see any features that allow me to select the ability to sync specific lists")
 **Description:** Choose which Google Tasks lists sync to Apple Reminders, and actually push their tasks there (create/update as VTODOs). Each enabled list is matched to an existing Apple Reminders list by exact name — sync doesn't create Reminders lists on your device, you create one with a matching name first.

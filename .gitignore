@@ -23,3 +23,7 @@ venv/
 
 # macOS
 .DS_Store
+
+# Built .app bundle for the Apple Reminders helper — build.sh regenerates
+# it from mac-helper/Sources/App.swift, no need to version the binary.
+mac-helper/build/

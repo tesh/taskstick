@@ -678,6 +678,19 @@ body {
   font-size: 0.82rem;
 }
 .apple-sync-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+.apple-sync-token-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.apple-sync-token-row .apple-sync-input {
+  font-family: var(--mono-font, monospace);
+  font-size: 0.72rem;
+  cursor: text;
+}
+.apple-sync-token-row .apple-sync-disconnect-btn {
+  flex-shrink: 0;
+}
 .apple-sync-hint {
   font-family: var(--ui-font);
   font-size: 0.68rem;
@@ -2549,7 +2562,6 @@ async function checkAuth() {
         setSyncStatus('idle');
       } else {
         const loadedOk = await loadAll();
-        loadAppleSyncStatus(); // populates state.appleSyncConfigured for the background sync trigger, even if Settings is never opened
         // Only report on a genuinely successful load — loadAll() catches its
         // own errors internally, so without this check a failed load (which
         // leaves state.lists at its empty initial value) would overwrite a
@@ -2681,9 +2693,12 @@ function closeSettings() {
 }
 
 /* ============================================================
-   APPLE REMINDERS SYNC (beta) — Stage 1: connect + discover only.
-   Push/pull sync lands in a later stage; this just verifies the
-   iCloud connection works and shows which Reminders lists were found.
+   APPLE REMINDERS SYNC (beta) — a native macOS helper app (mac-helper/)
+   does the actual EventKit writing; this just manages the export token
+   it authenticates with and which lists are enabled. See
+   archive/apple-caldav-attempt-2026-08-19/README.md for why this isn't
+   a direct browser-to-iCloud connection (Apple removed Reminders from
+   CalDAV in 2019 — every third-party app hits this, not just us).
    ============================================================ */
 async function loadAppleSyncStatus() {
   const statusEl      = document.getElementById('apple-sync-status');
@@ -2697,34 +2712,20 @@ async function loadAppleSyncStatus() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to load status');
 
-    state.appleSyncConfigured = !!data.configured;
-
     if (data.configured) {
       statusEl.innerHTML = `
         <div class="apple-sync-connected">
-          <span>✅ Connected as <strong>${escHtml(data.appleEmail)}</strong></span>
+          <span>✅ Sync enabled</span>
           <span class="apple-sync-connected-actions">
-            <button class="apple-sync-disconnect-btn" onclick="toggleAppleSyncForm()">Change</button>
             <button class="apple-sync-disconnect-btn" onclick="disconnectAppleSync()">Disconnect</button>
           </span>
         </div>`;
       formEl.style.display = 'none';
       listsSection.style.display = '';
+      document.getElementById('apple-export-token').value = data.exportToken || '';
       state.appleSyncEnabledLists = data.enabledLists || [];
       renderAppleSyncListPicker();
-      // lastSyncedAt alone can't distinguish a real success from a total
-      // failure (it's stamped optimistically before the CalDAV work even
-      // starts, so a throttle claim survives a subsequent connection
-      // error) — fetch the actual outcome from apple-sync.php's GET so a
-      // silently-failing background sync doesn't look identical to a
-      // working one.
-      let lastSyncResult = null;
-      try {
-        const syncRes  = await fetch('/api/apple-sync.php');
-        const syncData = await syncRes.json();
-        if (syncRes.ok) lastSyncResult = syncData.lastSyncResult;
-      } catch (_) { /* status fetch is best-effort, not fatal */ }
-      renderAppleSyncLastLine(data.lastSyncedAt, lastSyncResult);
+      renderAppleSyncLastLine(data.lastSyncedAt, data.lastSyncResult);
     } else {
       statusEl.innerHTML = '';
       formEl.style.display = '';
@@ -2733,11 +2734,6 @@ async function loadAppleSyncStatus() {
   } catch (e) {
     statusEl.innerHTML = `<div class="apple-sync-error">${escHtml(e.message)}</div>`;
   }
-}
-
-function toggleAppleSyncForm() {
-  const formEl = document.getElementById('apple-sync-form');
-  formEl.style.display = formEl.style.display === 'none' ? '' : 'none';
 }
 
 function renderAppleSyncListPicker() {
@@ -2827,95 +2823,64 @@ function renderAppleSyncLastLine(lastSyncedAt, lastSyncResult) {
   el.innerHTML = html;
 }
 
-async function runAppleSyncNow() {
-  const btn = document.getElementById('apple-sync-now-btn');
-  btn.disabled = true;
-  btn.textContent = 'Syncing…';
-  try {
-    const res  = await fetch('/api/apple-sync.php', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ force: true }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Sync failed');
-
-    if (data.errors && data.errors.length) {
-      showToast(`Synced ${data.pushed} task${data.pushed === 1 ? '' : 's'}, ${data.errors.length} error${data.errors.length === 1 ? '' : 's'} — see below`, 'error');
-    } else {
-      showToast(`Synced ${data.pushed} task${data.pushed === 1 ? '' : 's'} to Apple Reminders`, 'success');
-    }
-    renderAppleSyncLastLine(new Date().toISOString(), data);
-  } catch (e) {
-    showToast(e.message || 'Sync failed', 'error');
-    renderAppleSyncLastLine(new Date().toISOString(), { error: e.message });
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Sync Now';
-  }
-}
-
-/** Fire-and-forget automatic sync, piggybacked on the existing poll cycle.
- * The server self-throttles (force:false), so this is cheap to call every
- * poll regardless of how many devices/tabs are open. */
-function triggerAutoAppleSync() {
-  if (!state.appleSyncConfigured) return;
-  fetch('/api/apple-sync.php', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ force: false }),
-  }).catch(() => {}); // silent — this is a background nicety, not user-initiated
-}
-
 async function connectAppleSync() {
-  const emailInput = document.getElementById('apple-email-input');
-  const passInput  = document.getElementById('apple-password-input');
-  const btn        = document.getElementById('apple-connect-btn');
-  const resultEl   = document.getElementById('apple-sync-result');
-
-  const appleEmail          = emailInput.value.trim();
-  const appSpecificPassword = passInput.value.trim();
-
-  if (!appleEmail || !appSpecificPassword) {
-    resultEl.innerHTML = `<div class="apple-sync-error">Enter both your Apple ID email and an app-specific password.</div>`;
-    return;
-  }
+  const btn      = document.getElementById('apple-connect-btn');
+  const resultEl = document.getElementById('apple-sync-result');
 
   btn.disabled = true;
-  btn.textContent = 'Connecting…';
+  btn.textContent = 'Enabling…';
   resultEl.innerHTML = '';
 
   try {
     const res  = await fetch('/api/apple-settings.php', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ appleEmail, appSpecificPassword }),
+      body:    JSON.stringify({ action: 'connect' }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Connection failed');
-
-    const lists = data.reminderLists || [];
-    resultEl.innerHTML = lists.length
-      ? `<div class="apple-sync-success">✅ Connected! Found ${lists.length} Reminders list${lists.length === 1 ? '' : 's'}: ${lists.map(escHtml).join(', ')}</div>`
-      : `<div class="apple-sync-success">✅ Connected! No Reminders lists found yet — create one in the Reminders app on your iPhone/Mac first.</div>`;
+    if (!res.ok) throw new Error(data.error || 'Could not enable sync');
+    resultEl.innerHTML = `<div class="apple-sync-success">✅ Sync enabled — copy the token below into the helper app on your Mac.</div>`;
     loadAppleSyncStatus();
   } catch (e) {
     resultEl.innerHTML = `<div class="apple-sync-error">${escHtml(e.message)}</div>`;
   } finally {
-    passInput.value = ''; // never leave the password sitting in the DOM longer than needed, success or not
     btn.disabled = false;
-    btn.textContent = 'Connect & Test';
+    btn.textContent = 'Enable Apple Reminders Sync';
   }
 }
 
+async function regenerateAppleExportToken() {
+  if (!confirm('Regenerate the setup token? The old token will stop working immediately — the helper app on your Mac will need the new one.')) return;
+  try {
+    const res  = await fetch('/api/apple-settings.php', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ action: 'regenerate_token' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not regenerate token');
+    loadAppleSyncStatus();
+    showToast('Token regenerated — update the helper app on your Mac', 'success');
+  } catch (e) {
+    showToast(e.message || 'Could not regenerate token', 'error');
+  }
+}
+
+function copyAppleExportToken() {
+  const input = document.getElementById('apple-export-token');
+  input.select();
+  navigator.clipboard?.writeText(input.value).then(
+    () => showToast('Token copied', 'success'),
+    () => showToast('Could not copy — select and copy manually', 'error')
+  );
+}
+
 async function disconnectAppleSync() {
-  if (!confirm('Disconnect Apple Reminders sync? Your stored Apple ID and app-specific password will be deleted.')) return;
+  if (!confirm('Disconnect Apple Reminders sync? Your setup token will be revoked and the Mac helper app will stop syncing.')) return;
   try {
     const res  = await fetch('/api/apple-settings.php', { method: 'DELETE' });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to disconnect');
-    document.getElementById('apple-email-input').value = '';
-    document.getElementById('apple-password-input').value = '';
     document.getElementById('apple-sync-result').innerHTML = '';
     loadAppleSyncStatus();
     showToast('Apple Reminders disconnected', 'success');
@@ -3479,7 +3444,6 @@ function startPolling() {
     const active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
     loadAll(false);
-    triggerAutoAppleSync();
   }, state.REFRESH_MS);
 }
 function stopPolling() {
@@ -5521,39 +5485,41 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
     <div class="settings-section">
       <div class="settings-section-title">Apple Reminders <span class="beta-badge">Beta</span></div>
       <div class="settings-row-desc" style="margin-bottom:10px">
-        Connect your iCloud account to sync tasks to Apple Reminders. Google Tasks stays the source of truth — checking off a reminder on your phone marks the matching task complete too, but edits to title/notes/due date only ever flow from Google Tasks outward. If a list you enable below doesn't already exist in Reminders under the same name, TaskStick creates it there automatically.
+        Sync tasks to Apple Reminders using a small helper app that runs on your Mac. Google Tasks stays the source of truth — checking off a reminder marks the matching task complete too, but edits to title/notes/due date only ever flow from Google Tasks outward.
+        <br><br>
+        <strong>Why a Mac helper app, not a direct connection:</strong> Apple removed Reminders from iCloud's CalDAV protocol back in 2019 — every third-party app hits this wall, not just TaskStick. EventKit (Apple's own framework) is the only thing that still reliably writes to Reminders, and it only runs on-device.
       </div>
 
       <div id="apple-sync-status" class="apple-sync-status"></div>
 
       <div id="apple-sync-form">
-        <label class="apple-sync-label">Apple ID email</label>
-        <input type="email" id="apple-email-input" class="apple-sync-input" placeholder="you@icloud.com" autocomplete="off" />
-
-        <label class="apple-sync-label" style="margin-top:8px">App-specific password</label>
-        <input type="password" id="apple-password-input" class="apple-sync-input" placeholder="xxxx-xxxx-xxxx-xxxx" autocomplete="off" />
-        <div class="apple-sync-hint">
-          Generate one at <a href="https://appleid.apple.com" target="_blank" rel="noopener">appleid.apple.com</a> → Sign-In and Security → App-Specific Passwords. Not your regular Apple ID password — that's never accepted here.
-        </div>
-
-        <button class="invite-send-btn" style="margin-top:10px;width:100%" onclick="connectAppleSync()" id="apple-connect-btn">
-          Connect &amp; Test
+        <button class="invite-send-btn" style="width:100%" onclick="connectAppleSync()" id="apple-connect-btn">
+          Enable Apple Reminders Sync
         </button>
       </div>
 
       <div id="apple-sync-result"></div>
 
       <div id="apple-sync-lists-section" style="display:none">
+        <div class="apple-sync-label" style="margin-top:14px">Setup token</div>
+        <div class="apple-sync-hint" style="margin-top:0;margin-bottom:6px">
+          Paste this into the TaskStick Reminders helper app's Settings on your Mac. First time setup: open the app, grant it Reminders access when macOS asks, then paste this token into its menu → Settings.
+        </div>
+        <div class="apple-sync-token-row">
+          <input type="text" id="apple-export-token" class="apple-sync-input" readonly onclick="this.select()" />
+          <button class="apple-sync-disconnect-btn" onclick="copyAppleExportToken()">Copy</button>
+        </div>
+        <div class="apple-sync-hint" style="margin-top:4px">
+          <a href="#" onclick="regenerateAppleExportToken(); return false;">Regenerate token</a> if it's ever been shared or exposed.
+        </div>
+
         <div class="apple-sync-label" style="margin-top:14px">Lists to sync</div>
         <div class="apple-sync-hint" style="margin-top:0;margin-bottom:8px">
-          A Reminders list with the same name is created automatically the first time a list syncs, if one doesn't already exist.
+          The helper app creates a matching Reminders list on your Mac the first time a list syncs, if one doesn't already exist — this works reliably because it uses EventKit, not CalDAV.
         </div>
         <div id="apple-sync-lists"></div>
 
-        <button class="invite-send-btn" style="margin-top:10px;width:100%" onclick="runAppleSyncNow()" id="apple-sync-now-btn">
-          Sync Now
-        </button>
-        <div id="apple-sync-last" class="apple-sync-hint" style="margin-top:6px"></div>
+        <div id="apple-sync-last" class="apple-sync-hint" style="margin-top:10px"></div>
       </div>
     </div>
     </div>

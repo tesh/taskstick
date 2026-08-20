@@ -33,10 +33,10 @@ if (!defined('DB_NAME')) define('DB_NAME', getenv('DB_NAME') ?: '');
 if (!defined('DB_USER')) define('DB_USER', getenv('DB_USER') ?: '');
 if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASS') ?: '');
 
-// Used to encrypt secrets we store at rest (currently: each user's Apple
-// app-specific password, for the Apple Reminders sync beta). Set a real
-// random value in config.local.php — never reuse GOOGLE_CLIENT_SECRET or
-// any other secret for this.
+// Used to encrypt secrets we store at rest (currently: each Apple
+// Reminders sync user's Google refresh_token — see api/apple-export.php).
+// Set a real random value in config.local.php — never reuse
+// GOOGLE_CLIENT_SECRET or any other secret for this.
 if (!defined('ENCRYPTION_KEY')) define('ENCRYPTION_KEY', getenv('ENCRYPTION_KEY') ?: '');
 
 // Session config
