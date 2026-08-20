@@ -387,6 +387,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let syncNowItem = NSMenuItem(title: "Sync Now", action: #selector(syncNow), keyEquivalent: "")
     private let statusLineItem = NSMenuItem(title: "Not synced yet", action: nil, keyEquivalent: "")
 
+    // Registering the Apple Event handler has to happen in
+    // applicationWillFinishLaunching (before the app is fully up) — this
+    // is the standard belt-and-suspenders alongside application(_:open:)
+    // for custom URL schemes on macOS; some app configurations only
+    // reliably receive one or the other.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleGetURLEvent(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.title = "◐"
@@ -398,6 +412,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(statusLineItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: "Check Reminders Permission…", action: #selector(checkPermission), keyEquivalent: "").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusItem.menu = menu
@@ -405,23 +420,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(syncDidFinish), name: .taskStickSyncDidFinish, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(settingsSaved), name: .taskStickSettingsSaved, object: nil)
 
-        Task {
-            let granted = await engine.requestAccess()
-            if !granted {
-                statusLineItem.title = "Reminders access denied — check System Settings"
-                return
-            }
-            if Config.isConfigured {
-                await engine.performSync()
-            } else {
-                statusLineItem.title = "Not configured — open Settings"
-                openSettings()
-            }
-        }
+        Task { await requestAccessAndMaybeSync() }
 
         timer = Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in
             Task { @MainActor in await self?.engine.performSync() }
         }
+    }
+
+    /// Runs on launch, and again from "Check Reminders Permission…" —
+    /// deliberately verbose (an actual alert, not just menu-bar text that's
+    /// easy to miss) because a silent EventKit denial is exactly what made
+    /// the CalDAV attempt so hard to debug earlier; this app shouldn't
+    /// repeat that mistake.
+    private func requestAccessAndMaybeSync() async {
+        let status = EKEventStore.authorizationStatus(for: .reminder)
+        let granted = await engine.requestAccess()
+
+        if !granted {
+            statusLineItem.title = "⚠️ Reminders access not granted"
+            let alert = NSAlert()
+            alert.messageText = "Reminders Access Needed"
+            alert.informativeText = "TaskStick Reminders can't create or update reminders without access. Current status: \(Self.describe(status)).\n\nOpen System Settings → Privacy & Security → Reminders and make sure TaskStickReminders is turned on. If it's not listed at all, try quitting this app, running:\n\ntccutil reset Reminders ai.tesh.taskstick.reminders\n\nin Terminal, then relaunch it."
+            alert.addButton(withTitle: "Open Privacy Settings")
+            alert.addButton(withTitle: "OK")
+            NSApp.activate(ignoringOtherApps: true)
+            if alert.runModal() == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders")!)
+            }
+            return
+        }
+
+        if Config.isConfigured {
+            await engine.performSync()
+        } else {
+            statusLineItem.title = "Not configured — open Settings"
+        }
+    }
+
+    private static func describe(_ status: EKAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: return "not yet asked"
+        case .restricted:    return "restricted (e.g. parental controls)"
+        case .denied:        return "denied"
+        case .authorized:    return "authorized (legacy)"
+        case .fullAccess:    return "full access"
+        case .writeOnly:     return "write-only"
+        @unknown default:    return "unknown"
+        }
+    }
+
+    @objc private func checkPermission() {
+        Task { await requestAccessAndMaybeSync() }
+    }
+
+    // MARK: URL scheme (taskstickreminders://connect?token=...&server=...)
+    // — lets Settings hand the token straight to this app with one click
+    // instead of copy/paste.
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        urls.forEach(handleIncomingURL)
+    }
+
+    @objc private func handleGetURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent: NSAppleEventDescriptor) {
+        guard let urlString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: urlString) else { return }
+        handleIncomingURL(url)
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        guard url.scheme == "taskstickreminders", url.host == "connect" else { return }
+        let params = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        guard let token = params.first(where: { $0.name == "token" })?.value, !token.isEmpty else {
+            statusLineItem.title = "⚠️ Link was missing a token"
+            return
+        }
+        Config.exportToken = token
+        if let server = params.first(where: { $0.name == "server" })?.value, !server.isEmpty {
+            Config.serverURL = server
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Connected to TaskStick"
+        alert.informativeText = "Setup token received. Syncing now…"
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+        Task { await requestAccessAndMaybeSync() }
     }
 
     @objc private func syncNow() {

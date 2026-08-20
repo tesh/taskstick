@@ -20,6 +20,17 @@
     <string>13.0</string>
     <key>LSUIElement</key>
     <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>ai.tesh.taskstick.reminders.connect</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>taskstickreminders</string>
+            </array>
+        </dict>
+    </array>
     <key>NSRemindersFullAccessUsageDescription</key>
     <string>TaskStick Reminders syncs your Google Tasks into Apple Reminders, creating and updating reminders to match.</string>
     <key>NSRemindersUsageDescription</key>

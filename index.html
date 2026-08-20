@@ -2866,6 +2866,13 @@ async function regenerateAppleExportToken() {
   }
 }
 
+function openAppleHelperApp() {
+  const token = document.getElementById('apple-export-token').value;
+  if (!token) return;
+  const server = window.location.origin;
+  window.location.href = `taskstickreminders://connect?token=${encodeURIComponent(token)}&server=${encodeURIComponent(server)}`;
+}
+
 function copyAppleExportToken() {
   const input = document.getElementById('apple-export-token');
   input.select();
@@ -5501,11 +5508,17 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div id="apple-sync-result"></div>
 
       <div id="apple-sync-lists-section" style="display:none">
-        <div class="apple-sync-label" style="margin-top:14px">Setup token</div>
+        <div class="apple-sync-label" style="margin-top:14px">Connect the helper app</div>
         <div class="apple-sync-hint" style="margin-top:0;margin-bottom:6px">
-          Paste this into the TaskStick Reminders helper app's Settings on your Mac. First time setup: open the app, grant it Reminders access when macOS asks, then paste this token into its menu → Settings.
+          With the TaskStick Reminders helper app open on your Mac (look for <strong>◐</strong> in the menu bar), click below — it hands your token straight to the app, no copy/paste needed.
         </div>
-        <div class="apple-sync-token-row">
+        <button class="invite-send-btn" style="width:100%" onclick="openAppleHelperApp()">
+          Open in TaskStick Reminders Helper
+        </button>
+        <div class="apple-sync-hint" style="margin-top:6px">
+          Nothing happen? The helper app may not be running, or isn't installed yet — see <code>mac-helper/README.md</code>. You can also copy the token manually below.
+        </div>
+        <div class="apple-sync-token-row" style="margin-top:6px">
           <input type="text" id="apple-export-token" class="apple-sync-input" readonly onclick="this.select()" />
           <button class="apple-sync-disconnect-btn" onclick="copyAppleExportToken()">Copy</button>
         </div>
