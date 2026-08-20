@@ -19,6 +19,15 @@ RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
+# Some hosts (IONOS included, confirmed 2026-08-20) don't pass the
+# Authorization header through to PHP's $_SERVER by default — it's
+# commonly reserved for Apache's own Basic Auth handling. This re-exposes
+# it as HTTP_AUTHORIZATION regardless, which api/apple-export.php's
+# headless bearer-token auth needs (no PHP session to authenticate the
+# Mac helper app with, unlike every other endpoint in this app).
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
+
 # Route /auth/login  → auth/login.php
 RewriteRule ^auth/login$  auth/login.php  [L]
 # Route /auth/callback → auth/callback.php

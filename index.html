@@ -5493,6 +5493,8 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div class="settings-section-title">Apple Reminders <span class="beta-badge">Beta</span></div>
       <div class="settings-row-desc" style="margin-bottom:10px">
         Sync tasks to Apple Reminders using a small helper app on your Mac. Google Tasks stays the source of truth — checking off a reminder marks the task done too, but title/notes/due date edits only flow one way, out from Google Tasks.
+        <br>
+        <a href="#" onclick="closeSettings(); openHelp(); return false;">Full setup instructions →</a>
       </div>
 
       <div id="apple-sync-status" class="apple-sync-status"></div>
@@ -5743,6 +5745,30 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
         <div class="help-card-icon">🔌</div>
         <div class="help-card-name">Connect an AI Assistant</div>
         <div class="help-card-desc">Let Claude, ChatGPT, or another AI assistant read and manage your tasks directly. <a href="/mcp/setup.php" target="_blank" rel="noopener" style="color:#a78bfa">Set up the connection →</a></div>
+      </div>
+    </div>
+
+    <div class="help-section-title">Apple Reminders (Mac)</div>
+    <div class="help-grid">
+      <div class="help-card">
+        <div class="help-card-icon">⬇️</div>
+        <div class="help-card-name">1. Download &amp; open</div>
+        <div class="help-card-desc"><a href="/downloads/TaskStickReminders.zip" style="color:#a78bfa">Download the helper app</a>, unzip it, drag it to Applications, then open it. macOS will warn it's from an unidentified developer — right-click the app → <strong>Open</strong> → <strong>Open</strong> again to confirm (only needed the first time).</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🔔</div>
+        <div class="help-card-name">2. Allow Reminders access</div>
+        <div class="help-card-desc">macOS will ask for permission to access Reminders — click <strong>Allow</strong> and let the dialog fully resolve. Look for a small TaskStick icon in the menu bar once it's running.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🔗</div>
+        <div class="help-card-name">3. Connect it</div>
+        <div class="help-card-desc">Settings → Apple Reminders → <strong>Enable Apple Reminders Sync</strong>, then <strong>Open in TaskStick Reminders Helper</strong>. Pick which lists to sync — matching Reminders lists are created automatically.</div>
+      </div>
+      <div class="help-card">
+        <div class="help-card-icon">🛠️</div>
+        <div class="help-card-name">Troubleshooting</div>
+        <div class="help-card-desc">Click the menu bar icon → <strong>Check Reminders Permission…</strong> for a clear status. Sync runs automatically every 10 minutes, or click <strong>Sync Now</strong> anytime.</div>
       </div>
     </div>
 

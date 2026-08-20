@@ -81,7 +81,18 @@ function googleTasksRequest(string $accessToken, string $endpoint, string $metho
 
 // ---- Bearer token auth (no PHP session available — this is a headless
 // background client, not a browser) ------------------------------------
-$authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '');
+// $_SERVER often doesn't have it at all on shared hosting (Authorization
+// is commonly reserved for Apache's own Basic Auth, stripped before PHP
+// sees it) — the .htaccess RewriteRule re-exposes it as HTTP_AUTHORIZATION,
+// but getallheaders() is a second, independent path to the same header
+// in case that rule isn't in effect for some reason (e.g. a host that
+// ignores .htaccess overrides for RewriteRule E= flags).
+$authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+if (!$authHeader && function_exists('getallheaders')) {
+    foreach (getallheaders() as $name => $value) {
+        if (strcasecmp($name, 'Authorization') === 0) { $authHeader = $value; break; }
+    }
+}
 if (!preg_match('/^Bearer\s+(.+)$/i', $authHeader, $m)) {
     jsonResponse(['error' => 'Missing bearer token'], 401);
 }
