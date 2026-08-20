@@ -319,7 +319,7 @@ final class SettingsWindowController: NSWindowController {
 
     convenience init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 170),
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 240),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -360,6 +360,10 @@ final class SettingsWindowController: NSWindowController {
 
             saveButton.topAnchor.constraint(equalTo: tokenField.bottomAnchor, constant: 20),
             saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            // Ties the window's height to the content instead of a fixed
+            // guess, so the button can never end up clipped below the
+            // visible area regardless of label/field sizing.
+            contentView.bottomAnchor.constraint(equalTo: saveButton.bottomAnchor, constant: 20),
         ])
     }
 
@@ -403,7 +407,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.title = "◐"
+        if let icon = Bundle.main.image(forResource: "MenuBarIcon") {
+            icon.size = NSSize(width: 18, height: 18)
+            icon.isTemplate = false // keep the actual yellow/purple TaskStick colors, not a monochrome symbol
+            statusItem.button?.image = icon
+        } else {
+            statusItem.button?.title = "◐" // fallback if the icon didn't get bundled
+        }
 
         let menu = NSMenu()
         syncNowItem.target = self

@@ -54,6 +54,10 @@ select `TaskStickReminders.app`.
 
 ## Notes for future changes
 
+- The menu bar icon and Finder/Login-Items icon both come from
+  `Resources/MenuBarIcon.png` (a copy of `icons/icon-512.png` — the
+  TaskStick Post-it mark). `build.sh` generates `AppIcon.icns` from it
+  automatically; edit the PNG and rebuild if the brand icon changes.
 - Local state lives in `~/Library/Application Support/TaskStickReminders/`
   (`links.json` maps Google task IDs to Reminders identifiers — delete
   it to force a full re-push, e.g. if it gets out of sync).
