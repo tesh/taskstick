@@ -1,3 +1,20 @@
+> **Update, 2026-08-20:** This guide originally walked through creating a
+> *brand-new* Cloud project from scratch. That project was abandoned —
+> the OAuth client actually live in `config.php` today belongs to the
+> **`pps-taskstick`** Cloud project (client id
+> `234459834738-lhfjqfgegukvv7q9usluvgr0hr9rhql9...`, see `memory/decisions.md`
+> 2026-08-12). **Skip Part A (create project) and Part C (wire new
+> credentials) entirely** — there's nothing to create or swap. Start at
+> **Part A3** below to review/complete the `pps-taskstick` project's OAuth
+> consent screen, confirm **Part B**'s domain verification still applies
+> (it's tied to the Google account, not the project, so it should already
+> carry over), then go to **Part D** to publish and submit. Part E's demo
+> video script and Part D's scope-justification text are still accurate
+> and reusable as-is — the app's core Tasks functionality they describe
+> (create/edit/complete/delete/reorder/move/star/Follow-up) hasn't
+> changed, though the video itself needs to be re-recorded against the
+> *current* TaskStick UI/branding, not TaskR/Tasktical.
+
 # TaskStick — Google Cloud Setup & OAuth Verification Guide
 
 **App:** TaskStick (by Purple Pill Solutions)
