@@ -9,9 +9,13 @@
 // hits this same wall. EventKit is the only API that still has real
 // Reminders access, and it only runs on-device — hence this app.
 //
-// Google Tasks stays the source of truth: title/notes/due date/list
-// membership always flow server → Reminders. Only completion status
-// flows back (checking a reminder off marks the Google task complete).
+// Google Tasks is the source of truth for tasks it already knows about:
+// title/notes/due date/list membership for those always flow server →
+// Reminders, and only completion status flows back. A reminder created
+// directly in Apple Reminders (no matching Google task yet) is the one
+// exception — it gets pushed up to Google Tasks once, at creation, so
+// both directions of "add a new task" work without needing real
+// conflict resolution for anything already synced.
 
 import Cocoa
 import EventKit
@@ -79,6 +83,13 @@ final class LinkStore {
     func taskIds(forListId listId: String) -> [String] {
         links.filter { $0.value.listId == listId }.map { $0.key }
     }
+
+    /// True if this Reminders item already came from (or was already
+    /// pushed to) Google Tasks — used to find reminders a person created
+    /// directly in Reminders, which have no link yet.
+    func isReminderLinked(_ reminderId: String) -> Bool {
+        links.values.contains { $0.reminderId == reminderId }
+    }
 }
 
 // MARK: - TaskStick API models
@@ -101,6 +112,17 @@ struct ExportList: Decodable {
 struct ExportResponse: Decodable {
     let lists: [ExportList]?
     let error: String?
+}
+
+struct CreatedTask: Decodable {
+    let clientId: String
+    let googleTaskId: String
+    let updated: String
+}
+
+struct CreateTasksResponse: Decodable {
+    let created: [CreatedTask]?
+    let errors: [String]?
 }
 
 // MARK: - TaskStick API client
@@ -155,6 +177,20 @@ final class TaskStickClient {
             "completions": completions,
         ])
     }
+
+    /// Pushes reminders created directly in Apple Reminders (no Google
+    /// Task yet) up to Google Tasks. Each item carries a clientId (the
+    /// reminder's own identifier) so the response's created tasks can be
+    /// matched back to the right EKReminder without guessing by title.
+    func createTasks(_ creates: [[String: Any]]) async -> (created: [CreatedTask], errors: [String]) {
+        guard !creates.isEmpty else { return ([], []) }
+        guard let data = try? await request(path: "/api/apple-export.php", method: "POST", body: [
+            "action": "create_tasks",
+            "creates": creates,
+        ]) else { return ([], ["Could not reach server to create new tasks"]) }
+        let decoded = try? JSONDecoder().decode(CreateTasksResponse.self, from: data)
+        return (decoded?.created ?? [], decoded?.errors ?? [])
+    }
 }
 
 // MARK: - Sync engine
@@ -206,6 +242,23 @@ final class SyncEngine {
         return DateComponents(year: y, month: m, day: d)
     }
 
+    /// Reverse of dueDateComponents — Google Tasks due dates are always
+    /// UTC midnight of a calendar date (see index.html's own due-date
+    /// handling for the same convention).
+    private func dueISOString(from components: DateComponents?) -> String? {
+        guard let y = components?.year, let m = components?.month, let d = components?.day else { return nil }
+        return String(format: "%04d-%02d-%02dT00:00:00.000Z", y, m, d)
+    }
+
+    private func fetchReminders(in calendar: EKCalendar) async -> [EKReminder] {
+        let predicate = store.predicateForReminders(in: [calendar])
+        return await withCheckedContinuation { cont in
+            store.fetchReminders(matching: predicate) { reminders in
+                cont.resume(returning: reminders ?? [])
+            }
+        }
+    }
+
     @MainActor
     func performSync() async {
         guard !syncing, Config.isConfigured else { return }
@@ -215,6 +268,7 @@ final class SyncEngine {
         var pushed = 0
         var errors: [String] = []
         var completions: [[String: String]] = []
+        var pendingCreates: [(reminder: EKReminder, listId: String, clientId: String, title: String, notes: String?, due: String?)] = []
 
         do {
             let lists = try await client.fetchExport()
@@ -291,6 +345,46 @@ final class SyncEngine {
                         try? store.remove(reminder, commit: true)
                     }
                     links.remove(staleId)
+                }
+
+                // Discover reminders created directly in Reminders (not
+                // pushed from Google Tasks, so no link exists yet) so
+                // they flow into Google Tasks too, not just completions.
+                for reminder in await fetchReminders(in: calendar) {
+                    guard !links.isReminderLinked(reminder.calendarItemIdentifier) else { continue }
+                    guard let title = reminder.title, !title.isEmpty else { continue }
+                    pendingCreates.append((
+                        reminder: reminder,
+                        listId: list.id,
+                        clientId: reminder.calendarItemIdentifier,
+                        title: title,
+                        notes: reminder.notes,
+                        due: dueISOString(from: reminder.dueDateComponents)
+                    ))
+                }
+            }
+
+            if !pendingCreates.isEmpty {
+                let payload: [[String: Any]] = pendingCreates.map { item in
+                    var dict: [String: Any] = ["listId": item.listId, "clientId": item.clientId, "title": item.title]
+                    if let notes = item.notes, !notes.isEmpty { dict["notes"] = notes }
+                    if let due = item.due { dict["due"] = due }
+                    return dict
+                }
+                let (created, createErrors) = await client.createTasks(payload)
+                errors.append(contentsOf: createErrors)
+                for result in created {
+                    guard let match = pendingCreates.first(where: { $0.clientId == result.clientId }) else { continue }
+                    links.set(result.googleTaskId, LinkEntry(
+                        reminderId: match.reminder.calendarItemIdentifier,
+                        listId: match.listId,
+                        googleUpdated: result.updated,
+                        lastKnownCompleted: match.reminder.isCompleted
+                    ))
+                    pushed += 1
+                    if match.reminder.isCompleted {
+                        completions.append(["listId": match.listId, "taskId": result.googleTaskId])
+                    }
                 }
             }
 

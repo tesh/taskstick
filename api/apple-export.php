@@ -23,9 +23,16 @@
  *        line stays meaningful even though the real work now happens
  *        entirely on the Mac.
  * POST { action: 'complete_tasks', completions: [{listId, taskId}] } →
- *        the one thing that flows Reminders → Google Tasks: the helper
+ *        completion status flowing Reminders → Google Tasks: the helper
  *        noticed these were checked off locally, so mark them complete
  *        at the source of truth.
+ * POST { action: 'create_tasks', creates: [{listId, clientId, title,
+ *        notes?, due?}] } → a reminder created directly in Apple
+ *        Reminders (no Google task yet) gets pushed up — the one
+ *        exception to Google Tasks being the source of truth, so "add a
+ *        new task" works from either side. Returns each created task's
+ *        real id/updated timestamp keyed by the clientId sent, so the
+ *        helper can link it to the right reminder.
  */
 require_once '../config.php';
 require_once '../lib/Encryption.php';
@@ -202,6 +209,39 @@ if ($method === 'POST') {
         }
 
         jsonResponse(['success' => true, 'completed' => $completed, 'errors' => $errors]);
+    }
+
+    if ($action === 'create_tasks') {
+        // Reminders created directly in Apple Reminders (no Google task
+        // yet) — the one exception to "Google Tasks is the source of
+        // truth," so both directions of "add a new task" work. clientId
+        // is the reminder's own EventKit identifier, echoed back so the
+        // helper can link the new Google task to the right reminder
+        // without guessing by title.
+        $creates = $body['creates'] ?? [];
+        $created = [];
+        $errors  = [];
+
+        foreach ($creates as $c) {
+            $listId   = $c['listId']   ?? '';
+            $clientId = $c['clientId'] ?? '';
+            $title    = trim($c['title'] ?? '');
+            if (!$listId || !$clientId || !$title) continue;
+
+            $payload = ['title' => $title];
+            if (!empty($c['notes'])) $payload['notes'] = $c['notes'];
+            if (!empty($c['due']))   $payload['due']   = $c['due'];
+
+            $result = googleTasksRequest($accessToken, '/lists/' . urlencode($listId) . '/tasks', 'POST', $payload);
+            if (!empty($result['id'])) {
+                $created[] = ['clientId' => $clientId, 'googleTaskId' => $result['id'], 'updated' => $result['updated'] ?? ''];
+            } else {
+                $msg = is_array($result['error'] ?? null) ? ($result['error']['message'] ?? 'unknown error') : ($result['error'] ?? 'unknown error');
+                $errors[] = "Could not create \"$title\" in Google Tasks: $msg";
+            }
+        }
+
+        jsonResponse(['success' => true, 'created' => $created, 'errors' => $errors]);
     }
 
     jsonResponse(['error' => 'Unknown action'], 400);
