@@ -1544,6 +1544,14 @@ body.theme-notebook .add-task-input {
   justify-content: center;
   gap: 8px;
   padding: 44px 20px 28px;
+  /* #board.tetris-mode switches #board to CSS multi-column layout
+     (columns: 300px). renderSkeletons() replaces #board's contents but
+     not its classList, so that class can still be on #board here if this
+     is a re-sync rather than the first load — without column-span, the
+     browser fragments this whole scene across columns instead of
+     rendering it as one block. */
+  column-span: all;
+  break-inside: avoid;
 }
 
 .loading-cloud {
