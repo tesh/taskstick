@@ -1532,29 +1532,195 @@ body.theme-notebook .add-task-input {
 .add-task-btn:hover { opacity: 0.85; transform: scale(1.08); }
 
 /* ============================================================
-   SKELETON LOADER
+   LOADING SCENE — cloud delivers tasks into sticky notes
+   Replaces the old plain skeleton cards with something that
+   actually explains what's happening: fetching from Google Tasks.
    ============================================================ */
-.skeleton-card {
+.loading-scene {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 44px 20px 28px;
+}
+
+.loading-cloud {
+  width: 60px; height: 32px;
   background: var(--card-bg);
   border: var(--card-border);
-  border-radius: 12px;
-  width: 300px;
-  height: 200px;
+  border-radius: 40px;
   position: relative;
-  overflow: hidden;
+  margin-bottom: 2px;
+  animation: loadingBob 2.6s ease-in-out infinite;
 }
-
-.skeleton-card::after {
+.loading-cloud::before, .loading-cloud::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
-  animation: shimmer 1.4s infinite;
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 50%;
+}
+.loading-cloud::before { width: 24px; height: 24px; top: -12px; left: 7px; }
+.loading-cloud::after  { width: 20px; height: 20px; top: -9px;  left: 27px; }
+@keyframes loadingBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.loading-path {
+  width: 2px;
+  height: 46px;
+  background: repeating-linear-gradient(to bottom, var(--text-muted) 0 6px, transparent 6px 12px);
+  opacity: 0.5;
+  position: relative;
+  margin-bottom: 4px;
+}
+.loading-path .loading-dot {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 11px; height: 11px;
+  background: #ffe066;
+  border: 1px solid #e3b400;
+  border-radius: 3px;
+  transform: translateX(-50%) rotate(8deg);
+  animation: loadingTravel 1.8s cubic-bezier(.4,0,.2,1) infinite;
+}
+.loading-path .loading-dot:nth-child(2) { animation-delay: 0.9s; }
+@keyframes loadingTravel {
+  0%   { top: -6px; opacity: 0; }
+  10%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { top: 42px; opacity: 0; }
 }
 
-@keyframes shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+.loading-notes {
+  display: grid;
+  grid-template-columns: repeat(2, 118px);
+  grid-template-rows: repeat(2, 94px);
+  gap: 12px;
+}
+
+.loading-note {
+  background: #ffe066;
+  border: 1px solid #e3b400;
+  border-radius: 4px;
+  box-shadow: 2px 3px 0 rgba(150, 108, 0, 0.28);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  animation: loadingNotePop 3.6s ease-in-out infinite;
+}
+.loading-note:nth-child(1) { animation-delay: 0s;   transform-origin: 30% 20%; }
+.loading-note:nth-child(2) { animation-delay: 0.9s; transform-origin: 70% 15%; }
+.loading-note:nth-child(3) { animation-delay: 1.8s; transform-origin: 25% 80%; }
+.loading-note:nth-child(4) { animation-delay: 2.7s; transform-origin: 75% 85%; }
+
+@keyframes loadingNotePop {
+  0%   { transform: scale(0.4) rotate(-14deg); opacity: 0; }
+  12%  { transform: scale(1.08) rotate(4deg);  opacity: 1; }
+  20%  { transform: scale(1) rotate(-2deg); }
+  45%  { transform: scale(1) rotate(2deg); }
+  70%  { transform: scale(1) rotate(-1deg);    opacity: 1; }
+  88%  { transform: scale(0.92) rotate(-6deg); opacity: 0; }
+  100% { transform: scale(0.4) rotate(-14deg); opacity: 0; }
+}
+
+.loading-line { display: flex; align-items: center; gap: 6px; }
+
+.loading-box {
+  width: 12px; height: 12px;
+  border: 2px solid #34365a;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.35);
+  position: relative;
+  flex-shrink: 0;
+}
+.loading-box::after {
+  content: '';
+  position: absolute;
+  left: 2px; top: -1px;
+  width: 4px; height: 7px;
+  border-right: 2px solid #e0684a;
+  border-bottom: 2px solid #e0684a;
+  transform: rotate(45deg) scale(0);
+  transform-origin: center;
+  animation-duration: 3.6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.loading-box.checkA::after { animation-name: loadingCheckA; }
+.loading-box.checkB::after { animation-name: loadingCheckB; }
+
+@keyframes loadingCheckA {
+  0%, 35%   { transform: rotate(45deg) scale(0); }
+  42%, 75%  { transform: rotate(45deg) scale(1); }
+  85%, 100% { transform: rotate(45deg) scale(0); }
+}
+@keyframes loadingCheckB {
+  0%, 50%   { transform: rotate(45deg) scale(0); }
+  57%, 80%  { transform: rotate(45deg) scale(1); }
+  88%, 100% { transform: rotate(45deg) scale(0); }
+}
+
+.loading-stroke {
+  height: 3px;
+  border-radius: 2px;
+  background: #34365a;
+  opacity: 0.55;
+  transform-origin: left;
+  transform: scaleX(0);
+  animation-duration: 3.6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.loading-stroke.draw1 { animation-name: loadingDraw1; }
+.loading-stroke.draw2 { animation-name: loadingDraw2; }
+.loading-stroke.draw3 { animation-name: loadingDraw3; }
+
+@keyframes loadingDraw1 { 0%, 15% { transform: scaleX(0); } 32%, 100% { transform: scaleX(1); } }
+@keyframes loadingDraw2 { 0%, 30% { transform: scaleX(0); } 47%, 100% { transform: scaleX(1); } }
+@keyframes loadingDraw3 { 0%, 45% { transform: scaleX(0); } 62%, 100% { transform: scaleX(1); } }
+
+.loading-note:nth-child(1) .loading-stroke, .loading-note:nth-child(1) .loading-box::after { animation-delay: 0s; }
+.loading-note:nth-child(2) .loading-stroke, .loading-note:nth-child(2) .loading-box::after { animation-delay: 0.9s; }
+.loading-note:nth-child(3) .loading-stroke, .loading-note:nth-child(3) .loading-box::after { animation-delay: 1.8s; }
+.loading-note:nth-child(4) .loading-stroke, .loading-note:nth-child(4) .loading-box::after { animation-delay: 2.7s; }
+
+.loading-bar-track {
+  width: 150px; height: 8px;
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+.loading-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #e3b400, #e0684a);
+  animation: loadingFill 3.6s ease-in-out infinite;
+}
+@keyframes loadingFill { 0% { width: 0%; } 85%, 100% { width: 100%; } }
+
+.loading-caption {
+  font-family: var(--ui-font);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 14px;
+  text-align: center;
+  min-height: 1.4em;
+  transition: opacity 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-cloud, .loading-dot, .loading-note, .loading-box::after,
+  .loading-stroke, .loading-bar-fill {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* ============================================================
@@ -3484,9 +3650,96 @@ function buildDisplayOrder(tasks) {
 /* ============================================================
    RENDER BOARD
    ============================================================ */
+const LOADING_CAPTIONS = [
+  'Waking up the Google Tasks hamsters…',
+  'Bribing the sync gremlins with virtual coffee…',
+  'Politely asking the cloud for your chores…',
+  'Counting how many times you rescheduled "Do taxes"…',
+  'Downloading your procrastination, please hold…',
+  'Herding your tasks into their sticky little homes…'
+];
+
 function renderSkeletons() {
   const board = document.getElementById('board');
-  board.innerHTML = [1,2,3,4].map(() => `<div class="skeleton-card"></div>`).join('');
+  board.innerHTML = `
+    <div class="loading-scene">
+      <div class="loading-cloud"></div>
+      <div class="loading-path">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <div class="loading-notes">
+        <div class="loading-note">
+          <div class="loading-line">
+            <div class="loading-box checkA"></div>
+            <div class="loading-stroke draw1" style="width:52px"></div>
+          </div>
+          <div class="loading-line">
+            <div class="loading-box"></div>
+            <div class="loading-stroke draw2" style="width:38px"></div>
+          </div>
+          <div class="loading-line">
+            <div class="loading-box checkB"></div>
+            <div class="loading-stroke draw3" style="width:60px"></div>
+          </div>
+        </div>
+        <div class="loading-note">
+          <div class="loading-line">
+            <div class="loading-box checkA"></div>
+            <div class="loading-stroke draw1" style="width:46px"></div>
+          </div>
+          <div class="loading-line">
+            <div class="loading-box"></div>
+            <div class="loading-stroke draw2" style="width:58px"></div>
+          </div>
+        </div>
+        <div class="loading-note">
+          <div class="loading-line">
+            <div class="loading-box"></div>
+            <div class="loading-stroke draw1" style="width:50px"></div>
+          </div>
+          <div class="loading-line">
+            <div class="loading-box checkA"></div>
+            <div class="loading-stroke draw2" style="width:36px"></div>
+          </div>
+          <div class="loading-line">
+            <div class="loading-box"></div>
+            <div class="loading-stroke draw3" style="width:60px"></div>
+          </div>
+        </div>
+        <div class="loading-note">
+          <div class="loading-line">
+            <div class="loading-box checkA"></div>
+            <div class="loading-stroke draw1" style="width:42px"></div>
+          </div>
+          <div class="loading-line">
+            <div class="loading-box checkB"></div>
+            <div class="loading-stroke draw2" style="width:56px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
+      <div class="loading-caption" id="loading-caption">${LOADING_CAPTIONS[0]}</div>
+    </div>`;
+  runLoadingCaptions();
+}
+
+function runLoadingCaptions() {
+  let i = 0;
+  const tick = () => {
+    const el = document.getElementById('loading-caption');
+    if (!el) return; // scene was replaced by the real board — stop rotating
+    i = (i + 1) % LOADING_CAPTIONS.length;
+    el.style.opacity = 0;
+    setTimeout(() => {
+      const el2 = document.getElementById('loading-caption');
+      if (!el2) return;
+      el2.textContent = LOADING_CAPTIONS[i];
+      el2.style.opacity = 1;
+    }, 200);
+    setTimeout(tick, 2600);
+  };
+  setTimeout(tick, 2600);
 }
 
 function renderNoTasksAccessBoard() {
