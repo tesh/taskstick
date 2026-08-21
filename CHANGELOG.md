@@ -10,6 +10,7 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 ## 2026-08-21
 
 - **Added:** Replaced the plain skeleton-card loading state with a themed loading scene — a cloud delivers tasks down a dashed path into four sticky notes that pop in and check off their own task lines, with rotating captions about syncing with Google Tasks. Sticky notes stay a fixed yellow across all 5 themes (same as the logo mark); the cloud, path, and progress bar adapt to whichever theme is active (ENH-048).
+- **Fixed:** The new loading scene fragmented into a scattered, overlapping mess on re-sync for anyone using Tetris stacking mode — `#board`'s multi-column layout class survives a skeleton re-render and was splitting the scene across columns. Now spans as one unfragmented block regardless of mode (BUG-015).
 
 ## 2026-08-18
 

@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-015 · fixed · 2026-08-21
+**Title:** Loading scene fragments into a scattered, overlapping mess on re-sync
+**Reported by:** Tesh (screenshot: cloud isolated on the far left, sticky notes split into disconnected clusters with a large gap, caption stranded on the right)
+**Root cause:** `#board.tetris-mode` (Tetris stacking mode) switches `#board` to a CSS multi-column layout (`columns: 300px`). `renderSkeletons()` replaces `#board`'s `innerHTML` but never touches its `classList`, so if the user has Tetris mode on, the `tetris-mode` class survives from the previous `renderBoard()` call — meaning it's present on first load's skeleton render too, but only becomes visible once the loading scene has real content tall enough to fragment across column boundaries. The `.loading-scene` div had no `column-span`, so the browser split its content across columns instead of rendering it as one block, exactly like `.list-card`/`.priority-card` would without their own `break-inside: avoid` overrides.
+**Fix:** Added `column-span: all; break-inside: avoid;` to `.loading-scene`, so it always renders as one full-width unfragmented block regardless of which mode class is on `#board`. Reproduced locally in a standalone test harness carrying the same `#board.tetris-mode` rule, confirmed the fragmentation, then confirmed the fix resolves it before deploying.
+**Files:** `index.html`
+**Resolved:** 2026-08-21
+
 ### BUG-014 · fixed · 2026-08-19
 **Title:** Theme picker chip labels unreadable in Notebook and Rose themes
 **Reported by:** Tesh (screenshot: "Modern"/"Compact"/"Ocean"/"Rose" chip text barely visible against Notebook's cream background)
