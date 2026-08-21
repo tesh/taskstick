@@ -7,6 +7,10 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
 - Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
 
+## 2026-08-21
+
+- **Added:** Replaced the plain skeleton-card loading state with a themed loading scene — a cloud delivers tasks down a dashed path into four sticky notes that pop in and check off their own task lines, with rotating captions about syncing with Google Tasks. Sticky notes stay a fixed yellow across all 5 themes (same as the logo mark); the cloud, path, and progress bar adapt to whichever theme is active (ENH-048).
+
 ## 2026-08-18
 
 - **Fixed:** A new user could log in, use the app, and never appear in the Admin Users list — `data/users.json` was updated with a plain read-modify-write and no file locking, so two near-simultaneous logins could race and silently drop one user's registration entirely. Now serialized behind an exclusive file lock (BUG-010).

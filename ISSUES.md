@@ -141,6 +141,14 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 
 ## ✨ Enhancement Requests
 
+### ENH-048 · complete · 2026-08-21
+**Title:** Replace the plain skeleton-card loader with a themed loading scene
+**Requested by:** Tesh ("cool and funny pre-loader... provide a helpful message that it's loading tasks from the Google Tasks service")
+**Design decision:** Iterated through 3 mockups (reviewed live as an HTML artifact) before converging on a combination: a cloud delivering tasks down a dashed path into sticky notes that pop in and draw/check their own checklist lines. Notes stay a fixed sticky-note yellow across all 5 themes — same precedent as the fixed-color logo mark — while the cloud, path, and progress-bar track pull from the active theme's `--card-bg`/`--card-border`/`--text-muted` tokens so it blends into Notebook, Modern, Compact, Ocean, and Rose alike.
+**Fix:** Replaced `.skeleton-card`/`shimmer` CSS and `renderSkeletons()`'s `[1,2,3,4].map(() => skeleton-card)` with a single `.loading-scene`: a bobbing cloud, dashed delivery path with traveling tiles, a 2×2 grid of 4 sticky notes (each with 2–3 checklist lines, 1–2 checked), a progress bar, and a caption that rotates through 6 jokes about syncing with Google Tasks. Caption loop self-clears once the real board replaces the scene (checks for its own DOM node each tick rather than being torn down explicitly). Respects `prefers-reduced-motion`.
+**Files:** `index.html`
+**Resolved:** 2026-08-21
+
 ### ENH-047 · complete · 2026-08-19
 **Title:** Replace CalDAV-based Apple Reminders sync with a native macOS helper app (EventKit)
 **Requested by:** Tesh (after live testing ENH-042/043/044 showed pushed tasks never appearing anywhere — see those entries below)
