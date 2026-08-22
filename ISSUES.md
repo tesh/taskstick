@@ -8,6 +8,15 @@
 
 ## 🐛 Bugs
 
+### BUG-016 · fixed · 2026-08-22
+**Title:** Signed out of the iPhone PWA after periods of not using it
+**Reported by:** Tesh (asked for the sign-in period to be extended to a week between inactivity)
+**Root cause:** Two compounding gaps in the session config. (1) `session.gc_maxlifetime` was only 24 hours, so the server garbage-collected session data after a day regardless of the cookie. (2) No `session.cookie_lifetime` was ever set, so PHP sent a browser-session cookie with no `Expires`/`Max-Age` at all — on a real desktop browser that persists for ages since "closing the browser" is rare, but iOS routinely terminates a backgrounded PWA's process, and a plain session cookie doesn't survive that the way it would on desktop.
+**Fix:** Set both `session.cookie_lifetime` and `session.gc_maxlifetime` to 7 days. Because PHP only stamps a cookie's expiry when the session is first created (not on every request), a flat 7 days would really mean "7 days since you last logged in," not "since you last opened the app" — so on every authenticated request, `config.php` now re-issues the session cookie with a fresh 7-day expiry via `setcookie()`, turning it into a rolling window: open the app at least once a week and you never see the login screen.
+**Note for Tesh:** This fixes the PHP-session half of the problem. If the Google Cloud OAuth consent screen for `pps-taskstick` is still in **Testing** publishing status (per `GOOGLE_VERIFICATION_GUIDE.md`, verification hadn't been submitted as of 2026-08-20), Google caps refresh tokens at exactly 7 days for apps in that state — which would independently force a re-login regardless of this fix. Worth checking Cloud Console → OAuth consent screen → Publishing status; if it says Testing, completing Part D of the verification guide (submit for production) removes that cap entirely.
+**Files:** `config.php`
+**Resolved:** 2026-08-22
+
 ### BUG-015 · fixed · 2026-08-21
 **Title:** Loading scene fragments into a scattered, overlapping mess on re-sync
 **Reported by:** Tesh (screenshot: cloud isolated on the far left, sticky notes split into disconnected clusters with a large gap, caption stranded on the right)

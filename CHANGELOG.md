@@ -6,6 +6,11 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
 - Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
+- If the `pps-taskstick` OAuth consent screen is still in Testing publishing status, Google caps refresh tokens at 7 days regardless of the session fix below — needs confirming/publishing per `GOOGLE_VERIFICATION_GUIDE.md` Part D (BUG-016).
+
+## 2026-08-22
+
+- **Fixed:** Signed out of the iPhone PWA after periods of not using it — the session cookie had no explicit lifetime, so iOS killing a backgrounded PWA's process lost it, unlike a real desktop browser. Session now lasts a rolling 7 days: it renews every time you actually use the app, so only a full week of not opening TaskStick logs you out (BUG-016).
 
 ## 2026-08-21
 

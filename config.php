@@ -40,11 +40,37 @@ if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASS') ?: '');
 if (!defined('ENCRYPTION_KEY')) define('ENCRYPTION_KEY', getenv('ENCRYPTION_KEY') ?: '');
 
 // Session config
+//
+// Both the cookie's own lifetime and gc_maxlifetime need to be a week, not
+// just gc_maxlifetime — without an explicit cookie_lifetime, PHP sends a
+// browser-session cookie (no Expires/Max-Age at all), which is exactly
+// what was signing iOS PWA users out: iOS routinely kills a backgrounded
+// PWA's process, and a plain session cookie doesn't survive that, unlike
+// a real desktop browser where "closing the browser" is rare.
+define('SESSION_LIFETIME_SECONDS', 7 * 24 * 60 * 60); // 1 week
 ini_set('session.cookie_httponly', 1);
 ini_set('session.cookie_secure', 1);
 ini_set('session.cookie_samesite', 'Lax');
-ini_set('session.gc_maxlifetime', 86400); // 24 hours
+ini_set('session.cookie_lifetime', SESSION_LIFETIME_SECONDS);
+ini_set('session.gc_maxlifetime', SESSION_LIFETIME_SECONDS);
 session_start();
+
+// PHP only stamps a fresh cookie expiry when the session is first created,
+// not on every request — so without this, "a week" would mean a week since
+// login, not a week since you last actually used the app. Re-stamping the
+// cookie on every authenticated request turns it into a rolling window:
+// open the app at least once a week and you never see the login screen.
+if (!empty($_SESSION['access_token'])) {
+    $sessionCookieParams = session_get_cookie_params();
+    setcookie(session_name(), session_id(), [
+        'expires'  => time() + SESSION_LIFETIME_SECONDS,
+        'path'     => $sessionCookieParams['path'],
+        'domain'   => $sessionCookieParams['domain'],
+        'secure'   => $sessionCookieParams['secure'],
+        'httponly' => $sessionCookieParams['httponly'],
+        'samesite' => $sessionCookieParams['samesite'],
+    ]);
+}
 
 /**
  * Make an authenticated request to the Google Tasks API.
