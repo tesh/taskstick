@@ -1,5 +1,6 @@
 <?php
 require_once '../config.php';
+require_once '../task_dates_db.php';
 
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
@@ -32,6 +33,19 @@ switch ($method) {
             'showHidden'    => 'true',
         ]);
         $result = googleApiRequest('/lists/' . urlencode($listId) . '/tasks?' . $params);
+        // Best-effort: task-age tracking is a nice-to-have layered on top of
+        // Google Tasks (the real source of truth), so a DB hiccup here must
+        // never break viewing/creating tasks themselves.
+        if (!empty($result['items'])) {
+            try {
+                $userEmail = $_SESSION['user']['email'] ?? '';
+                $taskIds   = array_column($result['items'], 'id');
+                taskDatesBackfillMissing($taskIds, $userEmail);
+                $result['taskDates'] = taskDatesGetFor($taskIds, $userEmail);
+            } catch (Throwable $e) {
+                // Swallow — task list itself already loaded fine.
+            }
+        }
         jsonResponse($result);
 
     case 'POST':
@@ -67,6 +81,15 @@ switch ($method) {
         $result = googleApiRequest('/lists/' . urlencode($listId) . '/tasks' . $createQs, 'POST', $task);
         if (!empty($result['error'])) {
             jsonResponse($result, 500);
+        }
+        // This is the one moment we ever know a task's *real* creation
+        // time — record it now, before it's just "some task we noticed."
+        if (!empty($result['id'])) {
+            try {
+                taskDatesBackfillMissing([$result['id']], $_SESSION['user']['email'] ?? '');
+            } catch (Throwable $e) {
+                // Swallow — the task itself was created successfully either way.
+            }
         }
         jsonResponse($result);
 

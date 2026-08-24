@@ -18,6 +18,11 @@ function appDb(): PDO {
     $pdo = new PDO($dsn, DB_USER, DB_PASS, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     ]);
+    // Force this session's timezone to UTC — IONOS's MySQL default isn't
+    // guaranteed to be UTC, and NOW()/CURRENT_TIMESTAMP values get sent to
+    // the client as if they were UTC (see task_dates_db.php). Without this,
+    // a non-UTC server default would silently skew every stored timestamp.
+    $pdo->exec("SET time_zone = '+00:00'");
 
     return $pdo;
 }

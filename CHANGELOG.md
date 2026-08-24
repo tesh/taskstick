@@ -10,7 +10,13 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 ## 2026-08-22
 
 - **Fixed:** Signed out of the iPhone PWA after periods of not using it — the session cookie had no explicit lifetime, so iOS killing a backgrounded PWA's process lost it, unlike a real desktop browser. Session now lasts a rolling 7 days: it renews every time you actually use the app, so only a full week of not opening TaskStick logs you out (BUG-016).
-- **Milestone:** Google approved the `pps-taskstick` OAuth verification — the consent screen is now in Production, removing Google's own 7-day refresh-token cap that Testing-mode apps carry. Combined with the fix above, this closes out the sign-in-persistence issue completely.
+- **Milestone:** Google approved the `pps-taskstick` OAuth verification — the consent screen is now in Production, removing Google's own 7-day refresh-token cap that Testing-mode apps carry. Combined with the fix above, this closes out the sign-in-persistence issue completely. *(Update 2026-08-24: it didn't — see below.)*
+
+## 2026-08-24
+
+- **Fixed:** Still getting signed out of the iPhone PWA daily even after the fix above — that fix only changed the session *cookie's* lifetime, but the session *file* it pointed to was still being deleted in well under a day by a system-level cleanup process shared hosts commonly run, which ignores a script's own settings. Session storage now lives in this app's own directory instead, which that external process has no reason to touch (BUG-017).
+- **Added:** Task age indicator — an optional colored dot next to each task, green when it's new fading through amber to red the longer it's been sitting, with a Settings toggle and a configurable "days until aged" threshold. Google Tasks has no creation-date field, so this is tracked in a small new database table the app keeps itself (ENH-050).
+- **Improved:** The loading screen's jokes are now genuinely random (never the same one twice in a row) instead of cycling through in the same fixed order every time (ENH-049).
 
 ## 2026-08-21
 

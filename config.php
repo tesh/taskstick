@@ -53,6 +53,21 @@ ini_set('session.cookie_secure', 1);
 ini_set('session.cookie_samesite', 'Lax');
 ini_set('session.cookie_lifetime', SESSION_LIFETIME_SECONDS);
 ini_set('session.gc_maxlifetime', SESSION_LIFETIME_SECONDS);
+
+// The cookie/gc_maxlifetime fix above wasn't enough on its own — shared
+// hosts (IONOS included) typically run a system-level cron that sweeps the
+// *default* session save path using php.ini's global gc_maxlifetime
+// (often 20-30 minutes), completely ignoring this script's own ini_set()
+// above, which only governs this script's own per-request probabilistic
+// cleanup. Redirecting storage into our own data/ directory (already
+// git-ignored and .htaccess-protected) means only OUR gc_maxlifetime ever
+// decides when a session file dies.
+$sessionSavePath = __DIR__ . '/data/sessions';
+if (!is_dir($sessionSavePath)) mkdir($sessionSavePath, 0700, true);
+ini_set('session.save_path', $sessionSavePath);
+ini_set('session.gc_probability', 1);
+ini_set('session.gc_divisor', 100);
+
 session_start();
 
 // PHP only stamps a fresh cookie expiry when the session is first created,

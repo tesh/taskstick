@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-017 · fixed · 2026-08-24
+**Title:** Still signed out of the iPhone PWA daily, despite BUG-016's session-lifetime fix
+**Reported by:** Tesh ("There was a patch applied that should have logged me out after a week of inactivity")
+**Root cause:** BUG-016 fixed the cookie's own lifetime and set `session.gc_maxlifetime` to 7 days, but that `ini_set()` only governs *this script's* own probabilistic cleanup trigger — it has no effect on the OS-level cleanup that shared hosts like IONOS commonly run against PHP's *default* session save path (typically a cron sweeping `/tmp` or similar using php.ini's global `gc_maxlifetime`, often 20-30 minutes). The cookie itself was correctly living for a week; the session *file* it pointed to was being deleted by that external process in well under a day, so the cookie became worthless almost immediately.
+**Fix:** Redirected `session.save_path` to a new `data/sessions/` directory (git-ignored, inherits `data/.htaccess`'s `Deny from all`) so only this app's own `gc_maxlifetime` ever governs when a session file is cleaned up — the external cron has no reason to touch a directory it doesn't manage. Also explicitly set `session.gc_probability`/`gc_divisor` so cleanup still happens reliably at low traffic.
+**Files:** `config.php`
+**Resolved:** 2026-08-24
+
 ### BUG-016 · fixed · 2026-08-22
 **Title:** Signed out of the iPhone PWA after periods of not using it
 **Reported by:** Tesh (asked for the sign-in period to be extended to a week between inactivity)
@@ -157,6 +165,22 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 ---
 
 ## ✨ Enhancement Requests
+
+### ENH-050 · complete · 2026-08-24
+**Title:** Task age indicator — a colored dot showing how long a task has been sitting
+**Requested by:** Tesh ("track the date a task was added... a visual slider that displays the task age from red to green... user should be able to configure what is considered an aged task... this should be a user option")
+**Design decision:** Google Tasks' API has no "created" field on a task at all, so there's no way to read a task's true creation date from Google directly. Recording it ourselves the moment a task is created (in `api/tasks.php`'s create branch) is exact going forward; for tasks that already existed before this shipped (or were created in Google's own apps rather than TaskStick), the best available approximation is "the first time TaskStick itself loaded the task" — backfilled automatically the next time that task is fetched. This mirrors the existing `apple_reminder_links`-style pattern of a small side-table keyed by Google's task ID, not a local mirror of task content — Google Tasks stays the only source of truth for the task itself.
+**Fix:** New `task_dates_db.php` (MySQL table `task_created_dates`, task_id + user_email + first_seen_at) — auto-creates on first use, same pattern as `feedback_db.php`. `api/tasks.php`'s GET backfills+returns dates for every task in a list; POST (create) records the exact moment. Client-side: `state.taskCreatedDates` (task_id → ISO date) merged in during `loadAll()`; a small dot renders next to each active (non-completed) task via `renderAgeDot()`, colored green→amber→red by linear interpolation between three fixed stops (not a flat green-red blend, which reads as muddy brown at the midpoint) based on age ÷ threshold. New Settings toggle "Task age indicator" plus a "Days until a task counts as 'aged'" number input (default 14), both riding the existing generic `state.settings` persistence — no backend changes needed for the settings themselves. Also fixed in passing: `db.php`'s MySQL connection never forced a session timezone, so `NOW()` wasn't safely assumable as UTC — added `SET time_zone = '+00:00'` on connect, which this feature's date math depends on and every other timestamp in the app (e.g. feedback's `created_at`) now benefits from too.
+**Verification:** Full integration test against a real local MariaDB instance (not just PHP's syntax check) — table auto-creation, backfill-without-overwrite (INSERT IGNORE), per-user isolation on the same task ID, empty-input handling, and a live check that MySQL's `NOW()` matches PHP's UTC clock within seconds, confirming the timezone fix actually works rather than assuming it. Frontend helpers (`taskAgeDays`, `ageIndicatorColor`, `renderAgeDot`) exercised directly in a browser: color stops verified exact at 0/50/100% of the threshold, clamping past 100% confirmed, completed tasks and tasks with no recorded date both correctly render no dot, and the Settings toggle/number input verified to update state end-to-end.
+**Files:** `task_dates_db.php` (new), `db.php`, `api/tasks.php`, `index.html`
+**Resolved:** 2026-08-24
+
+### ENH-049 · complete · 2026-08-24
+**Title:** Randomize the loading-scene captions instead of cycling in fixed order
+**Requested by:** Tesh ("randomize the funny captions so that i see different captions on loading")
+**Fix:** New `randomCaptionIndex(exclude)` picks a random caption index different from the one passed in, so the rotation never immediately repeats itself. Used for both the very first caption shown (previously always index 0 — the same joke on every load) and every subsequent rotation in `runLoadingCaptions()`.
+**Files:** `index.html`
+**Resolved:** 2026-08-24
 
 ### ENH-048 · complete · 2026-08-21
 **Title:** Replace the plain skeleton-card loader with a themed loading scene

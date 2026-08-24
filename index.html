@@ -1232,6 +1232,15 @@ body.theme-modern .list-title {
 /* Number shown via data-num attribute */
 .task-check-circle::before { content: attr(data-num); }
 
+/* Task age indicator — color set inline per-task (see renderAgeDot()),
+   green (just added) through amber to red (at/past the user's threshold). */
+.task-age-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+}
+
 /* Hover */
 .task-check-wrap:hover .task-check-circle { border-color: var(--accent); }
 
@@ -2695,7 +2704,8 @@ const state = {
   collapsed:    JSON.parse(localStorage.getItem('tasks-collapsed') || '{}'),
   taskCollapsed: JSON.parse(localStorage.getItem('tasks-task-collapsed') || '{}'),
   listColors:   JSON.parse(localStorage.getItem('tasks-list-colors') || '{}'),
-  settings:     JSON.parse(localStorage.getItem('tasks-settings') || '{"hideCompleted":false,"tetrisMode":false,"alphabeticalSort":false,"allTasksMode":false,"ritualEnabled":false}'),
+  taskCreatedDates: JSON.parse(localStorage.getItem('tasks-created-dates') || '{}'),
+  settings:     JSON.parse(localStorage.getItem('tasks-settings') || '{"hideCompleted":false,"tetrisMode":false,"alphabeticalSort":false,"allTasksMode":false,"ritualEnabled":false,"showTaskAge":false,"taskAgeThresholdDays":14}'),
   refreshTimer: null,
   REFRESH_MS:   120_000,  // 2 min — avoids interrupting typing
 };
@@ -2854,6 +2864,10 @@ function openSettings() {
   if (allTasksCb) allTasksCb.checked = !!state.settings.allTasksMode;
   const ritualCb = document.getElementById('pref-ritual-enabled');
   if (ritualCb) ritualCb.checked = !!state.settings.ritualEnabled;
+  const ageCb = document.getElementById('pref-show-task-age');
+  if (ageCb) ageCb.checked = !!state.settings.showTaskAge;
+  const ageThresholdInput = document.getElementById('pref-task-age-threshold');
+  if (ageThresholdInput) ageThresholdInput.value = state.settings.taskAgeThresholdDays || 14;
   // Render theme picker chips
   renderThemePicker();
   loadAppleSyncStatus();
@@ -3400,6 +3414,21 @@ function setAllTasksMode(val) {
   renderBoard();
 }
 
+function setShowTaskAge(val) {
+  state.settings.showTaskAge = val;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+  renderBoard();
+}
+
+function setTaskAgeThreshold(val) {
+  const days = Math.max(1, Math.min(365, parseInt(val, 10) || 14));
+  state.settings.taskAgeThresholdDays = days;
+  localStorage.setItem('tasks-settings', JSON.stringify(state.settings));
+  savePrefs();
+  if (state.settings.showTaskAge) renderBoard();
+}
+
 /* ── Daily Ritual: find-or-create the list, toggle its visibility ── */
 async function setRitualEnabled(val) {
   state.settings.ritualEnabled = val;
@@ -3531,11 +3560,13 @@ async function loadAll(showSpinner = true) {
       try {
         const r = await fetch(`/api/tasks.php?listId=${encodeURIComponent(list.id)}`);
         const d = await r.json();
+        if (d.taskDates) Object.assign(state.taskCreatedDates, d.taskDates);
         return { ...list, tasks: (d.items || []).filter(t => t.title) };
       } catch {
         return { ...list, tasks: [] };
       }
     }));
+    localStorage.setItem('tasks-created-dates', JSON.stringify(state.taskCreatedDates));
 
     state.lists = mergeOrder(withTasks);
     renderBoard();
@@ -3667,8 +3698,16 @@ const LOADING_CAPTIONS = [
   'Herding your tasks into their sticky little homes…'
 ];
 
+function randomCaptionIndex(exclude) {
+  if (LOADING_CAPTIONS.length <= 1) return 0;
+  let i;
+  do { i = Math.floor(Math.random() * LOADING_CAPTIONS.length); } while (i === exclude);
+  return i;
+}
+
 function renderSkeletons() {
   const board = document.getElementById('board');
+  const startIndex = randomCaptionIndex();
   board.innerHTML = `
     <div class="loading-scene">
       <div class="loading-cloud"></div>
@@ -3727,17 +3766,17 @@ function renderSkeletons() {
         </div>
       </div>
       <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
-      <div class="loading-caption" id="loading-caption">${LOADING_CAPTIONS[0]}</div>
+      <div class="loading-caption" id="loading-caption">${LOADING_CAPTIONS[startIndex]}</div>
     </div>`;
-  runLoadingCaptions();
+  runLoadingCaptions(startIndex);
 }
 
-function runLoadingCaptions() {
-  let i = 0;
+function runLoadingCaptions(startIndex) {
+  let i = startIndex;
   const tick = () => {
     const el = document.getElementById('loading-caption');
     if (!el) return; // scene was replaced by the real board — stop rotating
-    i = (i + 1) % LOADING_CAPTIONS.length;
+    i = randomCaptionIndex(i);
     el.style.opacity = 0;
     setTimeout(() => {
       const el2 = document.getElementById('loading-caption');
@@ -4073,6 +4112,39 @@ function createListCard(list, listIdx) {
   return card;
 }
 
+/* ============================================================
+   TASK AGE INDICATOR
+   Google Tasks has no "created" field, so state.taskCreatedDates
+   (task_id -> ISO date) comes from our own task_dates_db.php instead —
+   see loadAll() and api/tasks.php.
+   ============================================================ */
+function taskAgeDays(createdIso) {
+  if (!createdIso) return null;
+  const created = new Date(createdIso);
+  if (isNaN(created)) return null;
+  return Math.max(0, Math.floor((Date.now() - created.getTime()) / 86400000));
+}
+
+// Green (just added) -> amber -> red (at or past the threshold), so it
+// reads as a traffic light rather than a muddy green-to-red blend.
+function ageIndicatorColor(days, thresholdDays) {
+  const ratio = Math.max(0, Math.min(1, days / Math.max(1, thresholdDays)));
+  const green = [34, 197, 94], amber = [245, 158, 11], red = [239, 68, 68];
+  const [c1, c2, t] = ratio <= 0.5 ? [green, amber, ratio * 2] : [amber, red, (ratio - 0.5) * 2];
+  const mix = i => Math.round(c1[i] + (c2[i] - c1[i]) * t);
+  return `rgb(${mix(0)},${mix(1)},${mix(2)})`;
+}
+
+function renderAgeDot(task, done) {
+  if (!state.settings.showTaskAge || done) return '';
+  const days = taskAgeDays(state.taskCreatedDates[task.id]);
+  if (days === null) return '';
+  const threshold = state.settings.taskAgeThresholdDays || 14;
+  const color = ageIndicatorColor(days, threshold);
+  const label = days === 0 ? 'Added today' : `Added ${days} day${days === 1 ? '' : 's'} ago`;
+  return `<span class="task-age-dot" style="background:${color}" title="${escHtml(label)}"></span>`;
+}
+
 function renderTaskItem(task, index, listId, opts = {}) {
   const { indentTarget = null, childCount = 0, isCollapsed = false } = opts;
   const done         = task.status === 'completed';
@@ -4145,6 +4217,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
           <span class="task-check-circle" data-num="${escHtml(String(dataNum))}"></span>
         </label>
+        ${renderAgeDot(task, done)}
         <span class="task-text"
               ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
               title="Double-click to edit">${escHtml(task.title)}</span>
@@ -5130,6 +5203,7 @@ function renderPriorityTaskItem(task, list, opts = {}) {
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
           <span class="task-check-circle" data-num="${isSubtaskRow ? '·' : '★'}"></span>
         </label>
+        ${renderAgeDot(task, done)}
         <div class="priority-task-body">
           <span class="task-text"
                 ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
@@ -5721,6 +5795,27 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
                  onchange="setHideCompleted(this.checked)" />
           <span class="toggle-track"></span>
         </label>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Task age indicator</div>
+          <div class="settings-row-desc">A small dot next to each task, green when it's new fading to red the longer it's sat there</div>
+        </div>
+        <label class="toggle-switch" title="Task age indicator">
+          <input type="checkbox" id="pref-show-task-age"
+                 onchange="setShowTaskAge(this.checked)" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Days until a task counts as "aged"</div>
+          <div class="settings-row-desc">A task turns fully red once it's been sitting this many days</div>
+        </div>
+        <input type="number" id="pref-task-age-threshold" class="apple-sync-input"
+               style="width:70px;text-align:center" min="1" max="365" step="1"
+               onchange="setTaskAgeThreshold(this.value)" />
       </div>
     </div>
 
