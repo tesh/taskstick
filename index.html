@@ -678,6 +678,23 @@ body {
   font-size: 0.82rem;
 }
 .apple-sync-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+
+/* A number field sitting inline inside a settings-row-desc sentence, so a
+   setting that configures a toggle above/beside it reads as one connected
+   idea rather than two separate unrelated rows. */
+.inline-num-input {
+  width: 46px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  border: 1px solid var(--input-border, var(--card-border));
+  background: var(--input-bg, var(--card-bg));
+  color: var(--text-primary);
+  font-family: var(--ui-font);
+  font-size: 0.85rem;
+  text-align: center;
+  vertical-align: baseline;
+  margin: 0 2px;
+}
 .apple-sync-token-row {
   display: flex;
   gap: 8px;
@@ -1232,14 +1249,11 @@ body.theme-modern .list-title {
 /* Number shown via data-num attribute */
 .task-check-circle::before { content: attr(data-num); }
 
-/* Task age indicator — color set inline per-task (see renderAgeDot()),
-   green (just added) through amber to red (at/past the user's threshold). */
-.task-age-dot {
-  width: 9px; height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
-}
+/* Task age indicator — recolors the check circle's own ring instead of a
+   separate dot. --age-color set inline per-task (see ageIndicatorAttrs()),
+   green (just added) through amber to red (at/past the user's threshold).
+   Higher-specificity hover rule below still wins on hover. */
+.task-check-circle.has-age { border-color: var(--age-color); }
 
 /* Hover */
 .task-check-wrap:hover .task-check-circle { border-color: var(--accent); }
@@ -4135,14 +4149,16 @@ function ageIndicatorColor(days, thresholdDays) {
   return `rgb(${mix(0)},${mix(1)},${mix(2)})`;
 }
 
-function renderAgeDot(task, done) {
-  if (!state.settings.showTaskAge || done) return '';
+// Attributes spliced into the task-check-circle span itself, so age shows
+// as that circle's own ring color rather than a separate dot alongside it.
+function ageIndicatorAttrs(task, done) {
+  if (!state.settings.showTaskAge || done) return { cls: '', style: '', title: '' };
   const days = taskAgeDays(state.taskCreatedDates[task.id]);
-  if (days === null) return '';
+  if (days === null) return { cls: '', style: '', title: '' };
   const threshold = state.settings.taskAgeThresholdDays || 14;
   const color = ageIndicatorColor(days, threshold);
-  const label = days === 0 ? 'Added today' : `Added ${days} day${days === 1 ? '' : 's'} ago`;
-  return `<span class="task-age-dot" style="background:${color}" title="${escHtml(label)}"></span>`;
+  const title = days === 0 ? 'Added today' : `Added ${days} day${days === 1 ? '' : 's'} ago`;
+  return { cls: ' has-age', style: `--age-color:${color}`, title };
 }
 
 function renderTaskItem(task, index, listId, opts = {}) {
@@ -4169,6 +4185,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
   }
   // Number shown inside the circle: subtasks → dot, completed → empty (CSS shows ✓), active root → number
   const dataNum  = isChild ? '·' : (done ? '' : (index || ''));
+  const age      = ageIndicatorAttrs(task, done);
 
   const duePart = dueFmt
     ? `<span class="task-due${overdue ? ' overdue' : ''}"
@@ -4215,9 +4232,10 @@ function renderTaskItem(task, index, listId, opts = {}) {
         <label class="task-check-wrap" title="Complete task">
           <input type="checkbox" class="task-check" ${checked}
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
-          <span class="task-check-circle" data-num="${escHtml(String(dataNum))}"></span>
+          <span class="task-check-circle${age.cls}" style="${age.style}"
+                data-num="${escHtml(String(dataNum))}"
+                ${age.title ? `title="${escHtml(age.title)}"` : ''}></span>
         </label>
-        ${renderAgeDot(task, done)}
         <span class="task-text"
               ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
               title="Double-click to edit">${escHtml(task.title)}</span>
@@ -5169,6 +5187,7 @@ function renderPriorityTaskItem(task, list, opts = {}) {
     const parentTask = list.tasks.find(t => t.id === task.parent);
     if (parentTask) originListId = getOriginListId(parentTask.notes);
   }
+  const age = ageIndicatorAttrs(task, done);
 
   const duePart = dueFmt
     ? `<span class="task-due${overdue ? ' overdue' : ''}"
@@ -5201,9 +5220,10 @@ function renderPriorityTaskItem(task, list, opts = {}) {
         <label class="task-check-wrap" title="Complete task">
           <input type="checkbox" class="task-check" ${checked}
                  onchange="toggleComplete(this,'${escHtml(listId)}','${escHtml(task.id)}')" />
-          <span class="task-check-circle" data-num="${isSubtaskRow ? '·' : '★'}"></span>
+          <span class="task-check-circle${age.cls}" style="${age.style}"
+                data-num="${isSubtaskRow ? '·' : '★'}"
+                ${age.title ? `title="${escHtml(age.title)}"` : ''}></span>
         </label>
-        ${renderAgeDot(task, done)}
         <div class="priority-task-body">
           <span class="task-text"
                 ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
@@ -5800,22 +5820,18 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div class="settings-row">
         <div>
           <div class="settings-row-label">Task age indicator</div>
-          <div class="settings-row-desc">A small dot next to each task, green when it's new fading to red the longer it's sat there</div>
+          <div class="settings-row-desc">
+            Colors each task's circle from green (new) to red once it's been sitting
+            <input type="number" id="pref-task-age-threshold" class="inline-num-input"
+                   min="1" max="365" step="1"
+                   onchange="setTaskAgeThreshold(this.value)" /> days
+          </div>
         </div>
         <label class="toggle-switch" title="Task age indicator">
           <input type="checkbox" id="pref-show-task-age"
                  onchange="setShowTaskAge(this.checked)" />
           <span class="toggle-track"></span>
         </label>
-      </div>
-      <div class="settings-row">
-        <div>
-          <div class="settings-row-label">Days until a task counts as "aged"</div>
-          <div class="settings-row-desc">A task turns fully red once it's been sitting this many days</div>
-        </div>
-        <input type="number" id="pref-task-age-threshold" class="apple-sync-input"
-               style="width:70px;text-align:center" min="1" max="365" step="1"
-               onchange="setTaskAgeThreshold(this.value)" />
       </div>
     </div>
 
