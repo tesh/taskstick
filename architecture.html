@@ -1,0 +1,327 @@
+<meta charset="UTF-8">
+<title>TaskStick Architectural Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --cream:      #f5f0e8;
+    --paper:      #fdfbf5;
+    --navy:       #15132a;
+    --navy-soft:  #4b4868;
+    --olive:      #cdbf87;
+    --olive-line: #a89a5d;
+    --yellow:     #f4c430;
+    --yellow-deep:#d9a520;
+    --coral:      #c0392b;
+    --ink:        #2c2416;
+    --ink-soft:   #6b6250;
+    --ink-mute:   #948a72;
+    --shadow:     rgba(30, 24, 8, 0.10);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --cream:      #17152a;
+      --paper:      #201d38;
+      --navy:       #f3efe1;
+      --navy-soft:  #b9b4d6;
+      --olive:      #746a45;
+      --olive-line: #8f8459;
+      --yellow:     #f4c430;
+      --yellow-deep:#e0b400;
+      --coral:      #e0684a;
+      --ink:        #ece7d6;
+      --ink-soft:   #b6ae95;
+      --ink-mute:   #837c66;
+      --shadow:     rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --cream:      #17152a;
+    --paper:      #201d38;
+    --navy:       #f3efe1;
+    --navy-soft:  #b9b4d6;
+    --olive:      #746a45;
+    --olive-line: #8f8459;
+    --yellow:     #f4c430;
+    --yellow-deep:#e0b400;
+    --coral:      #e0684a;
+    --ink:        #ece7d6;
+    --ink-soft:   #b6ae95;
+    --ink-mute:   #837c66;
+    --shadow:     rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 2.6rem 1.5rem 3rem;
+  }
+
+  .wrap { max-width: 1260px; margin: 0 auto; }
+
+  header {
+    text-align: center;
+    margin-bottom: 1.6rem;
+  }
+  .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--coral);
+    margin: 0 0 0.7rem;
+  }
+  h1 {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    font-size: clamp(2.4rem, 5vw, 3.2rem);
+    line-height: 1.05;
+    margin: 0 0 0.6rem;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  header p {
+    max-width: 620px;
+    margin: 0 auto;
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    text-wrap: balance;
+  }
+
+  figure {
+    margin: 2.2rem 0 0;
+  }
+  .diagram-frame {
+    background: var(--paper);
+    border: 1px solid var(--olive-line);
+    border-radius: 16px;
+    box-shadow: 0 18px 40px var(--shadow);
+    padding: 1.4rem 1.6rem 1rem;
+  }
+  svg { display: block; width: 100%; height: auto; }
+
+  figcaption {
+    max-width: 680px;
+    margin: 1.3rem auto 0;
+    text-align: center;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  figcaption strong { color: var(--ink); }
+
+  .node-box   { fill: var(--paper); stroke: var(--olive-line); stroke-width: 2; }
+  .node-box.hub    { fill: var(--yellow); fill-opacity: 0.16; stroke: var(--yellow-deep); stroke-width: 2.5; }
+  .node-box.truth  { stroke: var(--coral); stroke-width: 2.5; }
+  .drawer-box { fill: var(--cream); stroke: var(--olive-line); stroke-width: 1.5; }
+
+  .node-title    { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 17px; fill: var(--ink); }
+  .node-sub      { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 12.5px; fill: var(--ink-soft); }
+  .drawer-title  { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13.5px; fill: var(--ink); }
+  .drawer-sub    { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 11px; fill: var(--ink-soft); }
+  .arrow-label   { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 11.5px; fill: var(--ink-soft); }
+  .protocol-label{ font-family: 'Inter', sans-serif; font-weight: 400; font-style: italic; font-size: 10px; fill: var(--ink-mute); }
+  .badge-text    { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 10px; fill: var(--paper); letter-spacing: 0.04em; }
+  .lang-badge-box { fill: var(--cream); stroke: var(--olive-line); stroke-width: 1.2; }
+  .lang-badge-text{ font-family: 'Inter', sans-serif; font-weight: 600; font-size: 10.5px; fill: var(--ink-soft); }
+
+  .stroke-line   { stroke: var(--navy-soft); stroke-width: 2; fill: none; }
+  .stroke-line.truth-line { stroke: var(--coral); stroke-width: 2.5; }
+  .label-bg      { fill: var(--paper); }
+  .icon-stroke   { stroke: var(--ink); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-fill-ink { fill: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">TaskStick &middot; how it fits together</p>
+    <h1>Five places, one real copy of your tasks</h1>
+    <p>Every piece of TaskStick, what it's built with, how it talks to the rest, and exactly what it keeps on hand.</p>
+  </header>
+
+  <figure>
+    <div class="diagram-frame">
+      <svg viewBox="0 0 1400 840" role="img" aria-label="Architecture diagram: your browser (vanilla JavaScript) and AI assistants talk to the TaskStick web server (PHP) over HTTPS, which is the hub. The web server reads and writes the real tasks and lists on Google Tasks over HTTPS with OAuth 2.0, keeps feedback and Apple Reminders link-ups in a small MySQL database, and keeps preferences and sign-in keys in small settings files. A helper app (Swift, using EventKit) on your Mac checks in with the web server over HTTPS every 10 minutes, creates matching reminders in Apple Reminders, and reads completion status back. Google Tasks is the only place the real tasks live.">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--navy-soft)" />
+          </marker>
+          <marker id="arrowTruth" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--coral)" />
+          </marker>
+        </defs>
+
+        <!-- ============ CONNECTORS (drawn first, under nodes) ============ -->
+
+        <!-- Browser <-> Server -->
+        <line x1="370" y1="405" x2="490" y2="405" class="stroke-line" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+        <rect x="380" y="388" width="100" height="34" class="label-bg" />
+        <text x="430" y="401" text-anchor="middle" class="arrow-label">app &amp; settings</text>
+        <text x="430" y="415" text-anchor="middle" class="protocol-label">HTTPS</text>
+
+        <!-- Server <-> Google Tasks (the truth line) -->
+        <line x1="650" y1="330" x2="650" y2="220" class="stroke-line truth-line" marker-start="url(#arrowTruth)" marker-end="url(#arrowTruth)" />
+        <rect x="660" y="258" width="175" height="34" class="label-bg" />
+        <text x="666" y="271" class="arrow-label" fill="var(--coral)">reads &amp; writes every task</text>
+        <text x="666" y="285" class="protocol-label">HTTPS + OAuth 2.0</text>
+
+        <!-- Server <-> Mac helper (diagonal, now two-way) -->
+        <line x1="810" y1="380" x2="980" y2="305" class="stroke-line" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+        <rect x="825" y="322" width="145" height="34" class="label-bg" />
+        <text x="831" y="335" class="arrow-label">checks in every 10 min</text>
+        <text x="831" y="349" class="protocol-label">HTTPS (polls)</text>
+
+        <!-- Mac helper <-> Apple Reminders (now two-way: creates reminders down, completions back up) -->
+        <line x1="1130" y1="380" x2="1130" y2="470" class="stroke-line" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+        <rect x="1145" y="403" width="230" height="49" class="label-bg" />
+        <text x="1151" y="416" class="arrow-label">creates &amp; updates reminders</text>
+        <text x="1151" y="430" class="arrow-label">reads completions back</text>
+        <text x="1151" y="444" class="protocol-label">EventKit (on-device)</text>
+
+        <!-- Server <-> AI assistants -->
+        <line x1="650" y1="480" x2="650" y2="650" class="stroke-line" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+        <rect x="660" y="612" width="150" height="34" class="label-bg" />
+        <text x="666" y="625" class="arrow-label">reads/writes with a key</text>
+        <text x="666" y="639" class="protocol-label">HTTPS + MCP</text>
+
+        <!-- Server <-> MySQL stub -->
+        <line x1="565" y1="480" x2="565" y2="510" class="stroke-line" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+        <!-- Server <-> Settings files stub -->
+        <line x1="735" y1="480" x2="735" y2="510" class="stroke-line" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+
+        <!-- ============ GOOGLE TASKS (the real copy) ============ -->
+        <g>
+          <rect x="480" y="50" width="340" height="170" rx="14" class="node-box truth" />
+          <rect x="580" y="62" width="140" height="19" rx="9.5" fill="var(--coral)" />
+          <text x="650" y="75.5" text-anchor="middle" class="badge-text">SOURCE OF TRUTH</text>
+          <!-- cloud icon -->
+          <g transform="translate(504,108)">
+            <circle cx="16" cy="10" r="15" class="icon-stroke" />
+            <circle cx="34" cy="6" r="11" class="icon-stroke" />
+            <path d="M2,20 a14,14 0 0 0 14,14 h26 a12,12 0 0 0 0,-24 h-2" class="icon-stroke" />
+            <path d="M12,25 l5,6 l10,-13" class="icon-stroke" stroke="var(--coral)" />
+          </g>
+          <text x="580" y="125" class="node-title">Google Tasks</text>
+          <text x="580" y="149" class="node-sub">Your tasks, lists &amp; due dates —</text>
+          <text x="580" y="166" class="node-sub">the one and only real copy.</text>
+          <text x="580" y="196" class="protocol-label">Google's own servers · REST API</text>
+        </g>
+
+        <!-- ============ THE WEB SERVER (hub) ============ -->
+        <g>
+          <rect x="490" y="330" width="320" height="150" rx="14" class="node-box hub" />
+          <!-- sticky-note app mark -->
+          <g transform="translate(514,350) rotate(-6)">
+            <rect x="0" y="0" width="26" height="26" rx="5" fill="var(--yellow)" stroke="var(--yellow-deep)" stroke-width="1.5" />
+            <line x1="6" y1="10" x2="20" y2="10" stroke="var(--navy)" stroke-width="2.2" stroke-linecap="round" />
+            <line x1="6" y1="16" x2="16" y2="16" stroke="var(--navy)" stroke-width="2.2" stroke-linecap="round" />
+          </g>
+          <text x="552" y="370" class="node-title">The Web Server</text>
+          <rect x="514" y="382" width="46" height="18" rx="9" class="lang-badge-box" />
+          <text x="537" y="395" text-anchor="middle" class="lang-badge-text">PHP</text>
+          <text x="524" y="418" class="node-sub">tasks.tesh.ai — hosts the app itself</text>
+          <text x="524" y="434" class="node-sub">and is the only thing every other</text>
+          <text x="524" y="450" class="node-sub">piece on this page talks to.</text>
+        </g>
+
+        <!-- MySQL drawer -->
+        <g>
+          <rect x="490" y="510" width="150" height="100" rx="10" class="drawer-box" />
+          <g transform="translate(514,528)">
+            <path d="M0,4 a15,4 0 0 1 30,0 v18 a15,4 0 0 1 -30,0 z" class="icon-stroke" />
+            <path d="M0,4 a15,4 0 0 0 30,0" class="icon-stroke" />
+          </g>
+          <text x="556" y="546" class="drawer-title">MySQL</text>
+          <text x="514" y="574" class="drawer-sub">Feedback you send +</text>
+          <text x="514" y="588" class="drawer-sub">Reminders link-ups</text>
+        </g>
+
+        <!-- Settings files drawer -->
+        <g>
+          <rect x="660" y="510" width="150" height="100" rx="10" class="drawer-box" />
+          <g transform="translate(684,528)">
+            <path d="M0,-8 h16 l6,6 v18 h-22 z" class="icon-stroke" />
+            <path d="M16,-8 v6 h6" class="icon-stroke" />
+          </g>
+          <text x="724" y="546" class="drawer-title">Settings files</text>
+          <text x="684" y="574" class="drawer-sub">Your preferences +</text>
+          <text x="684" y="588" class="drawer-sub">sign-in keys</text>
+        </g>
+
+        <!-- ============ BROWSER ============ -->
+        <g>
+          <rect x="80" y="330" width="290" height="150" rx="14" class="node-box" />
+          <g transform="translate(104,350)">
+            <rect x="0" y="0" width="40" height="30" rx="4" class="icon-stroke" />
+            <line x1="0" y1="8" x2="40" y2="8" class="icon-stroke" />
+            <circle cx="6" cy="4" r="1.4" class="icon-fill-ink" stroke="none" />
+            <circle cx="11" cy="4" r="1.4" class="icon-fill-ink" stroke="none" />
+          </g>
+          <text x="156" y="370" class="node-title">Your Browser</text>
+          <rect x="104" y="382" width="130" height="18" rx="9" class="lang-badge-box" />
+          <text x="169" y="395" text-anchor="middle" class="lang-badge-text">Vanilla JavaScript</text>
+          <text x="104" y="418" class="node-sub">Where you actually use TaskStick.</text>
+          <text x="104" y="434" class="node-sub">Keeps a small cached copy of your</text>
+          <text x="104" y="450" class="node-sub">preferences only — no tasks live here.</text>
+        </g>
+
+        <!-- ============ AI ASSISTANTS ============ -->
+        <g>
+          <rect x="490" y="650" width="320" height="140" rx="14" class="node-box" />
+          <g transform="translate(514,668)">
+            <path d="M0,4 a4,4 0 0 1 4,-4 h28 a4,4 0 0 1 4,4 v18 a4,4 0 0 1 -4,4 h-20 l-8,7 v-7 h-4 a4,4 0 0 1 -4,-4 z" class="icon-stroke" />
+            <path d="M17,10 l1.3,3 3,1.3 -3,1.3 -1.3,3 -1.3,-3 -3,-1.3 3,-1.3 z" class="icon-stroke" stroke="var(--yellow-deep)" />
+          </g>
+          <text x="556" y="688" class="node-title">AI Assistants</text>
+          <text x="514" y="716" class="node-sub">Claude, ChatGPT &amp; others — read</text>
+          <text x="514" y="732" class="node-sub">and add tasks using your own</text>
+          <text x="514" y="748" class="node-sub">personal access key. No extra copy.</text>
+          <text x="514" y="774" class="protocol-label">HTTPS + MCP (JSON-RPC)</text>
+        </g>
+
+        <!-- ============ MAC HELPER APP ============ -->
+        <g>
+          <rect x="980" y="230" width="300" height="150" rx="14" class="node-box" />
+          <g transform="translate(1004,248)">
+            <rect x="0" y="0" width="26" height="26" rx="6" class="icon-stroke" />
+            <circle cx="20" cy="6" r="3" fill="var(--yellow)" stroke="var(--yellow-deep)" stroke-width="1" />
+            <line x1="6" y1="13" x2="18" y2="13" class="icon-stroke" />
+            <line x1="6" y1="19" x2="14" y2="19" class="icon-stroke" />
+          </g>
+          <text x="1042" y="268" class="node-title">Mac Helper App</text>
+          <rect x="1004" y="280" width="128" height="18" rx="9" class="lang-badge-box" />
+          <text x="1068" y="293" text-anchor="middle" class="lang-badge-text">Swift + EventKit</text>
+          <text x="1004" y="316" class="node-sub">A tiny menu-bar app on your Mac.</text>
+          <text x="1004" y="332" class="node-sub">Holds no tasks of its own — just</text>
+          <text x="1004" y="348" class="node-sub">relays them to and from Reminders.</text>
+        </g>
+
+        <!-- ============ APPLE REMINDERS ============ -->
+        <g>
+          <rect x="980" y="470" width="300" height="140" rx="14" class="node-box" />
+          <g transform="translate(1004,488)">
+            <rect x="0" y="0" width="26" height="26" rx="6" class="icon-stroke" />
+            <path d="M5,13 l4,4 l9,-10" class="icon-stroke" stroke="var(--coral)" />
+            <line x1="5" y1="21" x2="18" y2="21" class="icon-stroke" />
+          </g>
+          <text x="1042" y="508" class="node-title">Apple Reminders</text>
+          <text x="1004" y="532" class="node-sub">A synced copy, for your Mac</text>
+          <text x="1004" y="548" class="node-sub">&amp; iPhone. Google Tasks stays</text>
+          <text x="1004" y="564" class="node-sub">the one that's actually in charge.</text>
+          <text x="1004" y="590" class="protocol-label">Apple's iCloud sync</text>
+        </g>
+
+      </svg>
+    </div>
+    <figcaption><strong>Google Tasks is the only place your real tasks and lists live.</strong> Everything else — the server's database, its settings files, the Mac helper, Apple Reminders, even your browser — keeps just enough of a supporting copy to do its one job, and every connection here flows both ways: nothing is a dead-end.</figcaption>
+  </figure>
+</div>
