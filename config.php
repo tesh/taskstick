@@ -10,7 +10,9 @@ unset($__localConfig);
 // Google OAuth Configuration
 if (!defined('GOOGLE_CLIENT_ID'))     define('GOOGLE_CLIENT_ID',     getenv('GOOGLE_CLIENT_ID')     ?: '');
 if (!defined('GOOGLE_CLIENT_SECRET')) define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
-define('GOOGLE_REDIRECT_URI',  'https://tasks.tesh.ai/auth/callback.php');
+// Must exactly match an Authorized redirect URI on your OAuth client.
+// Override in config.local.php or via the GOOGLE_REDIRECT_URI env var.
+if (!defined('GOOGLE_REDIRECT_URI')) define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI') ?: 'https://tasks.tesh.ai/auth/callback.php');
 
 // Google API endpoints
 define('GOOGLE_AUTH_URL',      'https://accounts.google.com/o/oauth2/v2/auth');
@@ -195,8 +197,14 @@ function isAuthenticated(): bool {
     return !empty($_SESSION['access_token']);
 }
 
-// Emails seeded as admin the first time they ever log in.
-define('ADMIN_SEED_EMAILS', ['hitesh.patel44@gmail.com']);
+// Emails seeded as admin the first time they ever log in. Set real
+// addresses in config.local.php or the ADMIN_SEED_EMAILS env var
+// (comma-separated) — see config.local.php.example.
+if (!defined('ADMIN_SEED_EMAILS')) {
+    $__adminSeedEnv = getenv('ADMIN_SEED_EMAILS');
+    define('ADMIN_SEED_EMAILS', $__adminSeedEnv ? array_map('trim', explode(',', $__adminSeedEnv)) : []);
+    unset($__adminSeedEnv);
+}
 
 const USERS_FILE = __DIR__ . '/data/users.json';
 

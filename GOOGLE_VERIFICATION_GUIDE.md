@@ -1,6 +1,6 @@
 > **Resolved, 2026-08-22:** Google approved verification. The
-> **`pps-taskstick`** Cloud project's OAuth consent screen (client id
-> `234459834738-lhfjqfgegukvv7q9usluvgr0hr9rhql9...`) is now in
+> **`your-project-id`** Cloud project's OAuth consent screen (client id
+> `<YOUR_CLIENT_ID>.apps.googleusercontent.com`) is now in
 > **Production** — the `tasks` scope is verified and the Testing-mode
 > 7-day refresh-token cap no longer applies. Nothing left to do from this
 > guide; kept below for reference if verification ever needs redoing
@@ -9,10 +9,9 @@
 > **Update, 2026-08-20 (superseded by the above):** This guide originally
 > walked through creating a *brand-new* Cloud project from scratch. That
 > project was abandoned — the OAuth client actually live in `config.php`
-> belongs to the `pps-taskstick` Cloud project instead (see
-> `memory/decisions.md` 2026-08-12). Part A (create project) and Part C
-> (wire new credentials) were skipped entirely; verification was
-> completed starting from Part A3 through Part D.
+> belongs to the `your-project-id` Cloud project instead. Part A (create
+> project) and Part C (wire new credentials) were skipped entirely;
+> verification was completed starting from Part A3 through Part D.
 
 # TaskStick — Google Cloud Setup & OAuth Verification Guide
 
@@ -59,13 +58,13 @@ Left menu → **APIs & Services → OAuth consent screen**
 | Field | Value |
 |---|---|
 | App name | `TaskStick` |
-| User support email | `hitesh.patel44@gmail.com` |
+| User support email | `you@example.com` |
 | App logo | Upload `/icons/icon-512.png` (must be 120×120 min, square, PNG/JPG, ≤1 MB — resize if needed) |
 | App domain — Application home page | `https://tasks.tesh.ai/` |
 | App domain — Application privacy policy link | `https://tasks.tesh.ai/privacy.html` |
 | App domain — Application terms of service link | `https://tasks.tesh.ai/terms.html` |
 | Authorized domains | `tesh.ai` *(only the apex — Google auto-allows subdomains. You MUST verify this in Part B before saving works cleanly.)* |
-| Developer contact information | `hitesh.patel44@gmail.com` |
+| Developer contact information | `you@example.com` |
 
 Click **Save and Continue**.
 
@@ -84,7 +83,7 @@ The first three appear under "Non-sensitive scopes" (no verification needed). Th
 Click **Update**, then **Save and Continue**.
 
 **Screen 4 — Test users:**
-Add at least your own email (`hitesh.patel44@gmail.com`) plus 1–2 others you can sign in as during the demo video.
+Add at least your own email (`you@example.com`) plus 1–2 others you can sign in as during the demo video.
 
 Click **Save and Continue**, then **Back to Dashboard**.
 
@@ -112,7 +111,7 @@ This is the fix for *"the website you provided as your homepage is not registere
 ### B1. Add the property in Google Search Console
 
 1. Go to https://search.google.com/search-console
-2. Sign in as `hitesh.patel44@gmail.com` (must be the same account you're using in Cloud Console)
+2. Sign in as `you@example.com` (must be the same account you're using in Cloud Console)
 3. **Add property → Domain** (left option, not URL prefix)
 4. Enter `tesh.ai`
 5. Search Console will show a **TXT record** like:
@@ -148,7 +147,7 @@ This is the fix for *"the website you provided as your homepage is not registere
 
 ## Part C — Wire the new client into your app
 
-Two files reference the OAuth credentials. You're replacing the existing client (from the old `contacts-app-489614` project) with the new TaskStick client.
+Two files reference the OAuth credentials. You're replacing the existing client (from an older, unrelated project) with the new TaskStick client.
 
 ### C1. `config.php` (root)
 
@@ -291,7 +290,7 @@ Narrate each one. Keep clicks deliberate and slow.
 
 ## Part F — Reply email template (for the existing project, if useful)
 
-You asked specifically about the *new* project, but if you also want to formally close out the old `contacts-app-489614` verification thread, here's a reply you can adapt — paste this into a reply to the Google review email **only if you intend to keep the old project**. If you're abandoning it in favour of the new TaskStick project, reply with the cancellation line at the bottom instead.
+You asked specifically about the *new* project, but if you also want to formally close out an older, unrelated project's verification thread, here's a reply you can adapt — paste this into a reply to the Google review email **only if you intend to keep the old project**. If you're abandoning it in favour of the new TaskStick project, reply with the cancellation line at the bottom instead.
 
 ```
 Hello Google verification team,
@@ -336,8 +335,8 @@ tasks.googleapis.com on behalf of the signed-in user.
 Please let me know if anything else is needed.
 
 Thanks,
-Tesh
-hitesh.patel44@gmail.com
+Your Name
+you@example.com
 ```
 
 **Or, to cancel the old verification** (recommended since you're starting fresh):
@@ -345,12 +344,12 @@ hitesh.patel44@gmail.com
 ```
 Hello Google verification team,
 
-I am no longer pursuing verification for project 958045188078
-(contacts-app-489614) and am submitting a fresh project for TaskStick
+I am no longer pursuing verification for project <OLD_PROJECT_NUMBER>
+(an older, unrelated project) and am submitting a fresh project for TaskStick
 instead. Please cancel this verification request.
 
 Thanks,
-Tesh
+Your Name
 ```
 
 ---
@@ -361,7 +360,7 @@ Tesh
 |---|---|
 | Project name | TaskStick |
 | App name | TaskStick |
-| Publisher / support email | hitesh.patel44@gmail.com |
+| Publisher / support email | you@example.com |
 | Homepage | https://tasks.tesh.ai/ |
 | Privacy policy | https://tasks.tesh.ai/privacy.html |
 | Terms of service | https://tasks.tesh.ai/terms.html |

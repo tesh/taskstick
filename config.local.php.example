@@ -7,13 +7,19 @@
  * Get these from:
  *   - GOOGLE_CLIENT_ID / SECRET: Google Cloud Console → APIs & Services →
  *     Credentials, for the OAuth 2.0 Client used by this app.
- *   - DB_*: IONOS control panel → Hosting → Databases → your database.
+ *   - DB_*: your MySQL host's control panel (e.g. IONOS → Hosting →
+ *     Databases, or any other MySQL provider).
  *   - ENCRYPTION_KEY: any long random string, e.g. `openssl rand -base64 48`.
  *     Used to encrypt secrets stored at rest (Apple app-specific passwords).
+ *   - ADMIN_SEED_EMAILS: the Google account email(s) that should be
+ *     auto-promoted to admin the first time they log in.
  */
 
 define('GOOGLE_CLIENT_ID',     'YOUR_ID.apps.googleusercontent.com');
 define('GOOGLE_CLIENT_SECRET', 'YOUR_CLIENT_SECRET');
+
+// Must exactly match an Authorized redirect URI on your OAuth client.
+define('GOOGLE_REDIRECT_URI', 'https://yourdomain.example/auth/callback.php');
 
 define('DB_HOST', 'YOUR_DB_HOST');
 define('DB_NAME', 'YOUR_DB_NAME');
@@ -21,3 +27,5 @@ define('DB_USER', 'YOUR_DB_USER');
 define('DB_PASS', 'YOUR_DB_PASSWORD');
 
 define('ENCRYPTION_KEY', 'YOUR_RANDOM_ENCRYPTION_KEY');
+
+define('ADMIN_SEED_EMAILS', ['you@example.com']);

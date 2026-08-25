@@ -1,6 +1,15 @@
 # TaskStick
 
-A custom Google Tasks web app, running at [tasks.tesh.ai](https://tasks.tesh.ai). PHP + vanilla JS, no framework, no build step. Includes an MCP server so AI assistants (Claude, ChatGPT, etc.) can read and manage tasks directly.
+A custom Google Tasks web app — the live instance runs at
+[tasks.tesh.ai](https://tasks.tesh.ai), but this repo is a fully
+self-hostable template: point it at your own domain and Google Cloud
+project and it's yours. PHP + vanilla JS, no framework, no build step.
+Includes an MCP server so AI assistants (Claude, ChatGPT, etc.) can read
+and manage tasks directly.
+
+> **License:** free to download and run for yourself; not free to
+> redistribute modified, or to use commercially. See
+> [`LICENSE.md`](LICENSE.md).
 
 ## Features
 
@@ -32,20 +41,58 @@ A custom Google Tasks web app, running at [tasks.tesh.ai](https://tasks.tesh.ai)
 
 [`archive/`](archive/) holds features that were built, tested, and deliberately backed out but are worth keeping for reference — currently the shared-tasks (jointly-owned lists) feature, with its own README explaining why it was archived.
 
+## Prerequisites
+
+- A PHP 8+ host (shared hosting is fine — this is what the live instance
+  runs on; no framework or Composer dependencies are required for the
+  app itself).
+- A MySQL 5.7+/8+ database (only used for feedback storage and the
+  archived shared-tasks feature — the app works without it, see Storage
+  below).
+- A domain (or subdomain) you control, with HTTPS. Google's OAuth
+  consent screen requires a real, verifiable domain — `localhost` works
+  for local development only.
+- A Google Cloud project with OAuth 2.0 credentials for the Tasks API.
+
+## Setting up your own Google Cloud OAuth client
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/),
+   create a new project, and enable the **Google Tasks API**.
+2. Configure the OAuth consent screen (External user type) with your own
+   app name, support email, and — once you've picked a domain — your
+   homepage/privacy/terms URLs.
+3. Create an **OAuth 2.0 Client ID** (Web application) with:
+   - Authorized JavaScript origin: `https://yourdomain.example`
+   - Authorized redirect URI: `https://yourdomain.example/auth/callback.php`
+4. Copy the generated Client ID and Client Secret — you'll need them below.
+
+While your app is in Google's "Testing" publishing status, refresh
+tokens expire after 7 days and only the test users you list can sign
+in. Submitting for verification (to lift both restrictions) requires a
+demo video and scope justification — see
+[`GOOGLE_VERIFICATION_GUIDE.md`](GOOGLE_VERIFICATION_GUIDE.md) for a full
+walkthrough, written from the process of verifying the live
+tasks.tesh.ai instance.
+
 ## Local setup
 
 1. Copy `config.local.php.example` → `config.local.php` and fill in:
-   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — Google Cloud Console → APIs & Services → Credentials.
-   - `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` — IONOS control panel → Hosting → Databases.
+   - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from the OAuth client you created above.
+   - `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` — your MySQL host's credentials.
    - `ENCRYPTION_KEY` — any long random string (`openssl rand -base64 48`), used to encrypt Apple Reminders app-specific passwords at rest.
-2. `config.local.php` is loaded automatically by `config.php` if present, and is git-ignored — it never gets committed.
-3. Serve the directory with any PHP server, e.g. `php -S localhost:8000`.
+   - `ADMIN_SEED_EMAILS` — the Google account email(s) you want auto-promoted to admin on first login, e.g. `['you@example.com']`.
+2. Add `GOOGLE_REDIRECT_URI` to your `config.local.php` (or as an env var), matching your own domain's `/auth/callback.php` — it must exactly match the redirect URI on your OAuth client. It defaults to the live site's URL, so this step is required for your own instance to sign in correctly.
+3. `config.local.php` is loaded automatically by `config.php` if present, and is git-ignored — it never gets committed.
+4. Serve the directory with any PHP server, e.g. `php -S localhost:8000`. (Note: Google OAuth requires HTTPS for anything other than `localhost`, so a plain HTTP tunnel to a remote dev box won't work for testing the sign-in flow — use `localhost` or a real HTTPS domain.)
 
 ## Deploying to production
 
-Deploys are plain SFTP to IONOS shared hosting — there's no CI/CD.
+The included [`deploy.py`](deploy.py) is a plain SFTP uploader — it
+works against any host that offers SFTP (shared hosting, a VPS, etc.),
+not just IONOS. There's no CI/CD; it's a straightforward "push these
+files" script.
 
-1. Copy `deploy_local.py.example` → `deploy_local.py` and fill in the real SFTP host/username/password (IONOS control panel → Hosting → FTP & SFTP Access) and `REMOTE_ROOT`. This file is git-ignored.
+1. Copy `deploy_local.py.example` → `deploy_local.py` and fill in your real SFTP host/username/password and `REMOTE_ROOT` (the path on the server your webroot maps to). This file is git-ignored.
 2. `pip install paramiko` (only external dependency).
 3. Deploy specific files after a change:
    ```
@@ -56,17 +103,29 @@ Deploys are plain SFTP to IONOS shared hosting — there's no CI/CD.
    python3 deploy.py --all
    ```
    Add `--dry-run` to preview without uploading.
+4. Set `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `DB_*` / `ENCRYPTION_KEY` / `ADMIN_SEED_EMAILS` on the server itself — either via a `config.local.php` you place there manually (never deployed via `deploy.py`, since it's git-ignored) or as real environment variables, since `config.php` falls back to `getenv()` for every secret.
 
 After deploying, smoke-test: homepage loads (200), an unauthenticated API endpoint returns clean JSON rather than a raw PHP error, and — for anything touching `mcp/`, the OAuth flow, or `config.php` — the MCP endpoint responds correctly to a live `tools/list` / `tools/call`, since PHP fatal errors (e.g. duplicate function declarations across includes) won't show up in `php -l` and need an actual request simulation to catch.
 
-## Working with this repo in Claude Code
+## Customizing for your own instance
 
-- The repo is **private** — treat it accordingly.
-- Claude commits automatically after each logical change, but always asks before pushing to GitHub or deploying to the live site.
-- Never commit `config.local.php`, `deploy_local.py`, or anything under `data/` — see `.gitignore`.
-- See [`CHANGELOG.md`](CHANGELOG.md) for project history, and [`ISSUES.md`](ISSUES.md) for the running bug/enhancement tracker.
+Before deploying publicly under your own name, you'll likely want to:
+
+- Replace the placeholder contact details in [`privacy.html`](privacy.html) and [`terms.html`](terms.html) (`[Your Company or Name]`, `[Your City, State/Country]`, `you@example.com`, `yourdomain.example`) with your own.
+- Update the branding in [`index.html`](index.html) and [`manifest.json`](manifest.json) (currently "Purple Pill Solutions") if you don't want to keep the original attribution.
+- Swap the icons under [`icons/`](icons/) for your own artwork.
+
+## License, contributions, and this being a personal project
+
+This is a personal project shared for others to learn from and
+self-host, not an actively developed open-source project looking for
+contributions — issues and PRs may not get a response. See
+[`LICENSE.md`](LICENSE.md) for what you may and may not do with the
+code.
 
 ## Docs
 
+- [`CHANGELOG.md`](CHANGELOG.md) — project history.
+- [`ISSUES.md`](ISSUES.md) — the running bug/enhancement tracker kept during development.
 - [`GOOGLE_VERIFICATION_GUIDE.md`](GOOGLE_VERIFICATION_GUIDE.md) — notes on Google OAuth app verification.
 - [`help.html`](help.html) — in-app help content shown to end users.

@@ -10,7 +10,7 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 ## 2026-08-22
 
 - **Fixed:** Signed out of the iPhone PWA after periods of not using it — the session cookie had no explicit lifetime, so iOS killing a backgrounded PWA's process lost it, unlike a real desktop browser. Session now lasts a rolling 7 days: it renews every time you actually use the app, so only a full week of not opening TaskStick logs you out (BUG-016).
-- **Milestone:** Google approved the `pps-taskstick` OAuth verification — the consent screen is now in Production, removing Google's own 7-day refresh-token cap that Testing-mode apps carry. Combined with the fix above, this closes out the sign-in-persistence issue completely. *(Update 2026-08-24: it didn't — see below.)*
+- **Milestone:** Google approved the OAuth verification — the consent screen is now in Production, removing Google's own 7-day refresh-token cap that Testing-mode apps carry. Combined with the fix above, this closes out the sign-in-persistence issue completely. *(Update 2026-08-24: it didn't — see below.)*
 
 ## 2026-08-24
 
@@ -78,7 +78,7 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 ## 2026-08-12
 
 - **Added:** Daily Ritual list — a recurring checklist that lives as a real Google Tasks list and resets every completed task back to incomplete at local midnight.
-- **Added:** Admin system — `hitesh.patel44@gmail.com` seeded as the first admin, with a Users view (promote/demote) and a Feedback view.
+- **Added:** Admin system — the site owner's email seeded as the first admin, with a Users view (promote/demote) and a Feedback view.
 - **Added:** In-app feedback submission (bug / feature / suggestion) from the profile dropdown, stored in MySQL and reviewable by admins.
 - **Rebranded:** Tasktical → TaskStick, including a new logo (stacked yellow Post-it notes with purple checkmarks) across the masthead, login screen, PWA icons, and legal pages.
 
