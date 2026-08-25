@@ -3,6 +3,10 @@
 config.local.php
 deploy_local.py
 
+# Internal-only docs — not part of the public repo.
+GOOGLE_VERIFICATION_GUIDE.md
+architecture.html
+
 # Live user data (per-user JSON files, tokens, admin registry). Lives only
 # on the server.
 data/*
