@@ -1054,7 +1054,10 @@ body.theme-notebook .list-card {
   background-color: var(--card-bg);
 }
 
-.list-card:hover { box-shadow: var(--card-shadow), 0 0 0 2px var(--accent)22; }
+/* color-mix, not `var(--accent)22` — var() substitutes a whole token, so that
+   produced `0 0 0 2px #6366f1 22`, an invalid value that dropped the entire
+   declaration and left this hover ring never rendering at all. */
+.list-card:hover { box-shadow: var(--card-shadow), 0 0 0 2px color-mix(in srgb, var(--accent) 13%, transparent); }
 
 /* Drag states */
 .list-card.sortable-chosen { opacity: 0.85; transform: rotate(1.5deg) scale(1.02); }
@@ -1145,7 +1148,7 @@ body.theme-modern .list-title {
 .task-item.subtask {
   margin-left: 22px;
   padding: 2px 0 2px 8px;
-  border-left: 2px solid var(--accent)55;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 33%, transparent); /* see .list-card:hover */
   border-bottom: none;
   opacity: 0.92;
 }
@@ -1185,23 +1188,7 @@ body.theme-modern .list-title {
 .subtask-toggle-btn.subtask-static { cursor: default; }
 .subtask-toggle-btn.subtask-static:hover { background: none; color: var(--text-muted); }
 
-/* ── Notes indicator — always visible on tasks that have notes, so you can
-   tell at a glance without hovering. Clicking it opens the notes editor. ── */
-.notes-indicator {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
-  font-size: 0.72rem;
-  flex-shrink: 0;
-  align-self: flex-start;
-  margin-top: 3px;
-  margin-left: 2px;
-  opacity: 0.8;
-  transition: opacity 0.15s, transform 0.15s;
-}
-.notes-indicator:hover { opacity: 1; transform: scale(1.15); }
+
 .subtask-chevron { font-size: 0.68rem; }
 .subtask-count {
   font-family: var(--ui-font);
@@ -2155,18 +2142,14 @@ body.theme-modern .priority-card .task-item {
 
 /* ============================================================
    SNOOZE BUTTON + SNOOZED ROWS
-   (.partial-btn is the legacy ◑ "return to original list" button, only
-   shown on tasks still sitting in an old Follow-up list)
    ============================================================ */
-.partial-btn, .snooze-btn {
+.snooze-btn {
   opacity: 0; background: none; border: none; cursor: pointer;
   color: var(--text-muted); font-size: 0.88rem; padding: 0 1px;
   line-height: 1; flex-shrink: 0; margin-top: 3px;
   transition: opacity 0.15s, color 0.15s;
 }
-.task-item:hover .partial-btn,
 .task-item:hover .snooze-btn   { opacity: 0.6; }
-.partial-btn:hover             { opacity: 1 !important; color: #f59e0b; }
 .snooze-btn:hover              { opacity: 1 !important; }
 
 /* Snoozed = set aside for later. The whole row (and its subtasks) greys out
@@ -2176,29 +2159,54 @@ body.theme-modern .priority-card .task-item {
 .task-item.snoozed .task-text { color: var(--text-muted); }
 .task-item.snoozed .task-check-circle { font-style: italic; }
 
-/* "💤 Snoozed · N" divider between the active and snoozed groups in a list —
-   click to collapse/expand the snoozed section. It's a plain <li>, not a
-   .task-item, so numbering / drag / hover-actions logic all skip it. */
+/* Screen-reader-only text: present in the accessibility tree, not on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* "💤 N" divider between the active and snoozed groups in a list — click to
+   collapse/expand the snoozed section. It's a plain <li>, not a .task-item,
+   so numbering / drag / hover-actions logic all skip it. */
 .snooze-divider {
+  position: relative;
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 5px 4px 3px 2px;
-  border-top: 1px dashed var(--rule-color);
-  font-size: 0.68rem;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 8px 4px 4px 2px;
+  font-size: 0.74rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: var(--text-muted);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   transition: color 0.15s;
 }
-.snooze-divider:hover { color: var(--accent); }
-.snooze-divider .snooze-divider-count { opacity: 0.8; }
+/* The rule itself. Drawn from currentColor rather than --rule-color, which is
+   deliberately transparent in the Notebook theme — this line has to be visible
+   in every theme, since it's what separates active tasks from snoozed ones. */
+.snooze-divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.5;
+}
+.snooze-divider:hover,
+.snooze-divider:focus-visible { color: var(--accent); }
+.snooze-divider:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.snooze-divider .snooze-divider-icon  { font-size: 0.9rem; line-height: 1; }
+.snooze-divider .snooze-divider-count { opacity: 0.85; }
 .snooze-divider .snooze-chevron { margin-left: auto; font-size: 0.8rem; line-height: 1; }
 
 /* ============================================================
@@ -2249,7 +2257,6 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 .task-actions-row .star-btn,
 .task-actions-row .task-delete-btn,
 .task-actions-row .notes-btn,
-.task-actions-row .partial-btn,
 .task-actions-row .snooze-btn,
 .task-actions-row .due-add-btn,
 .task-actions-row .indent-btn,
@@ -2262,15 +2269,43 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 .task-actions-row .star-btn:hover,
 .task-actions-row .task-delete-btn:hover,
 .task-actions-row .notes-btn:hover,
-.task-actions-row .partial-btn:hover,
 .task-actions-row .snooze-btn:hover,
 .task-actions-row .due-add-btn:hover,
 .task-actions-row .indent-btn:hover,
 .task-actions-row .outdent-btn:hover { opacity: 1 !important; }
 .task-actions-row .task-due { margin-top: 0; font-size: 0.65rem; }
 .task-item.starred .task-actions-row .star-btn   { opacity: 1; color: #f59e0b; }
-.task-item.has-notes .task-actions-row .notes-btn { opacity: 1; color: var(--accent); }
+/* A task with notes badges its 📝 rather than just brightening it: the glyph
+   renders in emoji presentation, which ignores `color` entirely, and on touch
+   every task shows the full row — so opacity alone was near-invisible. */
+.task-item.has-notes .task-actions-row .notes-btn {
+  opacity: 1;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 5px;
+}
 .task-item.snoozed .task-actions-row .snooze-btn   { opacity: 1; }
+
+/* A task that has notes keeps its 📝 on screen at rest, so you can tell at a
+   glance without hovering. The actions row is revealed for that task, but on
+   a pointer device only the notes button is shown until hover — otherwise
+   every annotated task would sit there displaying a full toolbar. */
+.task-item.has-notes .task-actions-row,
+#board.tetris-mode .task-item.has-notes .task-actions-row {
+  max-height: 30px;
+  opacity: 1;
+  padding-bottom: 4px;
+}
+/* "not (max-width:640px)" rather than "min-width:641px" — the latter leaves
+   640<w<641 (reachable at fractional zoom levels) matching neither block, which
+   would reveal the whole toolbar at rest. */
+@media not all and (max-width: 640px) {
+  .task-item.has-notes:not(:hover) .task-actions-row > *:not(.notes-btn) {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden; /* also takes them out of the tab order */
+  }
+}
 /* Always show on touch screens */
 @media (max-width: 640px) {
   .task-actions-row {
@@ -3720,7 +3755,7 @@ async function loadAll(showSpinner = true) {
         const r = await fetch(`/api/tasks.php?listId=${encodeURIComponent(list.id)}`);
         const d = await r.json();
         if (d.taskDates) Object.assign(state.taskCreatedDates, d.taskDates);
-        return { ...list, tasks: (d.items || []).filter(t => t.title) };
+        return { ...list, tasks: (d.items || []).filter(t => t.title).map(cleanIngestedTask) };
       } catch {
         return { ...list, tasks: [] };
       }
@@ -4167,7 +4202,7 @@ function createListCard(list, listIdx) {
     });
   });
 
-  // Snoozed-section divider (💤 Snoozed · N, click to collapse/expand). Sits
+  // Snoozed-section divider (💤 + count, click to collapse/expand). Sits
   // right before the first snoozed row — or, when the section is collapsed,
   // before the first completed root / at the very end. Only rendered when
   // the list actually has snoozed tasks, so most lists never show it.
@@ -4374,15 +4409,6 @@ function renderTaskItem(task, index, listId, opts = {}) {
   const overdue      = !done && isOverdue(dueStr);
   const checked      = done ? 'checked' : '';
   const starIcon     = starred ? '★' : '☆';
-  const currentList  = state.lists.find(l => l.id === listId);
-  const isFollowUp   = !!(currentList && currentList.title === 'Follow-up');
-  // A subtask moved to Follow-up doesn't carry its own origin marker — only
-  // the family's parent does — so fall back to the parent's when this is a child.
-  let originListId = getOriginListId(task.notes);
-  if (isChild && !originListId && currentList) {
-    const parentTask = currentList.tasks.find(t => t.id === task.parent);
-    if (parentTask) originListId = getOriginListId(parentTask.notes);
-  }
   // Number shown inside the circle: subtasks → dot, completed → empty (CSS shows ✓), active root → number
   // Snoozed roots show a "z" instead of a number — they're set aside, so they
   // don't take up a slot in the active-task numbering.
@@ -4413,8 +4439,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
        </button>`
     : '';
 
-  const notesIndicator = hasNotes ? renderNotesIndicator() : '';
-  const snoozeBtns     = renderSnoozeButtons(listId, task, { done, isSnoozed, isFollowUp, originListId });
+  const snoozeBtn = renderSnoozeButton(listId, task, { done, isSnoozed });
 
   const indentBtn = indentTarget
     ? `<button class="indent-btn"
@@ -4444,7 +4469,6 @@ function renderTaskItem(task, index, listId, opts = {}) {
         <span class="task-text"
               ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
               title="Double-click to edit">${escHtml(task.title)}</span>
-        ${notesIndicator}
         ${subtaskToggle}
       </div>
       <div class="task-actions-row">
@@ -4454,7 +4478,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
         <button class="notes-btn"
                 onclick="toggleNotes(this)"
                 title="${hasNotes ? 'View/edit notes' : 'Add notes'}">📝</button>
-        ${snoozeBtns}
+        ${snoozeBtn}
         <button class="star-btn"
                 onclick="toggleStar('${escHtml(task.id)}',this)"
                 title="${starred ? 'Unstar' : 'Star'}">${starIcon}</button>
@@ -5419,12 +5443,6 @@ function renderPriorityTaskItem(task, list, opts = {}) {
   const overdue      = !done && isOverdue(dueStr);
   const checked      = done ? 'checked' : '';
   const listId       = list.id;
-  const isFollowUp   = list.title === 'Follow-up';
-  let originListId   = getOriginListId(task.notes);
-  if (isSubtaskRow && !originListId) {
-    const parentTask = list.tasks.find(t => t.id === task.parent);
-    if (parentTask) originListId = getOriginListId(parentTask.notes);
-  }
   const age = ageIndicatorAttrs(task, done);
 
   const duePart = dueFmt
@@ -5440,8 +5458,7 @@ function renderPriorityTaskItem(task, list, opts = {}) {
     : '';
 
   // Snoozed families never reach the Priority card, so isSnoozed is always false here.
-  const partialBtn     = renderSnoozeButtons(listId, task, { done, isSnoozed: false, isFollowUp, originListId });
-  const notesIndicator = hasNotes ? renderNotesIndicator() : '';
+  const snoozeBtn = renderSnoozeButton(listId, task, { done, isSnoozed: false });
   // Subtasks are always shown in Priority, so this badge is informational only.
   const subtaskBadge = hasChildren
     ? `<span class="subtask-toggle-btn subtask-static" title="${childCount} subtask${childCount > 1 ? 's' : ''}">
@@ -5469,7 +5486,6 @@ function renderPriorityTaskItem(task, list, opts = {}) {
                 title="Double-click to edit">${escHtml(task.title)}</span>
           ${isSubtaskRow ? '' : `<span class="task-source-label">${escHtml(list.title)}</span>`}
         </div>
-        ${notesIndicator}
         ${subtaskBadge}
       </div>
       <div class="task-actions-row">
@@ -5477,7 +5493,7 @@ function renderPriorityTaskItem(task, list, opts = {}) {
         <button class="notes-btn"
                 onclick="toggleNotes(this)"
                 title="${hasNotes ? 'View/edit notes' : 'Add notes'}">📝</button>
-        ${partialBtn}
+        ${snoozeBtn}
         <button class="star-btn"
                 onclick="toggleStar('${escHtml(task.id)}',this)"
                 title="${starred ? 'Unstar' : 'Star'}">${starred ? '★' : '☆'}</button>
@@ -5869,45 +5885,43 @@ function renderNoteText(text) {
    SNOOZE — set a task aside for later without completing it.
    Snoozed tasks stay in their own list (greyed, listed after the
    active ones) and drop out of the Priority card. This replaced the
-   old "move to a Follow-up list" flow; moveBackFromFollowUp below is
-   kept only so tasks already sitting in a Follow-up list can still be
-   returned to where they came from.
+   old "move to a Follow-up list" flow, which is gone entirely.
    ============================================================ */
 
-// Shared markup for the always-visible 📝 next to a task title
-function renderNotesIndicator() {
-  return `<button class="notes-indicator" onclick="toggleNotes(this)"
-                  title="This task has notes — click to view or edit">📝</button>`;
-}
-
-// 💤 snooze toggle (every active task) + the legacy ◑ "return to original
-// list" button (only for tasks still in an old Follow-up list that carry an
-// origin marker). Both live in the hover actions row.
-function renderSnoozeButtons(listId, task, { done, isSnoozed, isFollowUp, originListId }) {
+// 💤 snooze toggle — every active task gets one, in the hover actions row.
+function renderSnoozeButton(listId, task, { done, isSnoozed }) {
   if (done) return '';
-  const snooze = `<button class="snooze-btn"
-                          title="${isSnoozed ? 'Unsnooze — back to active tasks' : 'Snooze — set aside for later'}"
-                          onclick="toggleSnooze('${escHtml(listId)}','${escHtml(task.id)}')">💤</button>`;
-  const back = (isFollowUp && originListId)
-    ? `<button class="partial-btn" title="Return to original list"
-               onclick="moveBackFromFollowUp('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
-    : '';
-  return snooze + back;
+  return `<button class="snooze-btn"
+                  title="${isSnoozed ? 'Unsnooze — back to active tasks' : 'Snooze — set aside for later'}"
+                  onclick="toggleSnooze('${escHtml(listId)}','${escHtml(task.id)}')">💤</button>`;
 }
 
 function renderSnoozeDivider(listId, count, hidden) {
+  // No visible text label — the 💤 and the count carry it, with the rule above
+  // doing the work of separating active tasks from snoozed ones. Since the
+  // word is gone, the accessible name has to come from somewhere: hence the
+  // role/aria/off-screen label, which also make it keyboard-operable (a bare
+  // <li> with an onclick can't be reached by Tab at all).
+  const plural = count > 1 ? 's' : '';
+  const label  = `${hidden ? 'Show' : 'Hide'} ${count} snoozed task${plural}`;
+  const toggle = `toggleSnoozedSection('${escHtml(listId)}')`;
   return `<li class="snooze-divider"
-              onclick="toggleSnoozedSection('${escHtml(listId)}')"
-              title="${hidden ? 'Show' : 'Hide'} snoozed tasks">
-            <span>💤 Snoozed</span>
-            <span class="snooze-divider-count">· ${count}</span>
-            <span class="snooze-chevron">${hidden ? '▸' : '▾'}</span>
+              role="button"
+              tabindex="0"
+              aria-expanded="${hidden ? 'false' : 'true'}"
+              onclick="${toggle}"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${toggle}}"
+              title="${label}">
+            <span class="snooze-divider-icon" aria-hidden="true">💤</span>
+            <span class="snooze-divider-count">${count}</span>
+            <span class="sr-only">snoozed task${plural}</span>
+            <span class="snooze-chevron" aria-hidden="true">${hidden ? '▸' : '▾'}</span>
           </li>`;
 }
 
 // Toggle snooze on a task. Snooze is a root-level flag — clicking it on a
-// subtask snoozes/unsnoozes the whole family, same as the old Follow-up move
-// did, so a family is never split between the two groups.
+// subtask snoozes/unsnoozes the whole family, so a family is never split
+// between the two groups.
 function toggleSnooze(listId, taskId) {
   const list = state.lists.find(l => l.id === listId);
   if (!list) return;
@@ -5951,17 +5965,28 @@ function toggleSnoozedSection(listId) {
   if (list) rerenderCard(list);
 }
 
-/* ── Origin marker helpers (legacy Follow-up ↔ original list tracking) ── */
+/* Tasks deferred by the old Follow-up feature had a marker appended to their
+   notes. The feature is gone, but a task that was never moved back still
+   carries one. Strip it once at ingest (see cleanIngestedTask) rather than
+   only at render time: the notes panel, its Esc-revert path and its autosave
+   all read task.notes directly, so a render-time-only strip would show the
+   raw marker the moment the user opened the notes editor — and the marker
+   would never be cleaned out of Google Tasks, since nothing writes it back. */
 const ORIGIN_RE = /\n?\[(?:tasktical|taskstick)-origin:[^\]]+\]/g;
 
 function stripOriginMarker(notes) {
   return (notes || '').replace(ORIGIN_RE, '').trim();
 }
 
-function getOriginListId(notes) {
-  const m = (notes || '').match(/\[(?:tasktical|taskstick)-origin:([^\]]+)\]/);
-  return m ? m[1] : null;
+// Normalize a task as it arrives from the API. Returns the original object
+// untouched when there's nothing to clean, so this stays cheap on every poll.
+function cleanIngestedTask(task) {
+  if (!task || !task.notes) return task;
+  const cleaned = stripOriginMarker(task.notes);
+  if (cleaned === task.notes) return task;
+  return { ...task, notes: cleaned || undefined };
 }
+
 
 // Resolve the task clicked (root or subtask) to its family: the top-level
 // parent (itself, if it has none) and every subtask under that parent —
@@ -5974,43 +5999,6 @@ function getTaskFamily(list, task) {
   return { familyRoot, familyChildren };
 }
 
-// Legacy: return a task from an old Follow-up list to the list it came from.
-async function moveBackFromFollowUp(followUpListId, taskId, btn) {
-  const followUp = state.lists.find(l => l.id === followUpListId);
-  if (!followUp) return;
-  const task = followUp.tasks.find(t => t.id === taskId);
-  if (!task) return;
-  const { familyRoot, familyChildren } = getTaskFamily(followUp, task);
-
-  const originListId = getOriginListId(familyRoot.notes);
-  if (!originListId) { showToast('Original list not found', 'error'); return; }
-  const originList = state.lists.find(l => l.id === originListId);
-  if (!originList) { showToast('Original list no longer exists', 'error'); return; }
-
-  // Strip the origin marker from the parent's notes before moving back
-  familyRoot.notes = stripOriginMarker(familyRoot.notes) || undefined;
-
-  // Optimistically move the whole family in state
-  const familyIds = new Set([familyRoot.id, ...familyChildren.map(t => t.id)]);
-  followUp.tasks = followUp.tasks.filter(t => !familyIds.has(t.id));
-  originList.tasks.unshift(...familyChildren, familyRoot);
-  rerenderCard(followUp);
-  rerenderCard(originList);
-  renderPriorityCard();
-
-  // Move via API
-  const result = await crossListMoveFamilyAPI(followUpListId, originListId, familyRoot, familyChildren);
-  if (result.ok) {
-    const idx = originList.tasks.findIndex(t => t.id === familyRoot.id);
-    if (idx >= 0) originList.tasks[idx] = { ...familyRoot, ...result.newParent };
-    familyChildren.forEach((child, i) => {
-      const cIdx = originList.tasks.findIndex(t => t.id === child.id);
-      if (cIdx >= 0) originList.tasks[cIdx] = { ...child, ...result.newChildren[i] };
-    });
-    rerenderCard(originList); // real IDs changed on the server — refresh so buttons use them
-    showToast(`Returned to ${originList.title} ✓`, 'success');
-  }
-}
 
 </script>
 
@@ -6292,7 +6280,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div class="help-card">
         <div class="help-card-icon">💤</div>
         <div class="help-card-name">Snooze</div>
-        <div class="help-card-desc">Click 💤 to set a task aside without completing it. It drops below the active tasks, greyed out, and leaves the Priority card. Click 💤 again to bring it back. Click the "Snoozed" divider in a list to hide or show that list's snoozed tasks.</div>
+        <div class="help-card-desc">Click 💤 to set a task aside without completing it. It drops below the active tasks, greyed out, and leaves the Priority card. Click 💤 again to bring it back. Click the 💤 divider line in a list to hide or show that list's snoozed tasks.</div>
       </div>
       <div class="help-card">
         <div class="help-card-icon">🔁</div>
