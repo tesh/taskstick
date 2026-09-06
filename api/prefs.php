@@ -5,8 +5,8 @@
  * display settings/theme) server-side so they persist across browsers,
  * sessions, and devices instead of living only in localStorage.
  *
- * GET  /api/prefs.php          → returns { stars, listOrder, collapsed, taskCollapsed, listColors, settings }
- * POST /api/prefs.php          → saves body { stars, listOrder, collapsed, taskCollapsed, listColors, settings }
+ * GET  /api/prefs.php          → returns { stars, snoozed, listOrder, collapsed, taskCollapsed, snoozedCollapsed, listColors, settings }
+ * POST /api/prefs.php          → saves body { stars, snoozed, listOrder, collapsed, taskCollapsed, snoozedCollapsed, listColors, settings }
  */
 
 require_once '../config.php';
@@ -40,7 +40,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 function asMapObj($v) {
     return (is_array($v) && empty($v)) ? new stdClass() : $v;
 }
-const PREFS_MAP_FIELDS = ['stars', 'collapsed', 'taskCollapsed', 'listColors', 'settings'];
+const PREFS_MAP_FIELDS = ['stars', 'snoozed', 'collapsed', 'taskCollapsed', 'snoozedCollapsed', 'listColors', 'settings'];
 
 switch ($method) {
     case 'GET':
@@ -70,9 +70,11 @@ switch ($method) {
         // Validate shape before saving
         $prefs = [
             'stars'         => asMapObj($body['stars']         ?? new stdClass()),
+            'snoozed'       => asMapObj($body['snoozed']       ?? new stdClass()),
             'listOrder'     => $body['listOrder']      ?? [],
             'collapsed'     => asMapObj($body['collapsed']      ?? new stdClass()),
             'taskCollapsed' => asMapObj($body['taskCollapsed']  ?? new stdClass()),
+            'snoozedCollapsed' => asMapObj($body['snoozedCollapsed'] ?? new stdClass()),
             'listColors'    => asMapObj($body['listColors']     ?? new stdClass()),
             'settings'      => asMapObj($body['settings']       ?? new stdClass()),
             'savedAt'       => date('c'),

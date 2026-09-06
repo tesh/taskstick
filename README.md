@@ -14,8 +14,8 @@ and manage tasks directly.
 ## Features
 
 - Google Tasks lists and tasks, live (no local task database — see Storage below)
-- Subtasks: indent/outdent via button or drag, collapsible, grouped with their parent for Priority/Follow-up
-- Priority card (starred tasks), Follow-up card, self-resetting Daily Ritual list
+- Subtasks: indent/outdent via button or drag, collapsible, grouped with their parent for Priority/Snooze
+- Priority card (starred tasks), per-task Snooze (set aside without completing, collapsible per list), self-resetting Daily Ritual list
 - Per-list custom background colors, independent of the active theme
 - 5 themes (Notebook, Modern, Compact, Ocean, Rose), fully theme-aware including every modal
 - User feedback capture + an Admin panel (Users with self-reported usage stats, Feedback grouped by type with soft-delete + Markdown export)

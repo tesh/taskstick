@@ -7,6 +7,13 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
 - Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
 
+## 2026-09-06
+
+- **Changed:** Snooze replaces the Follow-up list. The ◑ "move to Follow-up" button on each task is now 💤 Snooze — click it to set a task aside without completing it. Snoozed tasks stay in their own list, greyed out below the active ones (and drop out of the Priority card); click 💤 again to bring one back. A "💤 Snoozed · N" divider in each list collapses or expands that list's snoozed tasks, and remembers the choice across devices. Snoozing a subtask snoozes its whole family. Tasks already sitting in a Follow-up list keep their ◑ "Return to original list" button; Follow-up is otherwise now just a regular list (ENH-052).
+- **Added:** Tasks with notes now show a small 📝 right next to the title at all times, so you can tell a task has notes without hovering — click it to open them (ENH-051).
+- **Fixed:** After adding a task with Enter or the + button, the cursor no longer drops out of that list's "Add task…" box — you can keep typing the next task straight away (BUG-018).
+- **Fixed:** Tasks with subtasks were rendered bold, making them look like starred/priority tasks. Bold now means starred only; the chevron + count badge is what marks a task as having subtasks (the Priority card gets the same badge) (BUG-019).
+
 ## 2026-08-22
 
 - **Fixed:** Signed out of the iPhone PWA after periods of not using it — the session cookie had no explicit lifetime, so iOS killing a backgrounded PWA's process lost it, unlike a real desktop browser. Session now lasts a rolling 7 days: it renews every time you actually use the app, so only a full week of not opening TaskStick logs you out (BUG-016).

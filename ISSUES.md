@@ -8,6 +8,23 @@
 
 ## 🐛 Bugs
 
+### BUG-019 · fixed · 2026-09-06
+**Title:** Parent tasks (ones with subtasks) rendered bold, indistinguishable from starred/priority tasks
+**Reported by:** Tesh ("the parent task is bolded which is confusing with Priority tasks that are made bold")
+**Root cause:** A CSS rule (`.task-item.has-subtasks > .task-row .task-text { font-weight: 600 }`) added with the subtasks feature so a group "scans as a unit" — but bold was already the app's one signal for "starred", so the two states collided.
+**Fix:** Removed that rule. The always-visible chevron + subtask-count badge at the end of a parent row (already there in list cards) is now the sole "has subtasks" affordance; the Priority card — which never had the chevron because it always shows subtasks — gets a matching non-interactive count badge so the affordance is consistent everywhere.
+**Files:** `index.html`
+**Resolved:** 2026-09-06
+
+### BUG-018 · fixed · 2026-09-06
+**Title:** Focus lost from the "Add task…" box after adding a task with Enter or the + button
+**Reported by:** Tesh ("the focus should return to text entry for the same list so that a user can enter another task")
+**Root cause:** `addTaskFromInput()` re-renders the entire list card after the create succeeds (`rerenderCard()` swaps the card element wholesale), so the `input` it then called `.focus()` on in its `finally` block was a detached DOM node — the focus call silently did nothing.
+**Fix:** After the re-render, look up the freshly rendered `.add-task-input` for the same list ID and focus that instead (falling back to the old element only if the card somehow isn't in the DOM).
+**Verification:** Exercised both the Enter-key path and the + button path against a mock board in a browser; in both cases `document.activeElement` is the live input for the same list afterwards.
+**Files:** `index.html`
+**Resolved:** 2026-09-06
+
 ### BUG-017 · fixed · 2026-08-24
 **Title:** Still signed out of the iPhone PWA daily, despite BUG-016's session-lifetime fix
 **Reported by:** Tesh ("There was a patch applied that should have logged me out after a week of inactivity")
@@ -165,6 +182,24 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 ---
 
 ## ✨ Enhancement Requests
+
+### ENH-052 · complete · 2026-09-06
+**Title:** Snooze replaces the Follow-up list — set a task aside in place instead of moving it to a separate list
+**Requested by:** Tesh ("replace the follow-up icon on a task with a snooze icon... toggles the task from active to snoozed. Snoozed tasks are displayed after active tasks and are greyed out... also add a toggle that allows a user to collapse and expand the display of snoozed tasks")
+**Design decision:** Snooze is a per-task flag stored exactly like stars — `state.snoozed` (task ID → true), mirrored to localStorage and to the server via `api/prefs.php` so it follows the user across devices — rather than anything written to Google Tasks, which has no such field. It's a *root-level* flag: clicking 💤 on a subtask snoozes/unsnoozes the whole family, the same way the old Follow-up move always took the family together, so a family can never be split across the two groups. The old flow's biggest cost was that every move to/from Follow-up was a cross-list create+delete that gave the task a *new* Google ID (with all the star/sync/zombie-reminder bookkeeping that implied); snooze is a pure client-side flag flip with no API write to the task at all. The collapse/expand toggle is per list (a "💤 Snoozed · N" divider row between the active and snoozed groups, persisted as `state.snoozedCollapsed` list ID → true) rather than one global switch, following the existing per-list / per-task collapse pattern and keeping the control right where the tasks are.
+**Behavior:** Within a list, order is active (starred first) → snoozed (starred first, greyed to 50%, "z" in the circle instead of a number) → completed. The header count and `updateCardCount()` exclude snoozed tasks. Snoozed families are excluded from the Priority card (snoozing means "not right now", the opposite of a priority — a starred task returns to Priority the moment it's unsnoozed). The All Tasks flat view lists snoozed after active, greyed. A collapsed snoozed section hides snoozed roots and their subtasks; the divider stays so it can be expanded. The divider is a plain `<li>` (not a `.task-item`) so numbering, drag-and-drop, and hover-actions logic all skip it; it's also `filter`ed out of the task-list Sortable. Cross-list moves transfer the flag to the new task ID alongside stars; deleting a snoozed task drops its flag. Completing a snoozed task shows it in the completed group with the flag left alone, so un-completing returns it to snoozed rather than silently un-snoozing it.
+**Legacy Follow-up handling:** "Move to Follow-up" (`markPartialComplete()`) is removed. Tasks *already* sitting in a list titled "Follow-up" that carry a `[taskstick-origin:…]` note marker keep their ◑ "Return to original list" button, so nothing already deferred is stranded — but Follow-up is otherwise now an ordinary list: no amber card styling, no ◑ title prefix, renamable, no longer pinned in alphabetical sort, and no longer excluded from Priority. Help card, Settings copy, and README updated.
+**Verification:** Mock board in a browser: verified group ordering, numbering/"z", header count, Priority exclusion + return on unsnooze, family snooze via a subtask row, divider collapse/expand with persisted state, `savePrefs()` payload carrying both new fields, legacy return button still present on a Follow-up task, visually checked Notebook and Modern (dark) themes, plus a mobile viewport. `php -l` on `prefs.php`; `node --check` on the extracted inline script.
+**Independent review round (8 findings, all fixed and re-verified before hand-off):** (1) Cross-list moves remapped the star/snooze flags to the new task ID in localStorage but never called `savePrefs()`, so the next full load (server prefs are authoritative) silently un-snoozed and un-starred the moved task — a pre-existing star bug the snooze code inherited. (2) `editDue()` re-rendered a single row via `renderTaskItem()` with no opts, stripping the snoozed class, the "z", and the correct button title; it now re-renders the whole card (or the Priority card) instead. (3) `visibleSubs`/`isSnoozed` keyed off the raw `state.snoozed` flag rather than actual snoozed-group membership, so completing a snoozed parent made its subtasks vanish entirely while the section was collapsed — now keyed off a `snoozedIds` set built from the group, mirroring the existing `completedIds` pattern. (4) Sortable's `filter` only blocks a drag *starting* on the divider, so rows could be dropped on the wrong side of it; added an `onMove` guard rejecting cross-boundary drops, plus a `rerenderCard()` after a same-list reorder. (5) `toggleComplete()` on a snoozed task left the divider count and the row's position stale (`deleteTask` already handled the analogous case). (6) The first snoozed root's visual predecessor is the last *active* task, so it was offered an indent that would silently un-snooze it; indent targets no longer cross the boundary, and `indentTask()` clears the flag since only roots can carry one. (7) `toggleStar()`'s "starred zone" count included snoozed and completed roots, sending a wrong `previous` to Google's move API — invisible in TaskStick, wrong in Google's own ordering. (8) `toggleSnooze()` on a subtask whose parent is missing from the list set a flag nothing reads; it now refuses with a message.
+**Files:** `index.html`, `api/prefs.php`, `README.md`
+**Resolved:** 2026-09-06
+
+### ENH-051 · complete · 2026-09-06
+**Title:** Always-visible indicator on tasks that have notes
+**Requested by:** Tesh ("there needs to be a visual way... so that a user knows there are notes associated with that task without having to click on the notes icon")
+**Design decision:** The existing 📝 button lives inside the hover-only actions row, and a CSS rule that tried to keep it lit for `.has-notes` tasks was moot because the whole row is height-0 until hover. Rather than fighting that, a separate small 📝 (`.notes-indicator`) now renders in the always-visible title row itself, right after the task text (and before the subtask chevron), only when the task has notes. Clicking it opens the notes editor via the same `toggleNotes()` path as the actions-row button. Rendered in both list cards and the Priority card via one shared `renderNotesIndicator()` helper.
+**Files:** `index.html`
+**Resolved:** 2026-09-06
 
 ### ENH-050 · complete · 2026-08-24
 **Title:** Task age indicator — colors each task's own circle by how long it's been sitting

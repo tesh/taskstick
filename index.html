@@ -1155,8 +1155,9 @@ body.theme-modern .list-title {
 /* The last subtask in a group restores the row-separator border */
 .task-item.subtask:not(:has(+ .task-item.subtask)) { border-bottom: 1px solid var(--rule-color); padding-bottom: 5px; }
 
-/* A parent row with subtasks reads slightly bolder so the group scans as a unit */
-.task-item.has-subtasks > .task-row .task-text { font-weight: 600; }
+/* Parent rows are deliberately NOT bolded — bold means "starred / priority"
+   everywhere else in the app, and the always-visible chevron + count badge
+   below is what marks a task as having subtasks. */
 
 /* Subtask collapse/expand toggle — sits at the end of the row (not before
    the checkbox) so a task's number/checkbox column stays left-aligned
@@ -1180,6 +1181,27 @@ body.theme-modern .list-title {
   transition: background 0.15s, color 0.15s;
 }
 .subtask-toggle-btn:hover { background: var(--accent-light); color: var(--accent); }
+/* Non-interactive variant (Priority card, where subtasks are always shown) */
+.subtask-toggle-btn.subtask-static { cursor: default; }
+.subtask-toggle-btn.subtask-static:hover { background: none; color: var(--text-muted); }
+
+/* ── Notes indicator — always visible on tasks that have notes, so you can
+   tell at a glance without hovering. Clicking it opens the notes editor. ── */
+.notes-indicator {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 3px;
+  margin-left: 2px;
+  opacity: 0.8;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.notes-indicator:hover { opacity: 1; transform: scale(1.15); }
 .subtask-chevron { font-size: 0.68rem; }
 .subtask-count {
   font-family: var(--ui-font);
@@ -2132,16 +2154,52 @@ body.theme-modern .priority-card .task-item {
 #app-footer a:hover { color: var(--accent); text-decoration: underline; }
 
 /* ============================================================
-   PARTIAL-COMPLETE BUTTON
+   SNOOZE BUTTON + SNOOZED ROWS
+   (.partial-btn is the legacy ◑ "return to original list" button, only
+   shown on tasks still sitting in an old Follow-up list)
    ============================================================ */
-.partial-btn {
+.partial-btn, .snooze-btn {
   opacity: 0; background: none; border: none; cursor: pointer;
   color: var(--text-muted); font-size: 0.88rem; padding: 0 1px;
   line-height: 1; flex-shrink: 0; margin-top: 3px;
   transition: opacity 0.15s, color 0.15s;
 }
-.task-item:hover .partial-btn { opacity: 0.6; }
+.task-item:hover .partial-btn,
+.task-item:hover .snooze-btn   { opacity: 0.6; }
 .partial-btn:hover             { opacity: 1 !important; color: #f59e0b; }
+.snooze-btn:hover              { opacity: 1 !important; }
+
+/* Snoozed = set aside for later. The whole row (and its subtasks) greys out
+   and sits below the active tasks; hovering lifts it enough to read/act on. */
+.task-item.snoozed { opacity: 0.5; transition: opacity 0.15s; }
+.task-item.snoozed:hover { opacity: 0.85; }
+.task-item.snoozed .task-text { color: var(--text-muted); }
+.task-item.snoozed .task-check-circle { font-style: italic; }
+
+/* "💤 Snoozed · N" divider between the active and snoozed groups in a list —
+   click to collapse/expand the snoozed section. It's a plain <li>, not a
+   .task-item, so numbering / drag / hover-actions logic all skip it. */
+.snooze-divider {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 5px 4px 3px 2px;
+  border-top: 1px dashed var(--rule-color);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: color 0.15s;
+}
+.snooze-divider:hover { color: var(--accent); }
+.snooze-divider .snooze-divider-count { opacity: 0.8; }
+.snooze-divider .snooze-chevron { margin-left: auto; font-size: 0.8rem; line-height: 1; }
 
 /* ============================================================
    INDENT / OUTDENT BUTTONS
@@ -2156,10 +2214,6 @@ body.theme-modern .priority-card .task-item {
 .task-item:hover .outdent-btn { opacity: 0.5; }
 .indent-btn:hover, .outdent-btn:hover { opacity: 1 !important; color: var(--accent); }
 
-/* ── Follow-up list card ── */
-.list-card.followup-card { border-top: 3px solid #f59e0b; }
-.list-card.followup-card .list-title { color: #d97706; }
-body.theme-modern .list-card.followup-card .list-title { color: #fbbf24; }
 
 .list-card.ritual-card { border-top: 3px solid #14b8a6; }
 .list-card.ritual-card .list-title { color: #0d9488; }
@@ -2196,6 +2250,7 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 .task-actions-row .task-delete-btn,
 .task-actions-row .notes-btn,
 .task-actions-row .partial-btn,
+.task-actions-row .snooze-btn,
 .task-actions-row .due-add-btn,
 .task-actions-row .indent-btn,
 .task-actions-row .outdent-btn {
@@ -2208,12 +2263,14 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 .task-actions-row .task-delete-btn:hover,
 .task-actions-row .notes-btn:hover,
 .task-actions-row .partial-btn:hover,
+.task-actions-row .snooze-btn:hover,
 .task-actions-row .due-add-btn:hover,
 .task-actions-row .indent-btn:hover,
 .task-actions-row .outdent-btn:hover { opacity: 1 !important; }
 .task-actions-row .task-due { margin-top: 0; font-size: 0.65rem; }
 .task-item.starred .task-actions-row .star-btn   { opacity: 1; color: #f59e0b; }
 .task-item.has-notes .task-actions-row .notes-btn { opacity: 1; color: var(--accent); }
+.task-item.snoozed .task-actions-row .snooze-btn   { opacity: 1; }
 /* Always show on touch screens */
 @media (max-width: 640px) {
   .task-actions-row {
@@ -2302,6 +2359,7 @@ body.theme-modern .list-card.ritual-card .list-title { color: #2dd4bf; }
 }
 .all-tasks-item:hover { background: var(--accent-light); }
 .all-tasks-item.at-starred .all-tasks-text { font-weight: 700; }
+.all-tasks-item.at-snoozed { opacity: 0.5; }
 .all-tasks-star {
   font-size: 0.75rem;
   color: #f59e0b;
@@ -2795,6 +2853,8 @@ const state = {
   stars:        JSON.parse(localStorage.getItem('tasks-stars') || '{}'),
   collapsed:    JSON.parse(localStorage.getItem('tasks-collapsed') || '{}'),
   taskCollapsed: JSON.parse(localStorage.getItem('tasks-task-collapsed') || '{}'),
+  snoozed:      JSON.parse(localStorage.getItem('tasks-snoozed') || '{}'),          // taskId → true (root tasks only)
+  snoozedCollapsed: JSON.parse(localStorage.getItem('tasks-snoozed-collapsed') || '{}'), // listId → true when its snoozed section is hidden
   listColors:   JSON.parse(localStorage.getItem('tasks-list-colors') || '{}'),
   taskCreatedDates: JSON.parse(localStorage.getItem('tasks-created-dates') || '{}'),
   settings:     JSON.parse(localStorage.getItem('tasks-settings') || '{"hideCompleted":false,"tetrisMode":false,"alphabeticalSort":false,"allTasksMode":false,"ritualEnabled":false,"showTaskAge":false,"taskAgeThresholdDays":14}'),
@@ -3020,10 +3080,9 @@ function renderAppleSyncListPicker() {
   const wrap = document.getElementById('apple-sync-lists');
   if (!wrap) return;
   const enabledIds = new Set((state.appleSyncEnabledLists || []).map(l => l.id));
-  // Google's own lists only — Daily Ritual resets itself every day and
-  // Follow-up is a working scratch list, neither is a natural fit for a
-  // synced Reminders list, so they're left off by default (still just
-  // regular entries in state.lists, nothing stops picking them).
+  // Daily Ritual resets itself every day, which isn't a natural fit for a
+  // synced Reminders list, so it's left off by default (still just a regular
+  // entry in state.lists, nothing stops picking it).
   const lists = state.lists.filter(l => l.title !== 'Daily Ritual');
   wrap.innerHTML = lists.length
     ? lists.map(l => `
@@ -3583,14 +3642,14 @@ async function resetRitualIfNewDay() {
 
 /* Returns state.lists in display order — alphabetical when that mode is on.
    Priority card is always first (handled separately by renderPriorityCard).
-   Within alphabetical mode, "Follow-up" and "Daily Ritual" are pinned to the top.
+   Within alphabetical mode, "Daily Ritual" is pinned to the top.
    "Daily Ritual" is hidden entirely unless the Settings toggle is on. */
 function getDisplayLists() {
   const base = state.settings.ritualEnabled
     ? state.lists
     : state.lists.filter(l => l.title !== 'Daily Ritual');
   if (!state.settings.alphabeticalSort) return base;
-  const pinned = ['Follow-up', 'Daily Ritual'];
+  const pinned = ['Daily Ritual'];
   const sorted = [...base].sort((a, b) => {
     const aPin = pinned.includes(a.title) ? 0 : 1;
     const bPin = pinned.includes(b.title) ? 0 : 1;
@@ -3634,6 +3693,14 @@ async function loadAll(showSpinner = true) {
       if (prefs.taskCollapsed) {
         state.taskCollapsed = prefs.taskCollapsed;
         localStorage.setItem('tasks-task-collapsed', JSON.stringify(state.taskCollapsed));
+      }
+      if (prefs.snoozed) {
+        state.snoozed = prefs.snoozed;
+        localStorage.setItem('tasks-snoozed', JSON.stringify(state.snoozed));
+      }
+      if (prefs.snoozedCollapsed) {
+        state.snoozedCollapsed = prefs.snoozedCollapsed;
+        localStorage.setItem('tasks-snoozed-collapsed', JSON.stringify(state.snoozedCollapsed));
       }
       if (prefs.listColors) {
         state.listColors = prefs.listColors;
@@ -3717,7 +3784,7 @@ function applyServerSettings(serverSettings) {
   }
 }
 
-// Persist stars + list order + collapsed state + display settings/theme to
+// Persist stars + snoozes + list order + collapsed state + display settings/theme to
 // the server, so they follow the user across devices instead of living only
 // in this browser's localStorage. Falls back silently — localStorage always
 // has a local copy, so nothing is lost if this fails.
@@ -3731,6 +3798,8 @@ async function savePrefs() {
         listOrder:     state.lists.map(l => l.id),
         collapsed:     state.collapsed,
         taskCollapsed: state.taskCollapsed,
+        snoozed:       state.snoozed,
+        snoozedCollapsed: state.snoozedCollapsed,
         listColors:    state.listColors,
         settings:      { ...state.settings, theme: state.theme },
       }),
@@ -3959,16 +4028,17 @@ function renderAllTasksView(board) {
 
   const displayLists = getDisplayLists();
   displayLists.forEach(list => {
-    const activeTasks = list.tasks
-      .filter(t => t.status !== 'completed' && !t.parent)
-      .sort((a, b) => {
-        const aS = !!state.stars[a.id], bS = !!state.stars[b.id];
-        if (aS !== bS) return aS ? -1 : 1;
-        return byPos(a, b);
-      });
+    const byStarThenPos = (a, b) => {
+      const aS = !!state.stars[a.id], bS = !!state.stars[b.id];
+      if (aS !== bS) return aS ? -1 : 1;
+      return byPos(a, b);
+    };
+    const activeRoots  = list.tasks.filter(t => t.status !== 'completed' && !t.parent);
+    const activeTasks  = activeRoots.filter(t => !state.snoozed[t.id]).sort(byStarThenPos);
+    const snoozedTasks = activeRoots.filter(t =>  state.snoozed[t.id]).sort(byStarThenPos);
     const completedTasks = hideCompleted ? [] :
       list.tasks.filter(t => t.status === 'completed' && !t.parent).sort(byPos);
-    const visibleTasks = [...activeTasks, ...completedTasks];
+    const visibleTasks = [...activeTasks, ...snoozedTasks, ...completedTasks];
     if (!visibleTasks.length) return; // skip empty lists
 
     const group = document.createElement('div');
@@ -3982,8 +4052,9 @@ function renderAllTasksView(board) {
     visibleTasks.forEach(task => {
       const isStarred   = !!state.stars[task.id];
       const isCompleted = task.status === 'completed';
+      const isSnoozed   = !isCompleted && !!state.snoozed[task.id];
       const item = document.createElement('div');
-      item.className = 'all-tasks-item' + (isStarred ? ' at-starred' : '') + (isCompleted ? ' at-done' : '');
+      item.className = 'all-tasks-item' + (isStarred ? ' at-starred' : '') + (isCompleted ? ' at-done' : '') + (isSnoozed ? ' at-snoozed' : '');
 
       const starEl = document.createElement('span');
       starEl.className   = 'all-tasks-star';
@@ -4012,19 +4083,34 @@ function createListCard(list, listIdx) {
   const byPos = (a, b) => (a.position || '') > (b.position || '') ? 1 : -1;
   // Starred (priority) tasks always render before unstarred tasks.
   // Within each group the existing API position order is preserved.
-  const activeTasks = list.tasks
-    .filter(t => t.status !== 'completed' && !t.parent)
-    .sort((a, b) => {
-      const aS = !!state.stars[a.id], bS = !!state.stars[b.id];
-      if (aS !== bS) return aS ? -1 : 1;   // starred floats to top
-      return byPos(a, b);                    // secondary: API position order
-    });
+  const byStarThenPos = (a, b) => {
+    const aS = !!state.stars[a.id], bS = !!state.stars[b.id];
+    if (aS !== bS) return aS ? -1 : 1;   // starred floats to top
+    return byPos(a, b);                    // secondary: API position order
+  };
+  // Active roots split into two groups: live tasks first, then snoozed ones
+  // (set aside for later — greyed out, listed after everything active but
+  // before completed). Snooze is a root-level flag; subtasks follow their parent.
+  const activeRoots    = list.tasks.filter(t => t.status !== 'completed' && !t.parent);
+  const activeTasks    = activeRoots.filter(t => !state.snoozed[t.id]).sort(byStarThenPos);
+  const snoozedTasks   = activeRoots.filter(t =>  state.snoozed[t.id]).sort(byStarThenPos);
+  const snoozedHidden  = !!state.snoozedCollapsed[list.id];
+  const visibleSnoozed = snoozedHidden ? [] : snoozedTasks;
+  // Membership of the snoozed group, not the raw flag: completing a snoozed
+  // task leaves its flag set (so un-completing restores it), but that task now
+  // belongs to the completed group — its subtasks must not be hidden or greyed.
+  const snoozedIds     = new Set(snoozedTasks.map(t => t.id));
   const completedTasks = list.tasks.filter(t => t.status === 'completed'  && !t.parent).sort(byPos);
-  // When hideCompleted is on, omit completed roots AND their subtasks
+  // When hideCompleted is on, omit completed roots AND their subtasks; a
+  // collapsed snoozed section likewise hides snoozed roots AND their subtasks.
   const hideCompleted  = !!state.settings.hideCompleted;
   const completedIds   = new Set(completedTasks.map(t => t.id));
-  const visibleRoots   = hideCompleted ? activeTasks : [...activeTasks, ...completedTasks];
-  const visibleSubs    = list.tasks.filter(t => t.parent && !(hideCompleted && completedIds.has(t.parent)));
+  const visibleRoots   = hideCompleted
+    ? [...activeTasks, ...visibleSnoozed]
+    : [...activeTasks, ...visibleSnoozed, ...completedTasks];
+  const visibleSubs    = list.tasks.filter(t => t.parent
+    && !(hideCompleted && completedIds.has(t.parent))
+    && !(snoozedHidden && snoozedIds.has(t.parent)));
   const orderedRoots   = visibleRoots;
 
   // Insert subtasks after their parents — this is the true order, independent
@@ -4042,8 +4128,13 @@ function createListCard(list, listIdx) {
 
   // Only active (non-completed) root tasks get a sequential number in the circle
   let displayIndex = 0;
-  const taskItemsHtml = display.map(task => {
-    const isActiveRoot = !task.parent && task.status !== 'completed';
+  const rowsHtml = display.map(task => {
+    // A completed row is never styled as snoozed, even if a stale flag
+    // lingers — "completed" wins visually; the flag only matters again if
+    // the task is un-completed later. Subtasks follow their root's *group*,
+    // so a subtask of a completed-but-still-flagged root stays ungreyed too.
+    const isSnoozed    = snoozedIds.has(task.parent || task.id);
+    const isActiveRoot = !task.parent && task.status !== 'completed' && !isSnoozed;
     if (isActiveRoot) displayIndex++;
 
     const children = childrenByParent[task.id] || [];
@@ -4059,20 +4150,37 @@ function createListCard(list, listIdx) {
       if (fullIdx > 0) {
         const prev = fullDisplay[fullIdx - 1];
         const targetId = prev.parent || prev.id;
-        indentTarget = list.tasks.find(t => t.id === targetId) || null;
+        const target   = list.tasks.find(t => t.id === targetId) || null;
+        // Never offer an indent that would jump the active/snoozed boundary —
+        // the first snoozed root's visual predecessor is the last active task,
+        // and making it that task's subtask would silently un-snooze it.
+        if (target && snoozedIds.has(target.id) === snoozedIds.has(task.id)) {
+          indentTarget = target;
+        }
       }
     }
     return renderTaskItem(task, isActiveRoot ? displayIndex : 0, list.id, {
       indentTarget,
       childCount:  children.length,
       isCollapsed: !!state.taskCollapsed[task.id],
+      isSnoozed,
     });
-  }).join('');
+  });
+
+  // Snoozed-section divider (💤 Snoozed · N, click to collapse/expand). Sits
+  // right before the first snoozed row — or, when the section is collapsed,
+  // before the first completed root / at the very end. Only rendered when
+  // the list actually has snoozed tasks, so most lists never show it.
+  if (snoozedTasks.length) {
+    let at = display.findIndex(t => !t.parent && t.status !== 'completed' && state.snoozed[t.id]);
+    if (at < 0) at = display.findIndex(t => !t.parent && t.status === 'completed');
+    if (at < 0) at = rowsHtml.length;
+    rowsHtml.splice(at, 0, renderSnoozeDivider(list.id, snoozedTasks.length, snoozedHidden));
+  }
+  const taskItemsHtml = rowsHtml.join('');
 
   const isCollapsed  = !!state.collapsed[list.id];
-  const isFollowUp   = list.title === 'Follow-up';
   const isRitual     = list.title === 'Daily Ritual';
-  if (isFollowUp) card.classList.add('followup-card');
   if (isRitual)   card.classList.add('ritual-card');
 
   const customColor = state.listColors[list.id];
@@ -4080,7 +4188,7 @@ function createListCard(list, listIdx) {
 
   card.innerHTML = `
     <div class="list-card-header">
-      <div class="list-title" ${(isFollowUp || isRitual) ? '' : `ondblclick="editListTitle('${escHtml(list.id)}',this)" title="Double-click to rename"`}>${isFollowUp ? '◑ ' : ''}${isRitual ? '🔁 ' : ''}${escHtml(list.title)}</div>
+      <div class="list-title" ${isRitual ? '' : `ondblclick="editListTitle('${escHtml(list.id)}',this)" title="Double-click to rename"`}>${isRitual ? '🔁 ' : ''}${escHtml(list.title)}</div>
       <span class="task-count">${activeTasks.length}</span>
       <button class="list-color-btn"
               onclick="openListColorPicker('${escHtml(list.id)}', this)"
@@ -4120,6 +4228,17 @@ function createListCard(list, listIdx) {
     handle:      '.drag-handle',
     ghostClass:  'sortable-ghost',
     chosenClass: 'sortable-chosen',
+    filter:      '.snooze-divider',
+    preventOnFilter: false, // let the divider's own click (collapse/expand) through
+    // A task's group (active vs snoozed) is decided by its snooze flag, not by
+    // where it sits — so refuse drops that would land it on the wrong side of
+    // the divider rather than letting the row look misplaced until a rerender.
+    onMove(evt) {
+      const related = evt.related;
+      if (!related) return true;
+      if (related.classList.contains('snooze-divider')) return false;
+      return related.classList.contains('snoozed') === evt.dragged.classList.contains('snoozed');
+    },
     onStart(evt) {
       evt.item.dataset.dragStartX = getEventX(evt.originalEvent);
     },
@@ -4166,6 +4285,9 @@ function createListCard(list, listIdx) {
         }
         const prevId = newIdx > 0 ? items[newIdx - 1].dataset.taskId : undefined;
         await moveTaskWithinList(toList, taskId, prevId, task ? task.parent : undefined);
+        // Rebuild from state so numbering, grouping, and the snoozed divider
+        // reflect the new order instead of whatever the drag left behind.
+        if (listState) rerenderCard(listState);
 
       } else {
         // Cross-list move — get task data (+ any subtasks, moved together),
@@ -4240,7 +4362,7 @@ function ageIndicatorAttrs(task, done) {
 }
 
 function renderTaskItem(task, index, listId, opts = {}) {
-  const { indentTarget = null, childCount = 0, isCollapsed = false } = opts;
+  const { indentTarget = null, childCount = 0, isCollapsed = false, isSnoozed = false } = opts;
   const done         = task.status === 'completed';
   const starred      = !!state.stars[task.id];
   const isChild      = !!task.parent;
@@ -4262,7 +4384,9 @@ function renderTaskItem(task, index, listId, opts = {}) {
     if (parentTask) originListId = getOriginListId(parentTask.notes);
   }
   // Number shown inside the circle: subtasks → dot, completed → empty (CSS shows ✓), active root → number
-  const dataNum  = isChild ? '·' : (done ? '' : (index || ''));
+  // Snoozed roots show a "z" instead of a number — they're set aside, so they
+  // don't take up a slot in the active-task numbering.
+  const dataNum  = isChild ? '·' : (done ? '' : (isSnoozed ? 'z' : (index || '')));
   const age      = ageIndicatorAttrs(task, done);
 
   const duePart = dueFmt
@@ -4289,6 +4413,9 @@ function renderTaskItem(task, index, listId, opts = {}) {
        </button>`
     : '';
 
+  const notesIndicator = hasNotes ? renderNotesIndicator() : '';
+  const snoozeBtns     = renderSnoozeButtons(listId, task, { done, isSnoozed, isFollowUp, originListId });
+
   const indentBtn = indentTarget
     ? `<button class="indent-btn"
                onclick="indentTask('${escHtml(listId)}','${escHtml(task.id)}','${escHtml(indentTarget.id)}',this)"
@@ -4301,7 +4428,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
     : '';
 
   return `
-    <li class="task-item${done ? ' completed' : ''}${starred ? ' starred' : ''}${isChild ? ' subtask' : ''}${hasNotes ? ' has-notes' : ''}${hasChildren ? ' has-subtasks' : ''}"
+    <li class="task-item${done ? ' completed' : ''}${starred ? ' starred' : ''}${isChild ? ' subtask' : ''}${hasNotes ? ' has-notes' : ''}${hasChildren ? ' has-subtasks' : ''}${isSnoozed ? ' snoozed' : ''}"
         data-task-id="${escHtml(task.id)}"
         data-list-id="${escHtml(listId)}"
         data-index="${index}">
@@ -4317,6 +4444,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
         <span class="task-text"
               ondblclick="startEdit(this,'${escHtml(listId)}','${escHtml(task.id)}')"
               title="Double-click to edit">${escHtml(task.title)}</span>
+        ${notesIndicator}
         ${subtaskToggle}
       </div>
       <div class="task-actions-row">
@@ -4326,13 +4454,7 @@ function renderTaskItem(task, index, listId, opts = {}) {
         <button class="notes-btn"
                 onclick="toggleNotes(this)"
                 title="${hasNotes ? 'View/edit notes' : 'Add notes'}">📝</button>
-        ${!done ? (
-          isFollowUp && originListId
-            ? `<button class="partial-btn" title="Return to original list"
-                       onclick="moveBackFromFollowUp('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
-            : `<button class="partial-btn" title="Move to Follow-up"
-                       onclick="markPartialComplete('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
-        ) : ''}
+        ${snoozeBtns}
         <button class="star-btn"
                 onclick="toggleStar('${escHtml(task.id)}',this)"
                 title="${starred ? 'Unstar' : 'Star'}">${starIcon}</button>
@@ -4400,14 +4522,18 @@ function toggleStar(taskId, btn) {
 
   // When starring a task, move it to just after any already-starred tasks
   // so all priority items stay grouped at the top of their list.
-  if (!isStarred) {
+  if (!isStarred && !state.snoozed[taskId]) { // a snoozed task has no place in the active zone
     for (const list of state.lists) {
       const taskIndex = list.tasks.findIndex(t => t.id === taskId);
       if (taskIndex !== -1 && !list.tasks[taskIndex].parent) {
         // Count starred tasks in this list that are NOT the one we just starred.
         // Those tasks own positions 0..N-1; insert this task at position N.
+        // Only active, un-snoozed roots count — the others sort below them, so
+        // including them would push this task past unstarred tasks in Google's
+        // own ordering even though TaskStick's display looks right.
         const otherStarredCount = list.tasks.filter(
           (t, i) => i !== taskIndex && state.stars[t.id] && !t.parent
+                    && t.status !== 'completed' && !state.snoozed[t.id]
         ).length;
         const insertAt = otherStarredCount;
 
@@ -4469,18 +4595,16 @@ function editDue(listId, taskId, currentDue, triggerEl) {
       showToast('Failed to update due date', 'error');
     }
 
-    // Re-render the task item in place
-    const li = input.closest('.task-item');
-    if (li) {
-      const list = state.lists.find(l => l.id === listId);
-      if (list) {
-        const task = list.tasks.find(t => t.id === taskId);
-        if (task) {
-          const idx  = parseInt(li.dataset.index) || 0;
-          const html = renderTaskItem(task, idx, listId);
-          li.outerHTML = html;
-        }
-      }
+    // Re-render the whole card rather than swapping this one row: a row's
+    // markup depends on options the row itself doesn't carry (snoozed state,
+    // subtask count, indent target), so an in-place re-render would silently
+    // drop them — e.g. a snoozed task would come back ungreyed and unnumbered.
+    const list = state.lists.find(l => l.id === listId);
+    if (list && document.querySelector(`.list-card[data-list-id="${CSS.escape(listId)}"]`)) {
+      rerenderCard(list);
+    } else {
+      // Priority card row (no list card on screen for it) — rebuild that instead
+      renderPriorityCard();
     }
   }
 
@@ -4520,7 +4644,14 @@ async function toggleComplete(checkbox, listId, taskId) {
       if (task) task.status = status;
       updateCardCount(listId, list);
     }
-    renumberCard(listId); // reflow active-task numbers after completion change
+    // Completing (or un-completing) a snoozed task moves it between the
+    // snoozed and completed groups, which changes the divider's count and the
+    // row's position — a class toggle can't express that, so rebuild the card.
+    if (list && state.snoozed[taskId]) {
+      rerenderCard(list);
+    } else {
+      renumberCard(listId); // reflow active-task numbers after completion change
+    }
     renderPriorityCard(); // completed tasks drop out of priority view
     setSyncStatus('ok');
   } catch (e) {
@@ -4624,8 +4755,14 @@ async function addTaskFromInput(input) {
     setSyncStatus('error');
     showToast('Failed to add task: ' + e.message, 'error');
   } finally {
+    // rerenderCard() replaced the whole card, so `input` is now a detached
+    // node — focusing it does nothing. Find the freshly rendered input for
+    // this same list instead, so the user can keep entering tasks.
     input.disabled = false;
-    input.focus();
+    const freshInput = document.querySelector(
+      `.list-card[data-list-id="${CSS.escape(listId)}"] .add-task-input`
+    );
+    (freshInput || input).focus();
   }
 }
 
@@ -4648,10 +4785,16 @@ async function deleteTask(listId, taskId, btn) {
       // locally too, or they'd be left behind pointing at a parent that no
       // longer exists.
       const hadChildren = list.tasks.some(t => t.parent === taskId);
+      const wasSnoozed  = !!state.snoozed[taskId];
       list.tasks = list.tasks.filter(t => t.id !== taskId && t.parent !== taskId);
+      if (wasSnoozed) { // drop the stale snooze flag along with the task
+        delete state.snoozed[taskId];
+        localStorage.setItem('tasks-snoozed', JSON.stringify(state.snoozed));
+        savePrefs();
+      }
       updateCardCount(listId, list);
-      if (hadChildren) {
-        rerenderCard(list); // multiple rows disappeared — a full re-render is simplest
+      if (hadChildren || wasSnoozed) {
+        rerenderCard(list); // multiple rows (or the snoozed divider count) changed — a full re-render is simplest
       } else {
         li.remove();
         renumberCard(listId); // reflow active-task numbers after deletion
@@ -4711,6 +4854,14 @@ async function indentTask(listId, taskId, newParentId, btn) {
     .pop();
 
   task.parent = newParentId;
+  // Snooze is a root-level flag: as a subtask this task now follows its new
+  // parent's group, so drop its own flag instead of leaving a dormant one that
+  // would silently re-snooze it the moment it's outdented again.
+  if (state.snoozed[taskId]) {
+    delete state.snoozed[taskId];
+    localStorage.setItem('tasks-snoozed', JSON.stringify(state.snoozed));
+    savePrefs();
+  }
   rerenderCard(list);
   renderPriorityCard();
 
@@ -4821,15 +4972,24 @@ async function crossListMoveFamilyAPI(fromListId, toListId, parentTask, childTas
     if (!parentDelRes.ok) throw new Error('Moved, but could not remove the original — refreshing to reconcile');
     deletedAnyOriginal = true;
 
-    // Transfer stars to the new IDs
+    // Transfer stars + snooze flags to the new IDs
     const idPairs = [[parentTask.id, newParent.id], ...childTasks.map((c, i) => [c.id, newChildren[i].id])];
     for (const [oldId, newId] of idPairs) {
       if (state.stars[oldId]) {
         state.stars[newId] = true;
         delete state.stars[oldId];
       }
+      if (state.snoozed[oldId]) {
+        state.snoozed[newId] = true;
+        delete state.snoozed[oldId];
+      }
     }
     localStorage.setItem('tasks-stars', JSON.stringify(state.stars));
+    localStorage.setItem('tasks-snoozed', JSON.stringify(state.snoozed));
+    // Server prefs are authoritative on a full load, so the remapped IDs must
+    // be pushed now — otherwise the next reload restores the flags against the
+    // task's old (deleted) ID and the task comes back unstarred/unsnoozed.
+    savePrefs();
 
     setSyncStatus('ok');
     return { ok: true, newParent, newChildren };
@@ -4890,7 +5050,7 @@ function updateCardCount(listId, list) {
   const card = document.querySelector(`.list-card[data-list-id="${CSS.escape(listId)}"]`);
   if (!card) return;
   const badge = card.querySelector('.task-count');
-  if (badge) badge.textContent = list.tasks.filter(t => t.status !== 'completed' && !t.parent).length;
+  if (badge) badge.textContent = list.tasks.filter(t => t.status !== 'completed' && !t.parent && !state.snoozed[t.id]).length;
 }
 
 /* ============================================================
@@ -5172,13 +5332,13 @@ function renderPriorityCard() {
   // one member — the task itself OR any of its subtasks — is starred.
   // The whole family displays together for context, but each row still
   // shows its own real star state (starring a subtask does not silently
-  // star its parent too). Follow-up tasks are excluded: they have their
-  // own card and shouldn't also appear in Priority.
+  // star its parent too). Snoozed families are excluded: snoozing means
+  // "not right now", which is the opposite of a priority.
   const familyGroups = [];
   for (const list of state.lists) {
-    if (list.title === 'Follow-up') continue;
     for (const task of list.tasks) {
       if (task.parent) continue; // only consider roots as the anchor
+      if (state.snoozed[task.id]) continue;
       const children = list.tasks.filter(t => t.parent === task.id && t.status !== 'completed');
       // The root only counts on its own if it's active and starred (a
       // completed standalone task never shows in Priority). But a completed
@@ -5210,7 +5370,7 @@ function renderPriorityCard() {
   const totalCount = familyGroups.reduce((n, g) => n + 1 + g.children.length, 0);
 
   const taskItemsHtml = familyGroups.map(({ root, list, children }) => {
-    const rootHtml     = renderPriorityTaskItem(root, list, { hasChildren: children.length > 0 });
+    const rootHtml     = renderPriorityTaskItem(root, list, { hasChildren: children.length > 0, childCount: children.length });
     const childrenHtml = children.map(child => renderPriorityTaskItem(child, list, { isSubtaskRow: true })).join('');
     return rootHtml + childrenHtml;
   }).join('');
@@ -5249,7 +5409,7 @@ function renderPriorityCard() {
 }
 
 function renderPriorityTaskItem(task, list, opts = {}) {
-  const { isSubtaskRow = false, hasChildren = false } = opts;
+  const { isSubtaskRow = false, hasChildren = false, childCount = 0 } = opts;
   const done         = task.status === 'completed';
   const starred      = !!state.stars[task.id];
   const displayNotes = stripOriginMarker(task.notes || '');
@@ -5279,14 +5439,15 @@ function renderPriorityTaskItem(task, list, opts = {}) {
     ? `<div class="task-notes-view">${renderNoteText(displayNotes)}</div>`
     : '';
 
-  // ◑ button: on Follow-up tasks moves back; on others moves to Follow-up
-  const partialBtn = !done ? (
-    isFollowUp && originListId
-      ? `<button class="partial-btn" title="Return to original list"
-                 onclick="moveBackFromFollowUp('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
-      : `<button class="partial-btn" title="Move to Follow-up"
-                 onclick="markPartialComplete('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
-  ) : '';
+  // Snoozed families never reach the Priority card, so isSnoozed is always false here.
+  const partialBtn     = renderSnoozeButtons(listId, task, { done, isSnoozed: false, isFollowUp, originListId });
+  const notesIndicator = hasNotes ? renderNotesIndicator() : '';
+  // Subtasks are always shown in Priority, so this badge is informational only.
+  const subtaskBadge = hasChildren
+    ? `<span class="subtask-toggle-btn subtask-static" title="${childCount} subtask${childCount > 1 ? 's' : ''}">
+         <span class="subtask-chevron">▾</span><span class="subtask-count">${childCount}</span>
+       </span>`
+    : '';
 
   return `
     <li class="task-item${starred ? ' starred' : ''}${done ? ' completed' : ''}${hasNotes ? ' has-notes' : ''}${isSubtaskRow ? ' subtask' : ''}${hasChildren ? ' has-subtasks' : ''}"
@@ -5308,6 +5469,8 @@ function renderPriorityTaskItem(task, list, opts = {}) {
                 title="Double-click to edit">${escHtml(task.title)}</span>
           ${isSubtaskRow ? '' : `<span class="task-source-label">${escHtml(list.title)}</span>`}
         </div>
+        ${notesIndicator}
+        ${subtaskBadge}
       </div>
       <div class="task-actions-row">
         ${duePart}
@@ -5428,6 +5591,8 @@ function renumberCard(listId) {
     if (!circle) return;
     if (isSubtask) {
       circle.dataset.num = '·';
+    } else if (!isCompleted && li.classList.contains('snoozed')) {
+      circle.dataset.num = 'z'; // set aside — no slot in the active numbering
     } else if (!isCompleted) {
       num++;
       circle.dataset.num = String(num);
@@ -5701,9 +5866,92 @@ function renderNoteText(text) {
 }
 
 /* ============================================================
-   PARTIALLY COMPLETE — move task to Follow-up list
+   SNOOZE — set a task aside for later without completing it.
+   Snoozed tasks stay in their own list (greyed, listed after the
+   active ones) and drop out of the Priority card. This replaced the
+   old "move to a Follow-up list" flow; moveBackFromFollowUp below is
+   kept only so tasks already sitting in a Follow-up list can still be
+   returned to where they came from.
    ============================================================ */
-/* ── Origin marker helpers (Follow-up ↔ original list tracking) ── */
+
+// Shared markup for the always-visible 📝 next to a task title
+function renderNotesIndicator() {
+  return `<button class="notes-indicator" onclick="toggleNotes(this)"
+                  title="This task has notes — click to view or edit">📝</button>`;
+}
+
+// 💤 snooze toggle (every active task) + the legacy ◑ "return to original
+// list" button (only for tasks still in an old Follow-up list that carry an
+// origin marker). Both live in the hover actions row.
+function renderSnoozeButtons(listId, task, { done, isSnoozed, isFollowUp, originListId }) {
+  if (done) return '';
+  const snooze = `<button class="snooze-btn"
+                          title="${isSnoozed ? 'Unsnooze — back to active tasks' : 'Snooze — set aside for later'}"
+                          onclick="toggleSnooze('${escHtml(listId)}','${escHtml(task.id)}')">💤</button>`;
+  const back = (isFollowUp && originListId)
+    ? `<button class="partial-btn" title="Return to original list"
+               onclick="moveBackFromFollowUp('${escHtml(listId)}','${escHtml(task.id)}',this)">◑</button>`
+    : '';
+  return snooze + back;
+}
+
+function renderSnoozeDivider(listId, count, hidden) {
+  return `<li class="snooze-divider"
+              onclick="toggleSnoozedSection('${escHtml(listId)}')"
+              title="${hidden ? 'Show' : 'Hide'} snoozed tasks">
+            <span>💤 Snoozed</span>
+            <span class="snooze-divider-count">· ${count}</span>
+            <span class="snooze-chevron">${hidden ? '▸' : '▾'}</span>
+          </li>`;
+}
+
+// Toggle snooze on a task. Snooze is a root-level flag — clicking it on a
+// subtask snoozes/unsnoozes the whole family, same as the old Follow-up move
+// did, so a family is never split between the two groups.
+function toggleSnooze(listId, taskId) {
+  const list = state.lists.find(l => l.id === listId);
+  if (!list) return;
+  const task = list.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  const { familyRoot } = getTaskFamily(list, task);
+  // getTaskFamily falls back to the task itself when its parent isn't in the
+  // list (e.g. a parent filtered out for having no title). Snooze only means
+  // anything on a root, so bail rather than setting a flag nothing reads.
+  if (task.parent && familyRoot.id === task.id) {
+    showToast("Can't snooze this subtask — its parent task is missing", 'error');
+    return;
+  }
+
+  const nowSnoozed = !state.snoozed[familyRoot.id];
+  if (nowSnoozed) {
+    state.snoozed[familyRoot.id] = true;
+  } else {
+    delete state.snoozed[familyRoot.id];
+  }
+  localStorage.setItem('tasks-snoozed', JSON.stringify(state.snoozed));
+  savePrefs(); // follow the user across devices, like stars
+
+  rerenderCard(list);
+  renderPriorityCard(); // snoozed families leave Priority; unsnoozed starred ones return
+  showToast(nowSnoozed ? 'Snoozed 💤' : 'Back to active ✓', 'success');
+}
+
+// Collapse/expand one list's snoozed section (the divider row's click)
+function toggleSnoozedSection(listId) {
+  const nowHidden = !state.snoozedCollapsed[listId];
+  if (nowHidden) {
+    state.snoozedCollapsed[listId] = true;
+  } else {
+    delete state.snoozedCollapsed[listId];
+  }
+  localStorage.setItem('tasks-snoozed-collapsed', JSON.stringify(state.snoozedCollapsed));
+  savePrefs(); // keep collapse state in sync across browsers
+
+  const list = state.lists.find(l => l.id === listId);
+  if (list) rerenderCard(list);
+}
+
+/* ── Origin marker helpers (legacy Follow-up ↔ original list tracking) ── */
 const ORIGIN_RE = /\n?\[(?:tasktical|taskstick)-origin:[^\]]+\]/g;
 
 function stripOriginMarker(notes) {
@@ -5726,62 +5974,7 @@ function getTaskFamily(list, task) {
   return { familyRoot, familyChildren };
 }
 
-async function markPartialComplete(listId, taskId, btn) {
-  const list = state.lists.find(l => l.id === listId);
-  if (!list) return;
-  const task = list.tasks.find(t => t.id === taskId);
-  if (!task) return;
-  const { familyRoot, familyChildren } = getTaskFamily(list, task);
-
-  // Find or create "Follow-up" list
-  let followUp = state.lists.find(l => l.title === 'Follow-up');
-  if (!followUp) {
-    try {
-      setSyncStatus('syncing');
-      const res = await fetch('/api/lists.php', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ title: 'Follow-up' }),
-      });
-      if (!res.ok) throw new Error('Could not create Follow-up list');
-      const newList = await res.json();
-      followUp = { ...newList, tasks: [] };
-      state.lists.push(followUp);
-    } catch (e) {
-      setSyncStatus('error');
-      showToast('Failed to create Follow-up list: ' + e.message, 'error');
-      return;
-    }
-  }
-
-  // Embed origin list ID in the parent's notes so ◑ can move the family back later
-  familyRoot.notes = (stripOriginMarker(familyRoot.notes) + `\n[taskstick-origin:${listId}]`).trim();
-
-  // Optimistically move the whole family in state
-  const familyIds = new Set([familyRoot.id, ...familyChildren.map(t => t.id)]);
-  list.tasks     = list.tasks.filter(t => !familyIds.has(t.id));
-  followUp.tasks = [familyRoot, ...familyChildren, ...followUp.tasks];
-  rerenderCard(list);
-  rerenderCard(followUp);
-  renderPriorityCard();
-
-  // Move via API (cross-list: create in Follow-up, delete from source)
-  const result = await crossListMoveFamilyAPI(listId, followUp.id, familyRoot, familyChildren);
-  if (result.ok) {
-    const idx = followUp.tasks.findIndex(t => t.id === familyRoot.id);
-    if (idx >= 0) followUp.tasks[idx] = { ...familyRoot, ...result.newParent };
-    familyChildren.forEach((child, i) => {
-      const cIdx = followUp.tasks.findIndex(t => t.id === child.id);
-      if (cIdx >= 0) followUp.tasks[cIdx] = { ...child, ...result.newChildren[i] };
-    });
-    rerenderCard(followUp); // real IDs changed on the server — refresh so buttons use them
-    showToast(
-      familyChildren.length ? `Moved to Follow-up ◑ (with ${familyChildren.length} subtask${familyChildren.length > 1 ? 's' : ''})` : 'Moved to Follow-up ◑',
-      'success'
-    );
-  }
-}
-
+// Legacy: return a task from an old Follow-up list to the list it came from.
 async function moveBackFromFollowUp(followUpListId, taskId, btn) {
   const followUp = state.lists.find(l => l.id === followUpListId);
   if (!followUp) return;
@@ -5859,7 +6052,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div class="settings-row">
         <div>
           <div class="settings-row-label">Alphabetical sort</div>
-          <div class="settings-row-desc">Sort lists A–Z (Priority &amp; Follow-up always first)</div>
+          <div class="settings-row-desc">Sort lists A–Z (Priority always first)</div>
         </div>
         <label class="toggle-switch" title="Alphabetical sort">
           <input type="checkbox" id="pref-alpha-sort"
@@ -6039,7 +6232,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div class="settings-row-desc" style="font-size:0.85rem;line-height:1.5;color:var(--text-primary)">
         You signed in, but didn't grant TaskStick access to your Google Tasks.
         Without it, <strong>your tasks won't be backed up or synced to Google</strong>,
-        and most features (viewing lists, adding tasks, due dates, Priority, Follow-up) won't work.
+        and most features (viewing lists, adding tasks, due dates, Priority, Snooze) won't work.
       </div>
       <a href="/auth/login" class="invite-send-btn"
          style="display:block;text-align:center;margin-top:16px;padding:10px;font-size:0.85rem;text-decoration:none">
@@ -6097,9 +6290,9 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
         <div class="help-card-desc">Star any task (★/☆) to pin it to the Priority card at the top.</div>
       </div>
       <div class="help-card">
-        <div class="help-card-icon">◑</div>
-        <div class="help-card-name">Follow-up</div>
-        <div class="help-card-desc">Click ◑ to defer a task to Follow-up. Click ◑ again to return it to the original list.</div>
+        <div class="help-card-icon">💤</div>
+        <div class="help-card-name">Snooze</div>
+        <div class="help-card-desc">Click 💤 to set a task aside without completing it. It drops below the active tasks, greyed out, and leaves the Priority card. Click 💤 again to bring it back. Click the "Snoozed" divider in a list to hide or show that list's snoozed tasks.</div>
       </div>
       <div class="help-card">
         <div class="help-card-icon">🔁</div>
@@ -6143,7 +6336,7 @@ async function moveBackFromFollowUp(followUpListId, taskId, btn) {
       <div class="help-card">
         <div class="help-card-icon">🔤</div>
         <div class="help-card-name">Alphabetical Sort</div>
-        <div class="help-card-desc">Settings → Alphabetical sort orders all lists A–Z. Priority &amp; Follow-up stay first.</div>
+        <div class="help-card-desc">Settings → Alphabetical sort orders all lists A–Z. Priority stays first.</div>
       </div>
       <div class="help-card">
         <div class="help-card-icon">🧱</div>
