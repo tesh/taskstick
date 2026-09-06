@@ -20,7 +20,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Kalam:wght@300;400;700&family=Manrope:wght@400;500;700;800&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 
 <style>
@@ -2631,6 +2631,84 @@ body.theme-rose {
 body.theme-rose .task-check-wrap:has(.task-check:checked) .task-check-circle {
   background: #e11d48;
   border-color: #e11d48;
+}
+
+/* ============================================================
+   PURPLE PILL THEME
+   Tokens sampled from the Purple Pill Solutions design system
+   (violet #8E20B7 / indigo #452BC0 sourced from the logo pixels;
+   see brand-assets/Purple Pill Design System/tesh.ai website/css/site.css).
+   ============================================================ */
+body.theme-purple-pill {
+  --bg:            oklch(0.055 0.014 283);
+  --bg-secondary:  oklch(0.115 0.018 283);
+  --card-bg:       oklch(0.145 0.02 283);
+  --card-shadow:   0 4px 24px rgba(0,0,0,0.5), 0 1px 6px rgba(0,0,0,0.3);
+  --card-border:   1px solid oklch(1 0 0 / 0.09);
+  --header-bg:     #0d0b1e;
+  --header-text:   oklch(0.97 0.008 292);
+  --title-font:    'Manrope', sans-serif;
+  --body-font:     'Sora', sans-serif;
+  --ui-font:       'Sora', sans-serif;
+  --title-size:    1rem;
+  --task-size:     0.9rem;
+  --text-primary:  oklch(0.97 0.008 292);
+  --text-secondary:oklch(0.70 0.016 287);
+  --text-muted:    oklch(0.52 0.018 286);
+  --accent:        oklch(0.497 0.222 314.2);
+  --accent-light:  oklch(0.497 0.222 314.2 / 0.15);
+  --done-color:    oklch(0.52 0.018 286);
+  --done-line:     line-through;
+  --rule-color:    oklch(1 0 0 / 0.09);
+  --add-btn-bg:    linear-gradient(95deg, oklch(0.44 0.21 314) 0%, oklch(0.497 0.222 314.2) 42%, oklch(0.431 0.215 280.4) 62%, oklch(0.38 0.20 280) 100%);
+  --add-btn-color: oklch(0.97 0.008 292);
+  --tag-bg:        oklch(0.431 0.215 280.4);
+  --tag-text:      oklch(0.97 0.008 292);
+  --input-bg:      oklch(0.115 0.018 283);
+  --input-border:  oklch(1 0 0 / 0.17);
+  --scrollbar:     oklch(1 0 0 / 0.17);
+  --paper-lines:   none;
+}
+/* Brand-gradient top edge on each card — the one signature touch tying this
+   theme back to the logo mark, kept off every other theme */
+body.theme-purple-pill .list-card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: var(--add-btn-bg);
+}
+body.theme-purple-pill .list-title {
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid oklch(1 0 0 / 0.14);
+  padding-bottom: 6px;
+}
+/* Priority card follows the same amber "priority" branding every other
+   theme uses, just sat on this theme's own dark violet card background */
+body.theme-purple-pill .priority-card {
+  background: var(--card-bg);
+  border: 1px solid #f59e0b55;
+  box-shadow: 0 0 0 1px #f59e0b22, 0 4px 28px rgba(0,0,0,0.5);
+}
+body.theme-purple-pill .priority-card:hover {
+  box-shadow: 0 0 0 1px #f59e0b44, 0 6px 32px rgba(245,158,11,0.12);
+}
+body.theme-purple-pill .priority-card-header {
+  background: linear-gradient(120deg, #78350f 0%, #b45309 60%, #d97706 100%);
+  border-bottom: 1px solid #f59e0b44;
+}
+body.theme-purple-pill .priority-card-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+body.theme-purple-pill .priority-card .task-item {
+  border-bottom-color: #f59e0b14;
+}
+body.theme-purple-pill .task-source-label {
+  color: #fbbf24;
+  background: #f59e0b12;
+  border-color: #f59e0b28;
 }
 </style>
 <meta name="google-site-verification" content="r_E0wsAVoAGO0nZd9JJ77yRm8mWRoDS5HXWxsi_MVHY" />
@@ -5257,11 +5335,12 @@ function renderPriorityTaskItem(task, list, opts = {}) {
    THEME
    ============================================================ */
 const THEMES = [
-  { id: 'notebook', label: '📓 Notebook' },
-  { id: 'modern',   label: '💻 Modern'   },
-  { id: 'compact',  label: '⚡ Compact'  },
-  { id: 'ocean',    label: '🌊 Ocean'    },
-  { id: 'rose',     label: '🌸 Rose'     },
+  { id: 'notebook',     label: '📓 Notebook'    },
+  { id: 'modern',       label: '💻 Modern'      },
+  { id: 'compact',      label: '⚡ Compact'     },
+  { id: 'ocean',        label: '🌊 Ocean'       },
+  { id: 'rose',         label: '🌸 Rose'        },
+  { id: 'purple-pill',  label: '💜 Purple Pill' },
 ];
 
 // skipSave: true when applying a theme we just fetched FROM the server
