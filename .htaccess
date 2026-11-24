@@ -16,6 +16,9 @@ Options -Indexes
 
 # Force HTTPS
 RewriteEngine On
+# IONOS maps docroots in a way that breaks relative rewrite targets unless
+# RewriteBase is set (BUG-023).
+RewriteBase /
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
@@ -37,8 +40,9 @@ RewriteRule ^\.well-known/oauth-protected-resource(/.*)?$   oauth/metadata.php?d
 # MCP server: the code lives in mcp-server/; mcp/ holds stubs for the public
 # /mcp/ URLs. Root rewrites into mcp-server/ never fire on IONOS (BUG-023).
 # Test routes to root-level stub files (BUG-023):
-RewriteRule ^mcp-try/?$ mcp.php [L,QSA]
-RewriteRule ^mcp-try/setup\.php$ mcp-setup.php [L,QSA]
+RewriteRule ^mcp-try/?$ /mcp.php [L,QSA]
+RewriteRule ^mcp-try/setup\.php$ /mcp-setup.php [L,QSA]
+RewriteRule ^mcp-try2$ mcp.php [L,QSA]
 
 # Route /auth/login  → auth/login.php
 RewriteRule ^auth/login$  auth/login.php  [L]
