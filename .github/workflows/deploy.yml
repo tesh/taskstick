@@ -209,10 +209,10 @@ jobs:
             check "OAuth server metadata" 'curl -s $B/.well-known/oauth-authorization-server | grep -q client_id_metadata_document_supported'
             check "protected-resource metadata" 'curl -s "$B/.well-known/oauth-protected-resource/mcp/" | grep -q "tasks.tesh.ai/mcp/"'
             
-            check "POST /mcp asks for sign-in" 'curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" -d "$body" $B/mcp | grep -qi "www-authenticate: Bearer resource_metadata"'
             check "POST /mcp/ asks for sign-in" 'curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" -d "$body" $B/mcp/ | grep -qi "www-authenticate: Bearer resource_metadata"'
             check "setup page 200" '[ "$(curl -s -o /dev/null -w %{http_code} $B/mcp/setup.php)" = 200 ]'
-            check "mcp/lib not public" '[ "$(curl -s -o /dev/null -w %{http_code} $B/mcp/lib/oauth.php)" = 403 ]'
+            check "mcp-server/lib not public" '[ "$(curl -s -o /dev/null -w %{http_code} $B/mcp-server/lib/oauth.php)" = 403 ]'
+            check "plugin zip downloads" 'curl -s $B/mcp-server/taskstick-plugin.zip | head -c 2 | grep -q PK'
           fi
           exit $fail
 

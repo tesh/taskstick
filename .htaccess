@@ -35,9 +35,7 @@ RewriteRule ^\.well-known/oauth-authorization-server(/.*)?$ oauth/metadata.php?d
 RewriteRule ^\.well-known/oauth-protected-resource(/.*)?$   oauth/metadata.php?doc=prm&path=$1 [L]
 
 # MCP server: the code lives in mcp-server/; mcp/ holds stubs for the public
-# /mcp/ URLs. Root rewrites for "mcp" itself never fire on IONOS (BUG-023).
-# Probe: does a root rewrite into mcp-server/ work for another name?
-RewriteRule ^mcp-probe/?$ mcp-server/index.php [L,QSA]
+# /mcp/ URLs. Root rewrites into mcp-server/ never fire on IONOS (BUG-023).
 
 # Route /auth/login  → auth/login.php
 RewriteRule ^auth/login$  auth/login.php  [L]

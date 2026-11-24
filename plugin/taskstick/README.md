@@ -10,7 +10,7 @@ Work with your Google Tasks from Claude through [TaskStick](https://tasks.tesh.a
 
 ## Install
 
-- **claude.ai / Claude Desktop / Cowork**: **Customize > Plugins > Add > Add marketplace**, enter `tesh/taskstick`, then add **TaskStick**. Or download [taskstick-plugin.zip](https://tasks.tesh.ai/mcp/taskstick-plugin.zip) and use **Add > Upload plugin**.
+- **claude.ai / Claude Desktop / Cowork**: **Customize > Plugins > Add > Add marketplace**, enter `tesh/taskstick`, then add **TaskStick**. Or download [taskstick-plugin.zip](https://tasks.tesh.ai/mcp-server/taskstick-plugin.zip) and use **Add > Upload plugin**.
 - **Claude Code**:
 
   ```

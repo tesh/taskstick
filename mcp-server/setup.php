@@ -120,7 +120,7 @@ mcpPageStart('Connect your AI apps');
     <h3>In claude.ai or the desktop app</h3>
     <ol class="steps">
       <li>Open <a href="https://claude.ai/customize/plugins" target="_blank" rel="noopener"><strong>Customize → Plugins</strong></a>.</li>
-      <li>Select <strong>Add → Add marketplace</strong> and enter <code>tesh/taskstick</code>. <span class="muted">(Or download <a href="/mcp/taskstick-plugin.zip">taskstick-plugin.zip</a> and use <strong>Add → Upload plugin</strong>.)</span></li>
+      <li>Select <strong>Add → Add marketplace</strong> and enter <code>tesh/taskstick</code>. <span class="muted">(Or download <a href="/mcp-server/taskstick-plugin.zip">taskstick-plugin.zip</a> and use <strong>Add → Upload plugin</strong>.)</span></li>
       <li>Find <strong>TaskStick</strong> and select <strong>Add</strong>.</li>
       <li>Open the plugin, go to its <strong>Connectors</strong> tab, and click <strong>Connect</strong> — then sign in and <strong>Allow</strong>.</li>
     </ol>
