@@ -9,7 +9,7 @@
  * client_secret_post or client_secret_basic (DCR clients that asked for a secret).
  */
 
-require_once dirname(__DIR__) . '/mcp/lib/oauth.php';
+require_once dirname(__DIR__) . '/mcp-server/lib/oauth.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');

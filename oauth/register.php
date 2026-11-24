@@ -7,7 +7,7 @@
  * pick CIMD — so it stays.
  */
 
-require_once dirname(__DIR__) . '/mcp/lib/oauth.php';
+require_once dirname(__DIR__) . '/mcp-server/lib/oauth.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');

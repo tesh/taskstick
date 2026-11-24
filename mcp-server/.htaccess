@@ -1,4 +1,4 @@
-# MCP server directory
+# MCP server code (public URLs /mcp and /mcp/… are rewritten here by the root .htaccess)
 
 # Pass the Authorization header through to PHP (Apache strips it by default
 # on some hosts, IONOS included).

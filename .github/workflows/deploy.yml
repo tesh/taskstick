@@ -48,7 +48,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Work out which files to upload
+      - name: Work out which files to upload or delete
         id: files
         env:
           EVENT: ${{ github.event_name }}
@@ -59,26 +59,35 @@ jobs:
         run: |
           set -euo pipefail
           TRAILER=$(printf '%s\n' "$HEAD_MSG" | sed -n 's/^Deploy-Since:[[:space:]]*\([0-9a-fA-F]\{7,40\}\)[[:space:]]*$/\1/p' | tail -1)
-          if [ "$EVENT" = "push" ] && [ -n "$TRAILER" ]; then
-            echo "Deploy-Since trailer: $TRAILER"
-            git diff --name-only --diff-filter=AMR "$TRAILER" HEAD > /tmp/changed
-          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$ALL" = "true" ]; then
-            git ls-files > /tmp/changed
+          BASE=""
+          if [ "$EVENT" = "workflow_dispatch" ] && [ "$ALL" = "true" ]; then
+            BASE="ALL"
+          elif [ "$EVENT" = "push" ] && [ -n "$TRAILER" ]; then
+            echo "Deploy-Since trailer: $TRAILER"; BASE="$TRAILER"
           elif [ "$EVENT" = "workflow_dispatch" ] && [ -n "$SINCE" ]; then
-            git diff --name-only --diff-filter=AMR "$SINCE" HEAD > /tmp/changed
+            BASE="$SINCE"
           elif git rev-parse -q --verify refs/tags/deployed >/dev/null; then
-            echo "Last successful deploy: $(git rev-parse --short deployed)"
-            git diff --name-only --diff-filter=AMR deployed HEAD > /tmp/changed
+            echo "Last successful deploy: $(git rev-parse --short deployed)"; BASE="deployed"
           elif [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
-            git diff --name-only --diff-filter=AMR "$BEFORE" HEAD > /tmp/changed
+            BASE="$BEFORE"
           else
-            git diff-tree --no-commit-id --name-only -r --diff-filter=AMR HEAD > /tmp/changed
+            BASE="HEAD~1"
           fi
-          # Keep only files the website needs.
-          grep -vE '^(\.github/|\.claude-plugin/|plugin/|archive/|mac-helper/|data/|downloads/)|\.md$|^deploy.*\.py$|\.example$|^\.gitignore$' /tmp/changed > /tmp/deploy || true
-          echo "Files to deploy:"; cat /tmp/deploy || true
-          echo "count=$(grep -c . /tmp/deploy || true)" >> "$GITHUB_OUTPUT"
-          grep -qE '^(mcp/|oauth/|\.htaccess$|auth/)' /tmp/deploy && echo "mcp=true" >> "$GITHUB_OUTPUT" || echo "mcp=false" >> "$GITHUB_OUTPUT"
+          if [ "$BASE" = "ALL" ]; then
+            git ls-files > /tmp/changed; : > /tmp/deleted
+          else
+            # --no-renames: a moved file is an upload at the new path plus a delete at the old one
+            git diff --no-renames --name-only --diff-filter=AM "$BASE" HEAD > /tmp/changed
+            git diff --no-renames --name-only --diff-filter=D  "$BASE" HEAD > /tmp/deleted
+          fi
+          # Keep only files the website needs (and never touch data/ or secrets).
+          FILTER='^(\.github/|\.claude-plugin/|plugin/|archive/|mac-helper/|data/|downloads/)|\.md$|^deploy.*\.py$|\.example$|^\.gitignore$|^config\.local\.php$'
+          grep -vE "$FILTER" /tmp/changed > /tmp/deploy || true
+          grep -vE "$FILTER" /tmp/deleted > /tmp/remove || true
+          echo "Files to upload:"; cat /tmp/deploy || true
+          echo "Files to delete on the server:"; cat /tmp/remove || true
+          echo "count=$(( $(grep -c . /tmp/deploy || true) + $(grep -c . /tmp/remove || true) ))" >> "$GITHUB_OUTPUT"
+          cat /tmp/deploy /tmp/remove | grep -qE '^(mcp/|mcp-server/|oauth/|\.htaccess$|\.well-known/|auth/)' && echo "mcp=true" >> "$GITHUB_OUTPUT" || echo "mcp=false" >> "$GITHUB_OUTPUT"
 
       - name: PHP syntax check
         if: steps.files.outputs.count != '0'
@@ -120,7 +129,35 @@ jobs:
           with open("deploy_local.py", "w") as f:
               f.write(f"SFTP_HOST = {host!r}\nSFTP_USER = {user!r}\nSFTP_PASS = {pw!r}\nSFTP_PORT = 22\nREMOTE_ROOT = {root!r}\n")
           PY
-          python3 deploy.py $(cat /tmp/deploy)
+          if [ -s /tmp/deploy ]; then python3 deploy.py $(cat /tmp/deploy); fi
+          if [ -s /tmp/remove ]; then python3 - <<'PY'
+          import posixpath, paramiko, deploy_local as c
+          t = paramiko.Transport((c.SFTP_HOST, c.SFTP_PORT)); t.connect(username=c.SFTP_USER, password=c.SFTP_PASS)
+          s = paramiko.SFTPClient.from_transport(t)
+          root = c.REMOTE_ROOT.rstrip('/')
+          dirs = set()
+          for rel in open('/tmp/remove').read().split():
+              path = f"{root}/{rel}"
+              try:
+                  s.remove(path); print(f"deleted {rel}")
+              except FileNotFoundError:
+                  print(f"already gone: {rel}")
+              d = posixpath.dirname(rel)
+              while d:
+                  dirs.add(d); d = posixpath.dirname(d)
+          # Remove folders that are now empty, deepest first; report any that aren't.
+          for d in sorted(dirs, key=lambda x: -x.count('/')):
+              try:
+                  s.rmdir(f"{root}/{d}"); print(f"removed folder {d}/")
+              except IOError:
+                  try:
+                      left = s.listdir(f"{root}/{d}")
+                      if left: print(f"::warning::{d}/ still has files on the server: {', '.join(sorted(left)[:20])}")
+                  except IOError:
+                      pass
+          s.close(); t.close()
+          PY
+          fi
           rm -f deploy_local.py
 
       - name: Smoke test the live site
@@ -141,6 +178,7 @@ jobs:
             check "OAuth server metadata" 'curl -s $B/.well-known/oauth-authorization-server | grep -q client_id_metadata_document_supported'
             check "protected-resource metadata" 'curl -s "$B/.well-known/oauth-protected-resource/mcp/" | grep -q "tasks.tesh.ai/mcp/"'
             
+            check "POST /mcp asks for sign-in" 'curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" -d "$body" $B/mcp | grep -qi "www-authenticate: Bearer resource_metadata"'
             check "POST /mcp/ asks for sign-in" 'curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" -d "$body" $B/mcp/ | grep -qi "www-authenticate: Bearer resource_metadata"'
             check "setup page 200" '[ "$(curl -s -o /dev/null -w %{http_code} $B/mcp/setup.php)" = 200 ]'
             check "mcp/lib not public" '[ "$(curl -s -o /dev/null -w %{http_code} $B/mcp/lib/oauth.php)" = 403 ]'

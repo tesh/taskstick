@@ -12,8 +12,8 @@
  */
 
 require_once dirname(__DIR__) . '/config.php';          // main app: session + isAuthenticated()
-require_once dirname(__DIR__) . '/mcp/lib/oauth.php';
-require_once dirname(__DIR__) . '/mcp/lib/page.php';
+require_once dirname(__DIR__) . '/mcp-server/lib/oauth.php';
+require_once dirname(__DIR__) . '/mcp-server/lib/page.php';
 
 /** Redirect back to the client with an OAuth error (only after redirect_uri is validated). */
 function authzRedirectError(string $redirectUri, string $error, string $desc, ?string $state): void {

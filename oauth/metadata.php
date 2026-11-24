@@ -6,7 +6,7 @@
  * Both are also reachable directly at /oauth/metadata.php?doc=…
  */
 
-require_once dirname(__DIR__) . '/mcp/lib/oauth.php';
+require_once dirname(__DIR__) . '/mcp-server/lib/oauth.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, OPTIONS');

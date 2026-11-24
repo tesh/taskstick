@@ -34,6 +34,12 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 RewriteRule ^\.well-known/oauth-authorization-server(/.*)?$ oauth/metadata.php?doc=as  [L]
 RewriteRule ^\.well-known/oauth-protected-resource(/.*)?$   oauth/metadata.php?doc=prm&path=$1 [L]
 
+# MCP server: public URLs are /mcp and /mcp/… ; the code lives in mcp-server/.
+# (It used to live in mcp/, but IONOS 301-redirects /mcp → /mcp/ for a real
+# directory, which breaks clients' POSTs — so /mcp must not be a directory.)
+RewriteRule ^mcp/?$ mcp-server/index.php [L,QSA]
+RewriteRule ^mcp/(.+)$ mcp-server/$1 [L,QSA]
+
 # Route /auth/login  → auth/login.php
 RewriteRule ^auth/login$  auth/login.php  [L]
 # Route /auth/callback → auth/callback.php

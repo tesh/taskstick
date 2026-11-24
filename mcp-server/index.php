@@ -2,7 +2,7 @@
 /**
  * TaskStick — Google Tasks MCP server (Streamable HTTP)
  * =====================================================
- * Endpoint: https://tasks.tesh.ai/mcp/
+ * Endpoint: https://tasks.tesh.ai/mcp/ (also /mcp) — code lives in mcp-server/, routed by the root .htaccess
  * Auth:     OAuth 2.1 bearer token (discovered via /.well-known/oauth-protected-resource)
  *
  * Dual-era server (see https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning):
