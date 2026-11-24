@@ -89,7 +89,9 @@ tasks.tesh.ai instance.
 
 ## Deploying to production
 
-The included [`deploy.py`](deploy.py) is a plain SFTP uploader — it
+**Automatic (recommended):** pushing to `main` deploys. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) uploads the files changed since the last successful deploy (tracked by the `deployed` tag) via `deploy.py`, skipping docs, `data/`, the plugin source and the Mac helper, then smoke-tests the live site, including the MCP/OAuth endpoints when those changed. One-time setup: repository secrets `IONOS_SFTP_HOST`, `IONOS_SFTP_USER`, `IONOS_SFTP_PASSWORD`, `IONOS_REMOTE_ROOT`. To redeploy, use **Actions → Deploy to IONOS → Run workflow** with a starting commit, or tick *all*.
+
+**Manual:** the included [`deploy.py`](deploy.py) is a plain SFTP uploader — it
 works against any host that offers SFTP (shared hosting, a VPS, etc.),
 not just IONOS. There's no CI/CD; it's a straightforward "push these
 files" script.
