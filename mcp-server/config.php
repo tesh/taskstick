@@ -26,7 +26,7 @@ define('MCP_OAUTH_DIR', DATA_DIR . '/oauth');
 if (!defined('MCP_PUBLIC_BASE')) define('MCP_PUBLIC_BASE', getenv('MCP_PUBLIC_BASE') ?: 'https://tasks.tesh.ai');
 
 // The MCP endpoint's public URL (no trailing slash — Claude and Cursor strip
-// it anyway). The root .htaccess rewrites /mcp and /mcp/ to mcp.php, a stub
+// it anyway). The root .htaccess rewrites /mcp and /mcp/ to mcp-endpoint.php, a stub
 // that loads mcp-server/index.php. Discovery describes whichever spelling a
 // client used, and token audience checks accept both (BUG-023).
 define('MCP_RESOURCE_URL', MCP_PUBLIC_BASE . '/mcp');

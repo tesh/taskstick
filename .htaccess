@@ -38,10 +38,11 @@ RewriteRule ^\.well-known/oauth-authorization-server(/.*)?$ oauth/metadata.php?d
 RewriteRule ^\.well-known/oauth-protected-resource(/.*)?$   oauth/metadata.php?doc=prm&path=$1 [L]
 
 # MCP server. Public URLs: /mcp (canonical; /mcp/ also works) and /mcp/…
-# The code lives in mcp-server/; mcp.php and mcp-setup.php are root stubs.
+# The code lives in mcp-server/; mcp-endpoint.php and mcp-setup.php are root
+# stubs (not "mcp.php": MultiViews would map /mcp/anything onto it first).
 # There must be NO real mcp/ directory: Apache would 301 /mcp → /mcp/, and
 # clients (Claude, Cursor) strip the trailing slash (BUG-023).
-RewriteRule ^mcp/?$ mcp.php [L,QSA]
+RewriteRule ^mcp/?$ mcp-endpoint.php [L,QSA]
 RewriteRule ^mcp/setup\.php$ mcp-setup.php [L,QSA]
 RewriteRule ^mcp/(.+)$ mcp-server/$1 [L,QSA]
 
