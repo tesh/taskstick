@@ -11,8 +11,9 @@
 # • Then it smoke-tests the live site.
 #
 # Uses the repo's own deploy.py. Credentials come from repository secrets
-# (Settings → Secrets and variables → Actions):
+# (Settings → Secrets and variables → Actions), either four separate secrets
 #   IONOS_SFTP_HOST, IONOS_SFTP_USER, IONOS_SFTP_PASSWORD, IONOS_REMOTE_ROOT
+# or one secret IONOS_DEPLOY holding those four as "NAME: value" lines.
 # Never deploys data/, secrets, docs, the plugin source or the Mac helper.
 
 name: Deploy to IONOS
@@ -43,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -92,21 +93,32 @@ jobs:
           SFTP_USER: ${{ secrets.IONOS_SFTP_USER }}
           SFTP_PASS: ${{ secrets.IONOS_SFTP_PASSWORD }}
           REMOTE_ROOT: ${{ secrets.IONOS_REMOTE_ROOT }}
+          IONOS_DEPLOY: ${{ secrets.IONOS_DEPLOY }}
         run: |
           set -euo pipefail
-          if [ -z "$SFTP_HOST" ] || [ -z "$SFTP_USER" ] || [ -z "$SFTP_PASS" ]; then
-            echo "::error::Add the IONOS_SFTP_* repository secrets first (Settings → Secrets and variables → Actions)."; exit 1
-          fi
           pip install --quiet paramiko
-          # deploy.py reads its settings from deploy_local.py; build it from the secrets.
+          # deploy.py reads its settings from deploy_local.py; build it from the
+          # four separate secrets, or from the combined IONOS_DEPLOY secret.
           python3 - <<'PY'
-          import os
+          import os, sys
+          cfg = {}
+          for line in os.environ.get("IONOS_DEPLOY", "").splitlines():
+              name, sep, value = line.partition(":")
+              if sep and name.strip():
+                  cfg[name.strip().upper()] = value.strip()
+          def get(env, key, default=""):
+              return os.environ.get(env) or cfg.get(key) or default
+          host = get("SFTP_HOST", "IONOS_SFTP_HOST")
+          user = get("SFTP_USER", "IONOS_SFTP_USER")
+          pw   = get("SFTP_PASS", "IONOS_SFTP_PASSWORD")
+          root = get("REMOTE_ROOT", "IONOS_REMOTE_ROOT", "/tasks-app")
+          if not (host and user and pw):
+              print("::error::No SFTP credentials found. Add the IONOS_DEPLOY secret (or the four IONOS_SFTP_* secrets) under Settings → Secrets and variables → Actions → Repository secrets.")
+              sys.exit(1)
+          print(f"::add-mask::{pw}")
+          print(f"Deploying as {user}@{host} into {root}")
           with open("deploy_local.py", "w") as f:
-              f.write(f"SFTP_HOST = {os.environ['SFTP_HOST']!r}\n")
-              f.write(f"SFTP_USER = {os.environ['SFTP_USER']!r}\n")
-              f.write(f"SFTP_PASS = {os.environ['SFTP_PASS']!r}\n")
-              f.write("SFTP_PORT = 22\n")
-              f.write(f"REMOTE_ROOT = {os.environ.get('REMOTE_ROOT') or '/tasks-app'!r}\n")
+              f.write(f"SFTP_HOST = {host!r}\nSFTP_USER = {user!r}\nSFTP_PASS = {pw!r}\nSFTP_PORT = 22\nREMOTE_ROOT = {root!r}\n")
           PY
           python3 deploy.py $(cat /tmp/deploy)
           rm -f deploy_local.py
