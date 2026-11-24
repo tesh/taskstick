@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-022 · fixed · 2026-11-24
+**Title:** Unknown paths (e.g. tasks.tesh.ai/foo) returned 500 instead of loading the app
+**Found by:** Live checks after the MCP v2 deploy (ENH-056) — predates it; the SPA fallback rule wasn't changed.
+**Root cause:** The root `.htaccess` SPA fallback rewrote to `index.html` with no guard against re-applying to itself; on IONOS the rewritten request kept matching and Apache aborted with 500 (too many internal redirects).
+**Fix:** Added a `REQUEST_URI !^/index\.html$` guard and an absolute `/index.html` target. Smoke test now checks an unknown path returns 200.
+**Files:** `.htaccess`, `.github/workflows/deploy.yml`
+**Resolved:** 2026-11-24
+
 ### BUG-021 · fixed · 2026-11-24
 **Title:** AI-starred tasks never reached the Priority card; MCP setup's sign-in redirect went nowhere
 **Found by:** Code review during the MCP v2 rebuild (ENH-056) — not user-reported.

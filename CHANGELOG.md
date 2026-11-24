@@ -9,6 +9,7 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 
 ## 2026-11-24
 
+- **Fixed:** Mistyped or old TaskStick addresses (like tasks.tesh.ai/something) now open the app instead of a server error page (BUG-022).
 - **Changed:** The AI connection (MCP server) was rebuilt for the latest MCP version (2026-07-28) while still working with older AI apps. Connecting is now one URL — `https://tasks.tesh.ai/mcp/` — and a Google sign-in, with an option to allow read-only access. Setup instructions cover Claude, the new Claude plugin, Claude Code, ChatGPT, Codex, Cursor and VS Code (ENH-056).
 - **Removed:** Connector links with an API key in them (`…/mcp/?key=mcp_…`) no longer work. Remove the old TaskStick connector from each AI app and add the new URL; the setup page walks through it (ENH-056).
 - **Added:** AI apps can now search across all lists, list your Priority tasks, snooze and unsnooze, delete tasks, move tasks between lists, and create or rename lists — 16 tools in all (ENH-056).

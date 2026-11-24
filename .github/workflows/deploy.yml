@@ -134,6 +134,7 @@ jobs:
           check() { if eval "$2"; then echo "✓ $1"; else echo "::error::✗ $1"; fail=1; fi; }
           sleep 3
           check "homepage 200" '[ "$(curl -s -o /dev/null -w %{http_code} $B/)" = 200 ]'
+          check "unknown path loads the app" '[ "$(curl -s -o /dev/null -w %{http_code} $B/no-such-page-$RANDOM)" = 200 ]'
           check "API returns JSON" 'curl -s $B/api/version.php | python3 -c "import sys,json; json.load(sys.stdin)"'
           if [ "$CHECK_MCP" = "true" ]; then
             body='{"jsonrpc":"2.0","id":1,"method":"initialize"}'

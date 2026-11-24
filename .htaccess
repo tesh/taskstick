@@ -48,7 +48,10 @@ RewriteRule ^api/tasks$  api/tasks.php  [L,QSA]
 # Route /api/auth/status → api/auth-status.php
 RewriteRule ^api/auth/status$ api/auth-status.php [L]
 
-# Serve index.html for all other routes (SPA fallback)
+# Serve index.html for all other routes (SPA fallback). The REQUEST_URI
+# guard stops the rewrite from re-applying to /index.html itself — without
+# it IONOS looped and returned 500 for any unknown path (BUG-022).
+RewriteCond %{REQUEST_URI} !^/index\.html$
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.html [L]
+RewriteRule ^ /index.html [L]
