@@ -1,0 +1,11 @@
+{
+  "name": "taskstick",
+  "displayName": "TaskStick",
+  "version": "2.0.0",
+  "description": "Work with your Google Tasks from Claude through TaskStick: see priorities, plan your day, add and update tasks, star and snooze, and review everything on an interactive board.",
+  "author": { "name": "Tesh Patel", "url": "https://tesh.ai" },
+  "homepage": "https://tasks.tesh.ai/mcp/setup.php",
+  "repository": "https://github.com/tesh/taskstick",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "keywords": ["tasks", "google-tasks", "productivity", "todo"]
+}

@@ -562,7 +562,7 @@
     <div style="display:flex;justify-content:center;margin:4px 0;">
       <div class="arch-vert-arrow bidirectional"></div>
     </div>
-    <div style="text-align:center;" class="arch-vert-label">MCP Protocol · JSON-RPC 2.0 · Per-user API key</div>
+    <div style="text-align:center;" class="arch-vert-label">MCP 2026-07-28 · Streamable HTTP · OAuth 2.1 sign-in</div>
     <div style="display:flex;justify-content:center;margin:4px 0;">
       <div class="arch-vert-arrow"></div>
     </div>
@@ -572,7 +572,7 @@
       <div class="arch-node teal-node" style="min-width:260px;">
         <span class="node-icon">🔌</span>
         <span class="node-label">MCP Server</span>
-        <span class="node-sub">tasks.tesh.ai/mcp/index.php<br>8 tools · per-user key auth · stateless POST</span>
+        <span class="node-sub">tasks.tesh.ai/mcp<br>16 tools + interactive board · OAuth · stateless POST</span>
       </div>
     </div>
 
@@ -642,7 +642,7 @@
   <div class="callout">
     <strong>Data files per user</strong> (stored in <code>/data/</code> on the server, never publicly accessible):
     &nbsp;
-    <span class="url-pill">mcp_key_{key}.json</span>
+    <span class="url-pill">oauth/*.json (hashed tokens)</span>
     &nbsp;
     <span class="url-pill">tokens_{userId}.json</span>
     &nbsp;
@@ -666,7 +666,7 @@
     <div class="feature-card">
       <div class="fc-icon">🔐</div>
       <div class="fc-title">Google Sign-In</div>
-      <div class="fc-desc">Sign in with any Google account. Each user gets their own fully isolated task lists, stars, preferences, and MCP key.</div>
+      <div class="fc-desc">Sign in with any Google account. Each user gets their own fully isolated task lists, stars, preferences, and AI connections.</div>
       <div class="fc-tags"><span class="fc-tag green">Multi-user</span><span class="fc-tag">OAuth 2.0</span></div>
     </div>
 
@@ -743,7 +743,7 @@
     <div class="feature-card">
       <div class="fc-icon">🔌</div>
       <div class="fc-title">MCP AI Integration</div>
-      <div class="fc-desc">Connect any MCP-compatible AI client (Claude, OpenAI, Cursor) to your tasks. Get a personal API key from the Setup page and manage tasks by talking to your AI.</div>
+      <div class="fc-desc">Connect any MCP-compatible AI client (Claude, OpenAI, Cursor) to your tasks. Add one URL, sign in with Google, and manage tasks by talking to your AI — or on an interactive board right in the chat.</div>
       <div class="fc-tags"><span class="fc-tag teal">MCP Server</span><span class="fc-tag pink">AI clients</span></div>
     </div>
 
@@ -758,14 +758,14 @@
 <section class="section" id="mcp">
   <div class="section-label">AI Integration</div>
   <div class="section-title">MCP Server &amp; Tools</div>
-  <p class="section-sub">The MCP server exposes 8 tools that let any AI client read and manage your personal Google Tasks.</p>
+  <p class="section-sub">The MCP server exposes 16 tools — plus an interactive task board for apps that support MCP Apps — that let any AI client read and manage your Google Tasks, including TaskStick stars and snoozes.</p>
 
   <div class="callout">
-    <strong>Server URL:</strong> &nbsp;<span class="url-pill">https://tasks.tesh.ai/mcp/</span>&nbsp;
+    <strong>Server URL:</strong> &nbsp;<span class="url-pill">https://tasks.tesh.ai/mcp</span>&nbsp;
     &nbsp;·&nbsp;
-    <strong>Auth:</strong> Per-user API key (generate one at <a href="/mcp/setup.php" style="color:var(--teal);">tasks.tesh.ai/mcp/setup.php</a>)
+    <strong>Auth:</strong> OAuth sign-in with your Google account — no keys (instructions per app at <a href="/mcp/setup.php" style="color:var(--teal);">tasks.tesh.ai/mcp/setup.php</a>)
     &nbsp;·&nbsp;
-    <strong>Protocol:</strong> JSON-RPC 2.0 over Streamable HTTP
+    <strong>Protocol:</strong> MCP 2026-07-28 (and 2025-11-25 back to 2024-11-05) over Streamable HTTP
   </div>
 
   <div class="tools-grid">
@@ -773,63 +773,112 @@
       <span class="tool-badge">GET</span>
       <div class="tool-info">
         <div class="tool-name">tasks_list_tasklists</div>
-        <div class="tool-desc">Returns all your Google Task lists with their IDs and titles.</div>
+        <div class="tool-desc">List all of the user&#039;s Google Task lists with their IDs. Start here to find a listId.</div>
       </div>
     </div>
     <div class="tool-row">
       <span class="tool-badge">GET</span>
       <div class="tool-info">
         <div class="tool-name">tasks_list_tasks</div>
-        <div class="tool-desc">Lists tasks in a given list. Includes title, notes, due date, completion status, and subtasks.</div>
+        <div class="tool-desc">List the tasks in one list, in display order with subtasks under their parent. Shows title, due date, notes indicator, starred (Priority) and snoozed status, and IDs.</div>
       </div>
     </div>
     <div class="tool-row">
       <span class="tool-badge">GET</span>
       <div class="tool-info">
         <div class="tool-name">tasks_get_task</div>
-        <div class="tool-desc">Fetches full detail for a single task by list ID + task ID.</div>
+        <div class="tool-desc">Get one task in full, including its complete notes (which may contain earlier AI notes).</div>
       </div>
     </div>
     <div class="tool-row">
-      <span class="tool-badge">POST</span>
+      <span class="tool-badge">GET</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_search</div>
+        <div class="tool-desc">Search task titles and notes across all lists (or one list). Case-insensitive; every word must match. Use when you don&#039;t know which list a task is in.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">GET</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_list_priority</div>
+        <div class="tool-desc">List the user&#039;s Priority tasks — every starred, not-completed task across all lists (TaskStick&#039;s Priority card). Good for &quot;what should I focus on?&quot;.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">GET</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_open_board</div>
+        <div class="tool-desc">Show the user an interactive TaskStick board (all lists or one list) they can tick off, star and snooze tasks in directly. Use when the user wants to see or work through their tasks visually. Also returns a text summary.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">WRITE</span>
       <div class="tool-info">
         <div class="tool-name">tasks_create_task</div>
-        <div class="tool-desc">Creates a new task in a list. Supports title, notes, due date, and optional parent task (for subtasks).</div>
+        <div class="tool-desc">Create a task in a list. Optionally make it a subtask (parentId), place it after another task (previousId), give it a due date, or star it for the Priority card.</div>
       </div>
     </div>
     <div class="tool-row">
-      <span class="tool-badge">PATCH</span>
+      <span class="tool-badge">WRITE</span>
       <div class="tool-info">
         <div class="tool-name">tasks_update_task</div>
-        <div class="tool-desc">Updates a task's title, notes, or due date. Partial updates — only send what you want to change.</div>
+        <div class="tool-desc">Change fields on a task; only the fields you pass change. To append to notes without losing them, use tasks_add_ai_note instead of replacing notes.</div>
       </div>
     </div>
     <div class="tool-row">
-      <span class="tool-badge">POST</span>
+      <span class="tool-badge">WRITE</span>
       <div class="tool-info">
         <div class="tool-name">tasks_complete_task</div>
-        <div class="tool-desc">Marks a task as completed (or un-completes it). Updates the status and completion timestamp.</div>
+        <div class="tool-desc">Mark a task completed (or pass completed=false to reopen it).</div>
       </div>
     </div>
     <div class="tool-row">
-      <span class="tool-badge">PATCH</span>
+      <span class="tool-badge">WRITE</span>
       <div class="tool-info">
         <div class="tool-name">tasks_star_task</div>
-        <div class="tool-desc">Stars or un-stars a task, surfacing it in the Priority Card on the web app.</div>
+        <div class="tool-desc">Star or unstar a task. Starred tasks appear in TaskStick&#039;s Priority card and are shown in bold.</div>
       </div>
     </div>
     <div class="tool-row">
-      <span class="tool-badge">PATCH</span>
+      <span class="tool-badge">WRITE</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_snooze_task</div>
+        <div class="tool-desc">Snooze (set aside without completing) or unsnooze a task. Snoozed tasks stay in their list, greyed out below active ones, and drop out of the Priority card. Snoozing a subtask snoozes its whole parent task family.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">WRITE</span>
       <div class="tool-info">
         <div class="tool-name">tasks_add_ai_note</div>
-        <div class="tool-desc">Appends a timestamped AI-generated note to a task's notes field without overwriting existing content.</div>
+        <div class="tool-desc">Append a timestamped AI note below a task&#039;s existing notes — e.g. how you could help, relevant context, or the next step. Keep it short and actionable.</div>
       </div>
     </div>
     <div class="tool-row">
-      <span class="tool-badge">POST</span>
+      <span class="tool-badge">WRITE</span>
       <div class="tool-info">
         <div class="tool-name">tasks_move_task</div>
-        <div class="tool-desc">Moves a task to a different position within its list, or to a different list entirely.</div>
+        <div class="tool-desc">Reorder a task, nest it under another task (subtask), un-nest it, or move it to a different list.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">DELETE</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_delete_task</div>
+        <div class="tool-desc">Permanently delete a task (and its subtasks) from Google Tasks. Prefer tasks_complete_task unless the user asked to delete. Confirm with the user first.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">WRITE</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_create_tasklist</div>
+        <div class="tool-desc">Create a new task list.</div>
+      </div>
+    </div>
+    <div class="tool-row">
+      <span class="tool-badge">WRITE</span>
+      <div class="tool-info">
+        <div class="tool-name">tasks_rename_tasklist</div>
+        <div class="tool-desc">Rename an existing task list.</div>
       </div>
     </div>
   </div>
@@ -849,7 +898,7 @@
         <span class="step-num">2</span>
         <span class="step-icon">🔑</span>
         <div class="step-label">Auth Check</div>
-        <div class="step-sub">Validates API key, resolves user ID from key file</div>
+        <div class="step-sub">Validates the OAuth access token (audience, expiry, scopes) and resolves the user</div>
       </div>
       <div class="flow-connector">→</div>
       <div class="flow-step">
@@ -941,7 +990,7 @@
       <span class="stack-icon">🔌</span>
       <div>
         <div class="stack-label">MCP Protocol</div>
-        <div class="stack-sub">JSON-RPC 2.0 · Streamable HTTP transport</div>
+        <div class="stack-sub">2026-07-28 · Streamable HTTP · OAuth 2.1 · MCP Apps</div>
       </div>
     </div>
     <div class="stack-item">

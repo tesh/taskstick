@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskStick board</title>
+<!--
+  TaskStick board — an MCP App view (io.modelcontextprotocol/ui, protocol 2026-01-26).
+  Talks to the host only via postMessage JSON-RPC: ui/initialize, tool-input/tool-result
+  notifications, tools/call (complete / star / snooze), ui/message, ui/request-display-mode,
+  ui/notifications/size-changed. No external requests, no dependencies.
+-->
+<style>
+:root {
+  --bg: var(--color-background-primary, #ffffff);
+  --bg2: var(--color-background-secondary, #f5f5f7);
+  --text: var(--color-text-primary, #1f1f24);
+  --muted: var(--color-text-secondary, #6b6b76);
+  --faint: var(--color-text-tertiary, #9a9aa5);
+  --border: var(--color-border-primary, #e3e3e8);
+  --accent: #6366f1;
+  --star: #e6a700;
+  --danger: var(--color-text-danger, #d93025);
+  --radius: var(--border-radius-md, 10px);
+  --font: var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  color-scheme: light dark;
+}
+html[data-theme="dark"] {
+  --bg: var(--color-background-primary, #1e1e24);
+  --bg2: var(--color-background-secondary, #26262e);
+  --text: var(--color-text-primary, #ececf1);
+  --muted: var(--color-text-secondary, #a5a5b2);
+  --faint: var(--color-text-tertiary, #777784);
+  --border: var(--color-border-primary, #36363f);
+  --accent: #8b8ff7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: transparent; }
+body { font-family: var(--font); color: var(--text); font-size: 14px; line-height: 1.4; padding: 12px; }
+.wrap { background: var(--bg); border-radius: var(--radius); }
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+header .logo { font-weight: 700; font-size: 15px; }
+header .count { color: var(--muted); font-size: 12px; }
+header .spacer { flex: 1; }
+.icon-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 9px;
+            font-size: 12px; cursor: pointer; font-family: inherit; }
+.icon-btn:hover { color: var(--text); border-color: var(--muted); }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 4px; scrollbar-width: thin; }
+.chip { flex: none; border: 1px solid var(--border); background: var(--bg); color: var(--muted); border-radius: 999px;
+        padding: 4px 11px; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip .n { opacity: .75; margin-left: 4px; font-size: 11px; }
+.list { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; }
+.list h3 { font-size: 13px; padding: 8px 12px; background: var(--bg2); border-bottom: 1px solid var(--border);
+           display: flex; justify-content: space-between; }
+.list h3 span { color: var(--faint); font-weight: 500; }
+ul { list-style: none; }
+li.task { display: flex; align-items: flex-start; gap: 9px; padding: 7px 12px; border-top: 1px solid var(--border); }
+li.task:first-child { border-top: none; }
+li.task.sub { padding-left: 34px; }
+li.task.snoozed { opacity: .55; }
+li.task.done .title { text-decoration: line-through; color: var(--faint); }
+li.task.starred .title { font-weight: 650; }
+li.task.busy { opacity: .6; pointer-events: none; }
+.check { flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; border: 1.6px solid var(--muted);
+         background: none; cursor: pointer; display: grid; place-items: center; color: transparent; font-size: 11px; }
+.check:hover { border-color: var(--accent); color: var(--accent); }
+li.task.done .check { background: var(--accent); border-color: var(--accent); color: #fff; }
+.body { flex: 1; min-width: 0; }
+.title { word-wrap: break-word; }
+.meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
+.meta .overdue { color: var(--danger); }
+.acts { display: flex; gap: 2px; flex: none; }
+.act { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 6px; opacity: .35;
+       filter: grayscale(1); }
+li.task:hover .act, .act.on, .act:focus-visible { opacity: 1; filter: none; }
+.act:hover { background: var(--bg2); }
+.act.ask { font-size: 12px; color: var(--muted); filter: none; }
+.divider { padding: 6px 12px; font-size: 12px; color: var(--muted); border-top: 1px dashed var(--border); cursor: pointer;
+           background: none; width: 100%; text-align: left; border-left: 0; border-right: 0; border-bottom: 0; font-family: inherit; }
+.empty, .state { color: var(--muted); padding: 14px 12px; font-size: 13px; }
+.state { text-align: center; padding: 28px 12px; }
+.toast { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--text); color: var(--bg);
+         padding: 7px 14px; border-radius: 8px; font-size: 12.5px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90%; }
+.toast.show { opacity: .92; }
+.ro { font-size: 11.5px; color: var(--muted); margin: -4px 0 8px; }
+@media (max-width: 420px) { body { padding: 8px; } li.task { padding: 7px 9px; } li.task.sub { padding-left: 28px; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="state">Loading your tasks…</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const APP_INFO = { name: 'taskstick-board', version: '2.0.0' };
+  const PROTOCOL = '2026-01-26';
+
+  // ── JSON-RPC over postMessage ───────────────────────────────────────────
+  let nextId = 1;
+  const pending = new Map();
+  function send(msg) { window.parent.postMessage(msg, '*'); }
+  function request(method, params) {
+    const id = nextId++;
+    send({ jsonrpc: '2.0', id, method, params });
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      setTimeout(() => { if (pending.delete(id)) reject(new Error('Timed out')); }, 30000);
+    });
+  }
+  function notify(method, params) { send({ jsonrpc: '2.0', method, params }); }
+
+  window.addEventListener('message', (ev) => {
+    if (ev.source !== window.parent) return;
+    const m = ev.data;
+    if (!m || m.jsonrpc !== '2.0') return;
+    if (m.id !== undefined && pending.has(m.id) && !m.method) {          // response
+      const p = pending.get(m.id); pending.delete(m.id);
+      m.error ? p.reject(new Error(m.error.message || 'Error')) : p.resolve(m.result);
+      return;
+    }
+    if (m.method && m.id !== undefined) {                                 // request from host
+      if (m.method === 'ui/resource-teardown' || m.method === 'ping') send({ jsonrpc: '2.0', id: m.id, result: {} });
+      else send({ jsonrpc: '2.0', id: m.id, error: { code: -32601, message: 'Method not found' } });
+      return;
+    }
+    switch (m.method) {                                                   // notifications
+      case 'ui/notifications/tool-input':
+        state.input = (m.params && m.params.arguments) || {};
+        break;
+      case 'ui/notifications/tool-result':
+        onResult(m.params || {});
+        break;
+      case 'ui/notifications/tool-cancelled':
+        if (!state.board) render('<div class="state">Cancelled.</div>');
+        break;
+      case 'ui/notifications/host-context-changed':
+        applyContext(m.params || {});
+        break;
+    }
+  });
+
+  // ── State ───────────────────────────────────────────────────────────────
+  const state = { board: null, active: null, input: {}, ctx: {}, showSnoozed: {}, canWrite: false };
+
+  function onResult(res) {
+    const sc = res.structuredContent;
+    if (res.isError || !sc || !Array.isArray(sc.lists)) {
+      const text = (res.content || []).map(c => c.text || '').join('\n') || 'Could not load tasks.';
+      render('<div class="state">' + esc(text) + '</div>');
+      return;
+    }
+    state.board = sc.lists;
+    state.canWrite = !!sc.canWrite;
+    if (!state.active || !sc.lists.some(l => l.id === state.active)) {
+      state.active = sc.lists.length === 1 ? sc.lists[0].id : 'all';
+    }
+    draw();
+  }
+
+  function applyContext(ctx) {
+    Object.assign(state.ctx, ctx);
+    const root = document.documentElement;
+    if (state.ctx.theme) root.dataset.theme = state.ctx.theme;
+    const vars = state.ctx.styles && state.ctx.styles.variables;
+    if (vars) for (const [k, v] of Object.entries(vars)) if (v) root.style.setProperty(k, v);
+    const dims = state.ctx.containerDimensions;
+    if (dims && 'maxHeight' in dims && dims.maxHeight) root.style.maxHeight = dims.maxHeight + 'px';
+    if (dims && 'height' in dims) root.style.height = '100vh';
+  }
+
+  // ── Rendering ───────────────────────────────────────────────────────────
+  const $app = document.getElementById('app');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+  function render(html) { $app.innerHTML = html; }
+
+  function today() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function fmtDue(d) {
+    if (!d) return '';
+    const [y, mo, da] = d.split('-').map(Number);
+    const label = new Date(y, mo - 1, da).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return d < today() ? '<span class="overdue">📅 ' + label + ' · overdue</span>' : '📅 ' + label;
+  }
+
+  function activeCount(list) { return list.tasks.filter(t => !t.snoozed && t.status !== 'completed' && !t.parentId).length; }
+
+  function taskRow(t) {
+    const cls = ['task', t.parentId ? 'sub' : '', t.snoozed ? 'snoozed' : '', t.status === 'completed' ? 'done' : '', t.starred ? 'starred' : ''].join(' ');
+    const dis = state.canWrite ? '' : ' disabled';
+    const meta = [fmtDue(t.due), t.notes ? '📝 notes' : ''].filter(Boolean).join(' ');
+    return '<li class="' + cls + '" data-id="' + esc(t.id) + '" data-list="' + esc(t.listId) + '">'
+      + '<button class="check" data-act="complete" title="' + (t.status === 'completed' ? 'Reopen' : 'Complete') + '"' + dis + '>✓</button>'
+      + '<div class="body"><div class="title">' + esc(t.title || 'Untitled') + '</div>' + (meta ? '<div class="meta">' + meta + '</div>' : '') + '</div>'
+      + '<div class="acts">'
+      + (t.parentId ? '' : '<button class="act' + (t.starred ? ' on' : '') + '" data-act="star" title="' + (t.starred ? 'Unstar' : 'Star (Priority)') + '"' + dis + '>⭐</button>')
+      + (t.parentId ? '' : '<button class="act' + (t.snoozed ? ' on' : '') + '" data-act="snooze" title="' + (t.snoozed ? 'Unsnooze' : 'Snooze') + '"' + dis + '>💤</button>')
+      + '<button class="act ask" data-act="ask" title="Ask for help with this task">Ask</button>'
+      + '</div></li>';
+  }
+
+  function listBlock(list, showTitle) {
+    const roots = list.tasks.filter(t => !t.parentId);
+    const kids = {};
+    list.tasks.filter(t => t.parentId).forEach(t => (kids[t.parentId] = kids[t.parentId] || []).push(t));
+    const withKids = r => [r].concat(kids[r.id] || []);
+    const byStar = (a, b) => (b.starred - a.starred) || String(a.position || '').localeCompare(String(b.position || ''));
+    const active = roots.filter(t => !t.snoozed).sort(byStar);
+    const snoozed = roots.filter(t => t.snoozed).sort(byStar);
+
+    let html = '<div class="list">';
+    if (showTitle) html += '<h3>' + esc(list.title) + '<span>' + activeCount(list) + '</span></h3>';
+    html += '<ul>';
+    if (!active.length && !snoozed.length) html += '<li class="empty">Nothing here — all clear.</li>';
+    active.forEach(r => withKids(r).forEach(t => html += taskRow(t)));
+    if (snoozed.length) {
+      const open = !!state.showSnoozed[list.id];
+      html += '<li><button class="divider" data-act="toggle-snoozed" data-list="' + esc(list.id) + '">💤 ' + snoozed.length + ' snoozed ' + (open ? '▾' : '▸') + '</button></li>';
+      if (open) snoozed.forEach(r => withKids(r).forEach(t => html += taskRow(t)));
+    }
+    return html + '</ul></div>';
+  }
+
+  function draw() {
+    const lists = state.board || [];
+    const total = lists.reduce((n, l) => n + activeCount(l), 0);
+    const modes = state.ctx.availableDisplayModes || [];
+    let html = '<header><span class="logo">TaskStick</span><span class="count">' + total + ' active</span><span class="spacer"></span>'
+      + (modes.includes('fullscreen') ? '<button class="icon-btn" data-act="fullscreen">' + (state.ctx.displayMode === 'fullscreen' ? 'Exit full screen' : 'Full screen') + '</button>' : '')
+      + '<button class="icon-btn" data-act="refresh">Refresh</button></header>';
+    if (!state.canWrite) html += '<div class="ro">Read-only connection — reconnect TaskStick with “Create and change tasks” to edit here.</div>';
+
+    if (lists.length > 1) {
+      html += '<div class="chips"><button class="chip' + (state.active === 'all' ? ' active' : '') + '" data-act="tab" data-list="all">All</button>';
+      const pr = lists.reduce((n, l) => n + l.tasks.filter(t => t.starred && !t.snoozed && t.status !== 'completed').length, 0);
+      if (pr) html += '<button class="chip' + (state.active === 'priority' ? ' active' : '') + '" data-act="tab" data-list="priority">⭐ Priority<span class="n">' + pr + '</span></button>';
+      lists.forEach(l => html += '<button class="chip' + (state.active === l.id ? ' active' : '') + '" data-act="tab" data-list="' + esc(l.id) + '">' + esc(l.title) + '<span class="n">' + activeCount(l) + '</span></button>');
+      html += '</div>';
+    }
+
+    if (state.active === 'priority') {
+      const pri = [];
+      lists.forEach(l => l.tasks.forEach(t => { if (t.starred && !t.snoozed && !t.parentId && t.status !== 'completed') pri.push(Object.assign({}, t)); }));
+      html += listBlock({ id: '__priority', title: 'Priority', tasks: pri }, false);
+    } else if (state.active === 'all') {
+      lists.forEach(l => html += listBlock(l, true));
+    } else {
+      const l = lists.find(x => x.id === state.active);
+      if (l) html += listBlock(l, lists.length === 1);
+    }
+    render(html);
+  }
+
+  // ── Actions ─────────────────────────────────────────────────────────────
+  function findTask(id) {
+    for (const l of state.board || []) { const t = l.tasks.find(x => x.id === id); if (t) return t; }
+    return null;
+  }
+  function applyTask(updated) {
+    for (const l of state.board || []) {
+      const i = l.tasks.findIndex(x => x.id === updated.id);
+      if (i >= 0) {
+        const prev = l.tasks[i];
+        l.tasks[i] = Object.assign({}, prev, updated);
+        // Snooze applies to the whole family
+        if ('snoozed' in updated) l.tasks.forEach(k => { if (k.parentId === updated.id) k.snoozed = updated.snoozed; });
+      }
+    }
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  async function callTool(name, args) {
+    const res = await request('tools/call', { name, arguments: args });
+    if (res && res.isError) throw new Error((res.content || []).map(c => c.text).join(' ') || 'Failed');
+    return res;
+  }
+
+  async function mutate(li, toolName, args, optimistic, doneMsg) {
+    const t = findTask(li.dataset.id);
+    if (!t) return;
+    const before = Object.assign({}, t);
+    applyTask(Object.assign({ id: t.id }, optimistic)); draw();
+    try {
+      const res = await callTool(toolName, Object.assign({ listId: t.listId, taskId: t.id }, args));
+      if (res && res.structuredContent && res.structuredContent.task) applyTask(res.structuredContent.task);
+      draw();
+      if (doneMsg) toast(doneMsg);
+    } catch (e) {
+      applyTask(before); draw();
+      toast('Couldn’t update: ' + e.message.slice(0, 120));
+    }
+  }
+
+  $app.addEventListener('click', async (ev) => {
+    const btn = ev.target.closest('[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    const li = btn.closest('li.task');
+    const t = li && findTask(li.dataset.id);
+
+    if (act === 'tab') { state.active = btn.dataset.list; draw(); return; }
+    if (act === 'toggle-snoozed') { state.showSnoozed[btn.dataset.list] = !state.showSnoozed[btn.dataset.list]; draw(); return; }
+    if (act === 'refresh') {
+      btn.textContent = 'Refreshing…';
+      try { onResult(await callTool('tasks_open_board', state.input.listId ? { listId: state.input.listId } : {})); }
+      catch (e) { toast('Refresh failed: ' + e.message.slice(0, 100)); draw(); }
+      return;
+    }
+    if (act === 'fullscreen') {
+      try {
+        const r = await request('ui/request-display-mode', { mode: state.ctx.displayMode === 'fullscreen' ? 'inline' : 'fullscreen' });
+        if (r && r.mode) { state.ctx.displayMode = r.mode; draw(); }
+      } catch (e) { toast('Full screen isn’t available here.'); }
+      return;
+    }
+    if (!t) return;
+    if (act === 'complete') {
+      const done = t.status !== 'completed';
+      return mutate(li, 'tasks_complete_task', { completed: done }, { status: done ? 'completed' : 'needsAction' }, done ? 'Completed ✓' : 'Reopened');
+    }
+    if (act === 'star') return mutate(li, 'tasks_star_task', { starred: !t.starred }, { starred: !t.starred }, t.starred ? 'Unstarred' : 'Starred — added to Priority');
+    if (act === 'snooze') return mutate(li, 'tasks_snooze_task', { snoozed: !t.snoozed }, { snoozed: !t.snoozed }, t.snoozed ? 'Back from snooze' : 'Snoozed');
+    if (act === 'ask') {
+      const list = (state.board || []).find(l => l.id === t.listId);
+      try {
+        await request('ui/message', { role: 'user', content: { type: 'text',
+          text: 'Help me with this task: "' + t.title + '"' + (list ? ' (list: ' + list.title + ')' : '') + ' [listId ' + t.listId + ', taskId ' + t.id + ']' } });
+      } catch (e) { toast('Couldn’t send to the chat.'); }
+    }
+  });
+
+  // ── Size reporting ──────────────────────────────────────────────────────
+  let lastH = 0, lastW = 0;
+  new ResizeObserver(() => {
+    const h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+    const w = Math.ceil(document.documentElement.getBoundingClientRect().width);
+    if (h !== lastH || w !== lastW) { lastH = h; lastW = w; notify('ui/notifications/size-changed', { width: w, height: h }); }
+  }).observe(document.documentElement);
+
+  // ── Handshake ───────────────────────────────────────────────────────────
+  if (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
+  request('ui/initialize', {
+    appInfo: APP_INFO,
+    appCapabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
+    protocolVersion: PROTOCOL,
+  }).then((r) => {
+    applyContext((r && r.hostContext) || {});
+    notify('ui/notifications/initialized', {});
+  }).catch(() => {
+    render('<div class="state">This board needs an app that supports MCP Apps (like Claude). Ask for your tasks in chat instead.</div>');
+  });
+})();
+</script>
+</body>
+</html>

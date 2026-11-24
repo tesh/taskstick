@@ -75,5 +75,17 @@ $_SESSION['user'] = [
 
 registerUser($_SESSION['user']['email'], $_SESSION['user']['name'], $_SESSION['user']['picture']);
 
-header('Location: /');
+// If an MCP connection (or another flow) sent the user to sign in, keep the
+// MCP server's stored Google token fresh too, then return them there.
+// login.php only ever stores a validated same-site path here.
+if (!empty($_SESSION['refresh_token']) && !empty($_SESSION['user']['id'])
+    && file_exists(dirname(__DIR__) . '/data/tokens_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $_SESSION['user']['id']) . '.json')) {
+    require_once dirname(__DIR__) . '/mcp/lib/oauth.php';
+    mcpSaveGoogleTokens($_SESSION['user']['id'], $_SESSION['user']['email'], $_SESSION['refresh_token'],
+        $_SESSION['access_token'], (int)$_SESSION['token_expiry']);
+}
+
+$returnTo = $_SESSION['login_return_to'] ?? '/';
+unset($_SESSION['login_return_to']);
+header('Location: ' . $returnTo);
 exit;

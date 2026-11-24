@@ -7,6 +7,17 @@ All notable changes to TaskStick, condensed from [`ISSUES.md`](ISSUES.md) (the f
 - Double-click-to-edit has no visible affordance — no visual cue that task text is editable, awkward on mobile (BUG-002).
 - Stars don't sync to Google Tasks' own `starred` field, only within this app (ENH-003).
 
+## 2026-11-24
+
+- **Changed:** The AI connection (MCP server) was rebuilt for the latest MCP version (2026-07-28) while still working with older AI apps. Connecting is now one URL — `https://tasks.tesh.ai/mcp` — and a Google sign-in, with an option to allow read-only access. Setup instructions cover Claude, the new Claude plugin, Claude Code, ChatGPT, Codex, Cursor and VS Code (ENH-056).
+- **Removed:** Connector links with an API key in them (`…/mcp/?key=mcp_…`) no longer work. Remove the old TaskStick connector from each AI app and add the new URL; the setup page walks through it (ENH-056).
+- **Added:** AI apps can now search across all lists, list your Priority tasks, snooze and unsnooze, delete tasks, move tasks between lists, and create or rename lists — 16 tools in all (ENH-056).
+- **Added:** An interactive task board that opens inside Claude (and other apps that support MCP Apps): switch between lists and Priority, tick off, star and snooze tasks without leaving the chat (ENH-056).
+- **Added:** A TaskStick plugin for Claude that bundles the connector with a skill that teaches Claude how Priority, Snooze and Daily Ritual work, plus `/taskstick:today` and `/taskstick:review` (ENH-056).
+- **Added:** The MCP setup page lists every app connected to your tasks, with a Disconnect button for each (ENH-056).
+- **Fixed:** Tasks an AI app starred never showed up in the Priority card — they were being sent to a Google field that doesn't exist. Stars and snoozes now go to the same place the app reads them from (BUG-021).
+- **Fixed:** Signing in from the MCP setup page now brings you back to it instead of the main board (BUG-021).
+
 ## 2026-09-06
 
 - **Changed:** Snooze replaces the Follow-up list entirely. The ◑ "move to Follow-up" button on each task is now 💤 Snooze — click it to set a task aside without completing it. Snoozed tasks stay in their own list, greyed out below the active ones and out of the Priority card; click 💤 again to bring one back. Snoozing a subtask snoozes its whole family. A divider between the two groups collapses or expands that list's snoozed tasks and remembers the choice across devices. Unlike the old Follow-up move, snoozing doesn't change a task's Google Tasks ID or move it between lists (ENH-052, ENH-053).

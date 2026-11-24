@@ -8,6 +8,14 @@
 
 ## 🐛 Bugs
 
+### BUG-021 · fixed · 2026-11-24
+**Title:** AI-starred tasks never reached the Priority card; MCP setup's sign-in redirect went nowhere
+**Found by:** Code review during the MCP v2 rebuild (ENH-056) — not user-reported.
+**Root cause:** (1) `tasks_star_task` and `tasks_update_task` sent a `starred` field to the Google Tasks API, which has no such field and silently ignores it — TaskStick's stars live in `data/prefs_{userId}.json`, so anything an AI "starred" never showed up. (2) `mcp/setup.php` sent signed-out users to `/?redirect_to=mcp%2Fsetup.php`, but nothing ever read `redirect_to`, so after signing in they landed on the board instead of setup.
+**Fix:** The MCP server now reads and writes stars and snoozes in the prefs file under a lock, keeping map fields as JSON objects. `auth/login.php` accepts a validated same-site `return_to` (and `force=1` for a fresh Google consent), and `auth/callback.php` returns there.
+**Files:** `mcp/lib/google.php`, `mcp/lib/tools.php`, `auth/login.php`, `auth/callback.php`
+**Resolved:** 2026-11-24
+
 ### BUG-020 · fixed · 2026-09-06
 **Title:** Two CSS declarations were silently invalid, so a hover ring and the subtask rail never rendered in any browser
 **Found by:** An independent review pass, as an aside while reviewing ENH-053/054/055 — not user-reported.
@@ -190,6 +198,24 @@ Also corrects drag-drop `previous` task ID calculation since DOM order now match
 ---
 
 ## ✨ Enhancement Requests
+
+### ENH-056 · complete · 2026-11-24
+**Title:** Rebuild the MCP server for MCP 2026-07-28, OAuth sign-in, Claude plugins and current ChatGPT
+**Requested by:** Tesh ("rebuild this MCP service so that it works with all of the latest changes to MCP servers … and also how plugins now work in Claude and any other changes to ChatGPT and other AI clients. Also update the instructions on this page")
+**Why:** The server spoke MCP 2024-11-05 and authenticated with an API key in the URL (`?key=mcp_…`). The MCP spec forbids credentials in URLs; Claude plugins (`.mcp.json` must not hold secrets), Claude's connector dialog and ChatGPT's new Plugins screen all expect OAuth; and MCP 2026-07-28 made the protocol stateless (no `initialize`, per-request `_meta`, `server/discover`, required `Mcp-Method`/`Mcp-Name` headers, `resultType`, cacheable list results).
+**Change:**
+- `mcp/index.php` rewritten as a dual-era server: 2026-07-28 (stateless, header/body validation, `UnsupportedProtocolVersion` -32022, `HeaderMismatch` -32020, `ttlMs`/`cacheScope`) plus `initialize` for 2025-11-25 / 2025-06-18 / 2025-03-26 / 2024-11-05 clients. No sessions minted; GET → 405; batches rejected; Origin checked.
+- New OAuth 2.1 authorization server in `oauth/` + `mcp/lib/oauth.php`: RFC 9728/8414 discovery via `.htaccess` rewrites, PKCE S256, Client ID Metadata Documents (SSRF-guarded) and DCR, RFC 9207 `iss`, consent screen with optional read-only access, audience-bound 1 h access tokens, rotating refresh tokens with reuse detection, revocation. Uses the normal TaskStick Google login.
+- **`?key=` URLs and API keys retired immediately** (Tesh's call): old URLs get a 401 that tells the app to sign in; setup deletes the user's old key file.
+- Canonical URL is now `https://tasks.tesh.ai/mcp` (no slash — Cursor strips it before validating the OAuth resource); `/mcp/` still works, with discovery answering for whichever spelling the client used. `mcp/.htaccess` turns off Apache's DirectorySlash redirect.
+- 16 tools (was 9): added search, priority list, snooze, delete, create/rename list, cross-list move, and `tasks_open_board`. Every tool has a title, annotations, `outputSchema` and `structuredContent`; write tools are hidden for read-only tokens and return 403 `insufficient_scope`. List IDs or exact list titles accepted.
+- MCP Apps board (`mcp/ui/board.html`): vanilla-JS view — tabs per list + Priority, complete/star/snooze in place, snoozed divider, “Ask” sends the task to the chat, full-screen, host theming.
+- Claude plugin (`plugin/taskstick/` + `.claude-plugin/marketplace.json`, zip at `mcp/taskstick-plugin.zip`): connector, `taskstick` skill, `/taskstick:today`, `/taskstick:review`. Passes `claude plugin validate`.
+- `mcp/setup.php` rewritten: one URL, per-app tabs (Claude, Claude plugin, Claude Code, ChatGPT, Codex, Cursor & VS Code, Other), connected-apps list with Disconnect. `help.html` and README updated.
+**Verification:** 80-check local end-to-end suite against a mock Google Tasks API (discovery, DCR, consent, PKCE, code reuse, redirect validation, SSRF guard, both protocol eras, header validation, every tool, prefs JSON shape, refresh rotation/replay/revoke, read-only scope, loopback redirects); board exercised in headless Chrome through a fake MCP Apps host; setup page checked at desktop and phone widths.
+**Known limitation:** the web app saves the whole prefs object, so a TaskStick tab that was already open can overwrite a star/snooze an AI made until that tab reloads (noted on the setup page).
+**Files:** `mcp/index.php`, `mcp/config.php`, `mcp/setup.php`, `mcp/.htaccess`, `mcp/lib/*`, `mcp/ui/board.html`, `oauth/*`, `.htaccess`, `auth/login.php`, `auth/callback.php`, `plugin/taskstick/*`, `.claude-plugin/marketplace.json`, `help.html`, `README.md`
+**Resolved:** 2026-11-24
 
 ### ENH-055 · complete · 2026-09-06
 **Title:** Snoozed divider: drop the "SNOOZED" label, add a genuinely visible rule

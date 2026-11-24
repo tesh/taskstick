@@ -1,0 +1,12 @@
+{
+  "name": "taskstick",
+  "description": "TaskStick: Google Tasks for Claude",
+  "owner": { "name": "Tesh Patel", "url": "https://tesh.ai" },
+  "plugins": [
+    {
+      "name": "taskstick",
+      "source": "./plugin/taskstick",
+      "description": "Work with your Google Tasks from Claude through TaskStick: priorities, planning, star and snooze, and an interactive board."
+    }
+  ]
+}
