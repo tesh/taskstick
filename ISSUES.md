@@ -8,13 +8,14 @@
 
 ## 🐛 Bugs
 
-### BUG-023 · fixed · 2026-11-24
+### BUG-023 · open · 2026-11-24
 **Title:** Claude signed in to TaskStick but then said it "returned an error when connecting" / "Server not responding"
 **Reported by:** Tesh (screenshots: Claude connector error `ofid_7df35c6ec2c916ac`, connector status "Server not responding").
 **Root cause:** With the connector URL entered as `https://tasks.tesh.ai/mcp` (no slash — the form earlier instructions gave), sign-in succeeded through the no-slash discovery document, but every MCP request to `/mcp` got a 301 to `/mcp/` from IONOS because `mcp/` was a real directory. Clients don't follow redirects for MCP POSTs, so Claude reported a connection error.
-**Fix:** Moved the server code to `mcp-server/` and route both `/mcp` and `/mcp/…` to it with root `.htaccess` rewrites (which work on IONOS for non-directories), so both spellings work. The deploy workflow now also deletes files removed or moved in git (same safety filter), which removed the old `mcp/` folder from the server.
-**Files:** `mcp-server/*` (moved from `mcp/`), `.htaccess`, `oauth/*.php`, `auth/callback.php`, `.github/workflows/deploy.yml`, `README.md`
-**Resolved:** 2026-11-24
+**Fix (partial):** Moved the code to `mcp-server/`. The plan was to route `/mcp` and `/mcp/…` there with root `.htaccess` rewrites, but IONOS never applies root rewrites for the path `mcp` (they fell through to the SPA fallback, which briefly took the MCP endpoint down on 2026-11-24). Restored `/mcp/` with thin stubs in `mcp/` (`index.php`, `setup.php`) that load `mcp-server/`. **The no-slash `/mcp` still 301-redirects and doesn't work** — connectors must use `https://tasks.tesh.ai/mcp/`. A valid OAuth token now wins over a stale `?key=` in the URL. Added an admin-only request log on the setup page (`data/oauth/mcp-requests.log`) to diagnose real client failures. The deploy workflow now deletes files removed in git and did a one-time cleanup of the old server `mcp/` folder (untracked `tokens.json` moved to `data/legacy-mcp/`).
+**Open:** confirm the reported Claude failure is fixed by re-adding with the slash URL; if not, read the request log.
+**Files:** `mcp-server/*` (moved from `mcp/`), `mcp/index.php`, `mcp/setup.php`, `.htaccess`, `oauth/*.php`, `auth/callback.php`, `.github/workflows/deploy.yml`, `README.md`
+**Resolved:** —
 
 ### BUG-022 · fixed · 2026-11-24
 **Title:** Unknown paths (e.g. tasks.tesh.ai/foo) returned 500 instead of loading the app

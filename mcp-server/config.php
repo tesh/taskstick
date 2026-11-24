@@ -25,10 +25,9 @@ define('MCP_OAUTH_DIR', DATA_DIR . '/oauth');
 // Override MCP_PUBLIC_BASE in config.local.php for a self-hosted instance.
 if (!defined('MCP_PUBLIC_BASE')) define('MCP_PUBLIC_BASE', getenv('MCP_PUBLIC_BASE') ?: 'https://tasks.tesh.ai');
 
-// The MCP endpoint's public URL. /mcp and /mcp/ both reach this server via
-// rewrites in the root .htaccess (the code lives in mcp-server/), and
-// discovery describes whichever spelling a client used; token audience
-// checks accept both.
+// The MCP endpoint's public URL. The code lives in mcp-server/; mcp/index.php
+// is a stub that loads it. The trailing slash is required on IONOS: /mcp
+// 301-redirects and root rewrites for that path never fire (BUG-023).
 define('MCP_RESOURCE_URL', MCP_PUBLIC_BASE . '/mcp/');
 define('MCP_ISSUER',       MCP_PUBLIC_BASE);   // OAuth issuer (RFC 8414 / RFC 9207)
 // Served directly (not via /.well-known) because IONOS intercepts parts of

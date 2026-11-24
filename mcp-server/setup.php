@@ -223,6 +223,22 @@ mcpPageStart('Connect your AI apps');
   <?php endif; ?>
 </div>
 
+<?php if ($signedIn && function_exists('isAdmin') && isAdmin()):
+    $logFile = MCP_OAUTH_DIR . '/mcp-requests.log';
+    $logLines = is_file($logFile) ? array_slice(file($logFile) ?: [], -60) : []; ?>
+<div class="card" id="log">
+  <h2>Recent MCP requests <span class="muted small">(admins only)</span></h2>
+  <?php if (!$logLines): ?><p class="muted">No requests logged yet.</p><?php else: ?>
+  <div class="code-block" style="white-space:pre-wrap;font-size:0.72rem;max-height:420px;overflow:auto"><?php
+    foreach (array_reverse($logLines) as $l) {
+        $d = json_decode($l, true); if (!$d) continue;
+        echo mcpH(sprintf("%s  %s %s %s %s %s%s  | %s %s\n", substr($d['t'], 5, 14), $d['s'], $d['m'], $d['e'] ?: '-',
+            $d['pv'] ?: '', $d['a'] ? '[token] ' : '[no token] ', $d['n'], $d['ua'], $d['p'] ?? ''));
+    } ?></div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <!-- ══ 4 · What the AI can do ══ -->
 <div class="card">
   <h2>What your AI app can do</h2>

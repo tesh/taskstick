@@ -25,7 +25,37 @@ const MCP_ERR_PARSE = -32700, MCP_ERR_INVALID_REQUEST = -32600, MCP_ERR_METHOD =
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
+/**
+ * Connection log (data/oauth/mcp-requests.log, last ~300 lines): one line per
+ * request with time, method, era, status, a short note and the client's
+ * user agent. No tokens, no request bodies. Shown to admins on setup.php.
+ */
+function mcpLogRequest(int $status, string $note = ''): void {
+    static $done = false;
+    if ($done) return; $done = true;
+    $line = json_encode([
+        't'  => gmdate('c'),
+        'm'  => $GLOBALS['__mcp_method'] ?? ($_SERVER['REQUEST_METHOD'] ?? ''),
+        'e'  => $GLOBALS['__mcp_era'] ?? '',
+        'pv' => $_SERVER['HTTP_MCP_PROTOCOL_VERSION'] ?? '',
+        's'  => $status,
+        'n'  => mb_substr($note, 0, 160),
+        'u'  => $GLOBALS['mcp_user']['email'] ?? '',
+        'ua' => mb_substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 80),
+        'p'  => parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH),
+        'a'  => !empty($_SERVER['HTTP_AUTHORIZATION']) || !empty($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) ? 1 : 0,
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $f = MCP_OAUTH_DIR . '/mcp-requests.log';
+    mcpEnsureDir(MCP_OAUTH_DIR);
+    @file_put_contents($f, $line . "\n", FILE_APPEND | LOCK_EX);
+    if (@filesize($f) > 200000) {
+        $lines = @file($f) ?: [];
+        @file_put_contents($f, implode('', array_slice($lines, -300)), LOCK_EX);
+    }
+}
+
 function rpcSend(array $msg, int $status = 200, array $headers = []): void {
+    mcpLogRequest($status, $msg['error']['message'] ?? '');
     http_response_code($status);
     header('Content-Type: application/json');
     foreach ($headers as $h) header($h);
@@ -71,6 +101,7 @@ function authChallenge(int $status, string $error = '', string $desc = '', ?arra
     header('Content-Type: application/json');
     // Pass the status explicitly: PHP otherwise forces 401 for any WWW-Authenticate header.
     header('WWW-Authenticate: Bearer ' . implode(', ', $parts), true, $status);
+    mcpLogRequest($status, ($error ?: 'no token') . ($desc ? ": $desc" : ''));
     echo json_encode(['jsonrpc' => '2.0', 'error' => [
         'code' => MCP_ERR_INVALID_REQUEST,
         'message' => $desc ?: 'Authorization required. Connect TaskStick in your AI app to sign in.',
@@ -114,7 +145,7 @@ header('Access-Control-Allow-Headers: Authorization, Content-Type, Accept, MCP-P
 header('Access-Control-Expose-Headers: WWW-Authenticate, MCP-Protocol-Version');
 header('Cache-Control: no-store');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { mcpLogRequest(204, 'CORS preflight'); http_response_code(204); exit; }
 
 // DNS-rebinding guard: a browser Origin must be https (any site — auth is a
 // bearer token, never a cookie) or a local dev page.
@@ -133,15 +164,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // ─── Authentication ───────────────────────────────────────────────────────
 
-if (isset($_GET['key'])) {
-    // Old URL-embedded API keys were retired in v2.0 (the MCP spec forbids
-    // credentials in URLs). Send the client into the OAuth flow instead.
-    authChallenge(401, 'invalid_token', 'API keys in the URL are no longer supported. Remove this connector and add ' . MCP_RESOURCE_URL . ' again — you will sign in with Google.');
-}
+// Old URL-embedded API keys (?key=…) were retired in v2.0. A valid OAuth
+// token wins (the old query string is just ignored); without one, explain.
+$keyNote = isset($_GET['key']) ? 'API keys in the URL are no longer supported. Remove this connector and add ' . MCP_RESOURCE_URL . ' again — you will sign in with Google.' : '';
 $auth = reqHeader('Authorization') ?? '';
-if (!preg_match('/^Bearer\s+(\S+)$/i', $auth, $m)) authChallenge(401);
+if (!preg_match('/^Bearer\s+(\S+)$/i', $auth, $m)) $keyNote ? authChallenge(401, 'invalid_token', $keyNote) : authChallenge(401);
 $tokenRec = oauthVerifyAccessToken($m[1]);
-if (!$tokenRec) authChallenge(401, 'invalid_token', 'The access token is invalid or expired.');
+if (!$tokenRec) authChallenge(401, 'invalid_token', $keyNote ?: 'The access token is invalid or expired.');
 mcpSetUser($tokenRec);
 $scope = $tokenRec['scope'] ?? [];
 
@@ -158,13 +187,15 @@ $id     = $req['id'] ?? null;
 $method = (string)($req['method'] ?? '');
 $params = is_array($req['params'] ?? null) ? $req['params'] : [];
 
+$GLOBALS['__mcp_method'] = $method;
+
 if ($method === '' && $isRequest) {
     // A JSON-RPC response from the client (legacy servers could receive these) — nothing to do.
     http_response_code(202); exit;
 }
 
 // Notifications (no id): accept and ignore (e.g. notifications/initialized).
-if (!$isRequest) { http_response_code(202); exit; }
+if (!$isRequest) { mcpLogRequest(202, 'notification ' . $method); http_response_code(202); exit; }
 
 // ─── Era detection & header validation ────────────────────────────────────
 
@@ -204,6 +235,8 @@ if ($method === 'initialize') {
         ]);
     }
 }
+
+$GLOBALS['__mcp_era'] = $era;
 
 $clientCaps = $era === 'modern'
     ? ($meta['io.modelcontextprotocol/clientCapabilities'] ?? [])
