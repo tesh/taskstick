@@ -8,8 +8,9 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 # /mcp (no trailing slash, the canonical URL) maps to this directory, so
 # this file's rewrite rules apply to it rather than the root .htaccess's.
 # Route it to the endpoint here (DirectorySlash is off below).
+RewriteBase /mcp/
 RewriteCond %{REQUEST_URI} ^/mcp$
-RewriteRule ^ /mcp/index.php [L,QSA]
+RewriteRule ^$ index.php [L,QSA]
 
 # Server config is never served directly
 <Files "config.php">
