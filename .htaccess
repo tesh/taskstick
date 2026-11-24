@@ -33,9 +33,6 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 # the same documents — there is only one MCP server on this host.
 RewriteRule ^\.well-known/oauth-authorization-server(/.*)?$ oauth/metadata.php?doc=as  [L]
 RewriteRule ^\.well-known/oauth-protected-resource(/.*)?$   oauth/metadata.php?doc=prm&path=$1 [L]
-# /mcp (no slash, the canonical URL) → the MCP endpoint. mcp/.htaccess turns
-# off Apache's automatic 301 to /mcp/, which would break clients' POSTs.
-RewriteRule ^mcp$ mcp/index.php [L,QSA]
 
 # Route /auth/login  → auth/login.php
 RewriteRule ^auth/login$  auth/login.php  [L]

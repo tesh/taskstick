@@ -371,10 +371,10 @@ function mcpHasGoogleTokens(string $userId): bool {
 // Discovery documents
 // ═════════════════════════════════════════════════════════════════════════
 
-/** $trailingSlash: describe the /mcp/ spelling (resource must match what the user entered). */
-function mcpProtectedResourceMetadata(bool $trailingSlash = false): array {
+/** $trailingSlash=false describes the no-slash spelling (resource must match what the client used). */
+function mcpProtectedResourceMetadata(bool $trailingSlash = true): array {
     return [
-        'resource'                 => MCP_RESOURCE_URL . ($trailingSlash ? '/' : ''),
+        'resource'                 => rtrim(MCP_RESOURCE_URL, '/') . ($trailingSlash ? '/' : ''),
         'authorization_servers'    => [MCP_ISSUER],
         'scopes_supported'         => MCP_SCOPES,
         'bearer_methods_supported' => ['header'],

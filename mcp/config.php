@@ -25,15 +25,15 @@ define('MCP_OAUTH_DIR', DATA_DIR . '/oauth');
 // Override MCP_PUBLIC_BASE in config.local.php for a self-hosted instance.
 if (!defined('MCP_PUBLIC_BASE')) define('MCP_PUBLIC_BASE', getenv('MCP_PUBLIC_BASE') ?: 'https://tasks.tesh.ai');
 
-// The MCP endpoint's canonical URL (no trailing slash, as the MCP spec
-// recommends — some clients, e.g. Cursor, strip it before validating the
-// OAuth resource). /mcp/ also works: discovery and token audience checks
-// accept both forms. See mcp/.htaccess for the Apache side.
-define('MCP_RESOURCE_URL', MCP_PUBLIC_BASE . '/mcp');
+// The MCP endpoint's canonical URL. The trailing slash is required on IONOS:
+// mcp/ is a real directory, and the no-slash /mcp can't be routed there
+// (tried DirectorySlash Off + rewrites in Nov 2026 — IONOS returns 404).
+// Token audience checks still accept both spellings.
+define('MCP_RESOURCE_URL', MCP_PUBLIC_BASE . '/mcp/');
 define('MCP_ISSUER',       MCP_PUBLIC_BASE);   // OAuth issuer (RFC 8414 / RFC 9207)
 // Served directly (not via /.well-known) because IONOS intercepts parts of
 // /.well-known on its own. The WWW-Authenticate header points clients here.
-define('MCP_PRM_URL',      MCP_PUBLIC_BASE . '/oauth/metadata.php?doc=prm&path=/mcp');
+define('MCP_PRM_URL',      MCP_PUBLIC_BASE . '/oauth/metadata.php?doc=prm&path=/mcp/');
 define('MCP_AUTHORIZE_URL', MCP_PUBLIC_BASE . '/oauth/authorize.php');
 define('MCP_TOKEN_URL',     MCP_PUBLIC_BASE . '/oauth/token.php');
 define('MCP_REGISTER_URL',  MCP_PUBLIC_BASE . '/oauth/register.php');

@@ -5,7 +5,7 @@ description: Manage the user's Google Tasks through the TaskStick connector. Use
 
 # Working with TaskStick
 
-TaskStick is the user's Google Tasks app (tasks.tesh.ai). Its connector tools all start with `tasks_`. If they are missing, tell the user to connect the TaskStick connector from this plugin's **Connectors** tab (or add `https://tasks.tesh.ai/mcp` as a custom connector) and stop.
+TaskStick is the user's Google Tasks app (tasks.tesh.ai). Its connector tools all start with `tasks_`. If they are missing, tell the user to connect the TaskStick connector from this plugin's **Connectors** tab (or add `https://tasks.tesh.ai/mcp/` as a custom connector) and stop.
 
 ## How TaskStick organizes things
 
