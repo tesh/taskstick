@@ -94,7 +94,7 @@ function authChallenge(int $status, string $error = '', string $desc = '', ?arra
     // Point at the metadata for whichever spelling the client used (/mcp or /mcp/),
     // since clients require the document's "resource" to match their URL exactly.
     $slash = str_ends_with(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '', '/');
-    $parts = ['resource_metadata="' . ($slash ? MCP_PRM_URL : rtrim(MCP_PRM_URL, '/')) . '"'];
+    $parts = ['resource_metadata="' . MCP_PRM_URL . ($slash ? '/' : '') . '"'];
     $parts[] = 'scope="' . implode(' ', $scopes ?? MCP_SCOPES) . '"';
     if ($error) $parts[] = 'error="' . $error . '"';
     if ($desc)  $parts[] = 'error_description="' . str_replace('"', "'", $desc) . '"';

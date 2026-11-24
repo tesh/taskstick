@@ -372,7 +372,7 @@ function mcpHasGoogleTokens(string $userId): bool {
 // ═════════════════════════════════════════════════════════════════════════
 
 /** $trailingSlash=false describes the no-slash spelling (resource must match what the client used). */
-function mcpProtectedResourceMetadata(bool $trailingSlash = true): array {
+function mcpProtectedResourceMetadata(bool $trailingSlash = false): array {
     return [
         'resource'                 => rtrim(MCP_RESOURCE_URL, '/') . ($trailingSlash ? '/' : ''),
         'authorization_servers'    => [MCP_ISSUER],

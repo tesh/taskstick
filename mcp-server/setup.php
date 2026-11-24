@@ -179,7 +179,7 @@ mcpPageStart('Connect your AI apps');
     <ul style="padding-left:20px" class="small">
       <li><strong>Transport:</strong> Streamable HTTP, POST only. MCP <code>2026-07-28</code> (stateless, <code>server/discover</code>) and the earlier handshake versions <code>2025-11-25</code>, <code>2025-06-18</code>, <code>2025-03-26</code>, <code>2024-11-05</code>.</li>
       <li><strong>Auth:</strong> OAuth 2.1 with PKCE (S256). Client registration by Client ID Metadata Document or Dynamic Client Registration. Issuer <code><?= mcpH(MCP_ISSUER) ?></code> (RFC 9207 <code>iss</code> on redirects).</li>
-      <li><strong>Discovery:</strong> <a href="/.well-known/oauth-protected-resource/mcp/"><code>/.well-known/oauth-protected-resource/mcp/</code></a> · <a href="/.well-known/oauth-authorization-server"><code>/.well-known/oauth-authorization-server</code></a></li>
+      <li><strong>Discovery:</strong> <a href="/.well-known/oauth-protected-resource/mcp"><code>/.well-known/oauth-protected-resource/mcp</code></a> · <a href="/.well-known/oauth-authorization-server"><code>/.well-known/oauth-authorization-server</code></a></li>
       <li><strong>Scopes:</strong> <code>tasks.read</code>, <code>tasks.write</code>. Access tokens last an hour; refresh tokens rotate on every use and expire after 180 days unused.</li>
       <li><strong>Extensions:</strong> MCP Apps (<code>io.modelcontextprotocol/ui</code>) for the interactive board.</li>
       <li><strong>Source:</strong> <a href="https://github.com/tesh/taskstick" target="_blank" rel="noopener">github.com/tesh/taskstick</a> (<code>mcp/</code> and <code>oauth/</code>).</li>

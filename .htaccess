@@ -37,12 +37,13 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
 RewriteRule ^\.well-known/oauth-authorization-server(/.*)?$ oauth/metadata.php?doc=as  [L]
 RewriteRule ^\.well-known/oauth-protected-resource(/.*)?$   oauth/metadata.php?doc=prm&path=$1 [L]
 
-# MCP server: the code lives in mcp-server/; mcp/ holds stubs for the public
-# /mcp/ URLs. Root rewrites into mcp-server/ never fire on IONOS (BUG-023).
-# Test routes to root-level stub files (BUG-023):
-RewriteRule ^mcp-try/?$ /mcp.php [L,QSA]
-RewriteRule ^mcp-try/setup\.php$ /mcp-setup.php [L,QSA]
-RewriteRule ^mcp-try2$ mcp.php [L,QSA]
+# MCP server. Public URLs: /mcp (canonical; /mcp/ also works) and /mcp/…
+# The code lives in mcp-server/; mcp.php and mcp-setup.php are root stubs.
+# There must be NO real mcp/ directory: Apache would 301 /mcp → /mcp/, and
+# clients (Claude, Cursor) strip the trailing slash (BUG-023).
+RewriteRule ^mcp/?$ mcp.php [L,QSA]
+RewriteRule ^mcp/setup\.php$ mcp-setup.php [L,QSA]
+RewriteRule ^mcp/(.+)$ mcp-server/$1 [L,QSA]
 
 # Route /auth/login  → auth/login.php
 RewriteRule ^auth/login$  auth/login.php  [L]

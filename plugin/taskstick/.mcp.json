@@ -2,7 +2,7 @@
   "mcpServers": {
     "taskstick": {
       "type": "http",
-      "url": "https://tasks.tesh.ai/mcp/"
+      "url": "https://tasks.tesh.ai/mcp"
     }
   }
 }

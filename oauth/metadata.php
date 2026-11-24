@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 
 $doc = $_GET['doc'] ?? 'as';
 // path = the suffix after the well-known name, e.g. "/mcp" or "/mcp/"
-$data = $doc === 'prm' ? mcpProtectedResourceMetadata(($_GET['path'] ?? '') !== '/mcp') : mcpAuthorizationServerMetadata();
+$data = $doc === 'prm' ? mcpProtectedResourceMetadata(($_GET['path'] ?? '') === '/mcp/') : mcpAuthorizationServerMetadata();
 
 http_response_code(200);
 header('Content-Type: application/json');

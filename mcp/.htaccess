@@ -1,4 +1,0 @@
-# Public /mcp/ URLs. The code lives in mcp-server/; index.php and setup.php
-# here are stubs that load it. No RewriteEngine here: the root .htaccess
-# passes the Authorization header through.
-DirectoryIndex index.php

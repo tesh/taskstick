@@ -4,7 +4,7 @@ Work with your Google Tasks from Claude through [TaskStick](https://tasks.tesh.a
 
 ## What's inside
 
-- **Connector**: the TaskStick MCP server at `https://tasks.tesh.ai/mcp/` (16 tools plus an interactive board). You sign in with your Google account the first time you connect; you can grant read-only access if you prefer.
+- **Connector**: the TaskStick MCP server at `https://tasks.tesh.ai/mcp` (16 tools plus an interactive board). You sign in with your Google account the first time you connect; you can grant read-only access if you prefer.
 - **Skill** `taskstick`: how TaskStick's Priority, Snooze, Daily Ritual and AI notes work, so Claude uses them the way the app does.
 - **Commands**: `/taskstick:today` plans your day; `/taskstick:review` runs a weekly review.
 
