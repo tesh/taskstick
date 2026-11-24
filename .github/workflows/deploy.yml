@@ -4,6 +4,8 @@
 #   successful deploy (tracked by the `deployed` git tag, which this workflow
 #   moves forward after each success) — so a failed run never leaves the
 #   server behind; the next one catches up.
+# • A commit message line "Deploy-Since: <sha>" deploys everything changed
+#   since that commit instead (catch-ups/redeploys without the Actions UI).
 # • "Run workflow" (Actions tab) can redeploy everything changed since a
 #   commit, or every deployable file.
 # • Then it smoke-tests the live site.
@@ -52,9 +54,14 @@ jobs:
           BEFORE: ${{ github.event.before }}
           SINCE: ${{ inputs.since }}
           ALL: ${{ inputs.all }}
+          HEAD_MSG: ${{ github.event.head_commit.message }}
         run: |
           set -euo pipefail
-          if [ "$EVENT" = "workflow_dispatch" ] && [ "$ALL" = "true" ]; then
+          TRAILER=$(printf '%s\n' "$HEAD_MSG" | sed -n 's/^Deploy-Since:[[:space:]]*\([0-9a-fA-F]\{7,40\}\)[[:space:]]*$/\1/p' | tail -1)
+          if [ "$EVENT" = "push" ] && [ -n "$TRAILER" ]; then
+            echo "Deploy-Since trailer: $TRAILER"
+            git diff --name-only --diff-filter=AMR "$TRAILER" HEAD > /tmp/changed
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ "$ALL" = "true" ]; then
             git ls-files > /tmp/changed
           elif [ "$EVENT" = "workflow_dispatch" ] && [ -n "$SINCE" ]; then
             git diff --name-only --diff-filter=AMR "$SINCE" HEAD > /tmp/changed
