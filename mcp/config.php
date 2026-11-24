@@ -31,7 +31,9 @@ if (!defined('MCP_PUBLIC_BASE')) define('MCP_PUBLIC_BASE', getenv('MCP_PUBLIC_BA
 // accept both forms. See mcp/.htaccess for the Apache side.
 define('MCP_RESOURCE_URL', MCP_PUBLIC_BASE . '/mcp');
 define('MCP_ISSUER',       MCP_PUBLIC_BASE);   // OAuth issuer (RFC 8414 / RFC 9207)
-define('MCP_PRM_URL',      MCP_PUBLIC_BASE . '/.well-known/oauth-protected-resource/mcp');
+// Served directly (not via /.well-known) because IONOS intercepts parts of
+// /.well-known on its own. The WWW-Authenticate header points clients here.
+define('MCP_PRM_URL',      MCP_PUBLIC_BASE . '/oauth/metadata.php?doc=prm&path=/mcp');
 define('MCP_AUTHORIZE_URL', MCP_PUBLIC_BASE . '/oauth/authorize.php');
 define('MCP_TOKEN_URL',     MCP_PUBLIC_BASE . '/oauth/token.php');
 define('MCP_REGISTER_URL',  MCP_PUBLIC_BASE . '/oauth/register.php');

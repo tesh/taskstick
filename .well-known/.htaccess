@@ -1,0 +1,5 @@
+# OAuth discovery for the MCP server. IONOS may handle /.well-known itself
+# (ACME), so route our two documents from inside this folder too.
+RewriteEngine On
+RewriteRule ^oauth-authorization-server(/.*)?$ /oauth/metadata.php?doc=as [L]
+RewriteRule ^oauth-protected-resource(/.*)?$ /oauth/metadata.php?doc=prm&path=$1 [L]
