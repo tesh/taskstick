@@ -158,6 +158,37 @@ jobs:
           s.close(); t.close()
           PY
           fi
+          # One-time cleanup (BUG-023): the MCP server moved from mcp/ to
+          # mcp-server/. A real mcp/ directory on the server breaks the /mcp
+          # rewrites, so remove it once the repo no longer has one. Files git
+          # never tracked are moved into data/legacy-mcp/ (protected), not deleted.
+          if [ ! -d mcp ]; then python3 - <<'PY'
+          import stat, paramiko, deploy_local as c
+          t = paramiko.Transport((c.SFTP_HOST, c.SFTP_PORT)); t.connect(username=c.SFTP_USER, password=c.SFTP_PASS)
+          s = paramiko.SFTPClient.from_transport(t)
+          root = c.REMOTE_ROOT.rstrip('/')
+          def exists(p):
+              try: s.stat(p); return True
+              except IOError: return False
+          if exists(f"{root}/mcp"):
+              keep = {"tokens.json"}                      # untracked v1 file: preserve it
+              if not exists(f"{root}/data/legacy-mcp"): s.mkdir(f"{root}/data/legacy-mcp")
+              def wipe(d, rel=""):
+                  for e in s.listdir_attr(d):
+                      p = f"{d}/{e.filename}"; r = f"{rel}{e.filename}"
+                      if stat.S_ISDIR(e.st_mode):
+                          wipe(p, r + "/"); s.rmdir(p); print(f"removed folder mcp/{r}/")
+                      elif r in keep:
+                          s.rename(p, f"{root}/data/legacy-mcp/{e.filename}"); print(f"moved mcp/{r} -> data/legacy-mcp/")
+                      else:
+                          s.remove(p); print(f"deleted mcp/{r}")
+              wipe(f"{root}/mcp")
+              s.rmdir(f"{root}/mcp"); print("removed old mcp/ folder")
+          else:
+              print("no old mcp/ folder on the server")
+          s.close(); t.close()
+          PY
+          fi
           rm -f deploy_local.py
 
       - name: Smoke test the live site
